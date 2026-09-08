@@ -1,0 +1,198 @@
+export type BatchStatus = "pending" | "held" | "released" | "rejected";
+export type BatchZone = "all" | "standard" | "quarantine";
+
+export interface BatchItem {
+  id: string;
+  productName: string;
+  zone: "standard" | "quarantine";
+  status: BatchStatus;
+  totalPcs: number;
+  defectCount: number;
+  defectTypes: string[];
+  escalationScore?: number;
+  timeAgo: string;
+  slaSeconds?: number;
+  defectSummary?: string;
+  supplierName: string;
+  line: string;
+  inspector: string;
+}
+
+export const INITIAL_BATCHES: BatchItem[] = [
+  {
+    id: "#B-2026-0730",
+    productName: "Bracket Motor A7",
+    zone: "quarantine",
+    status: "held",
+    totalPcs: 500,
+    defectCount: 14,
+    defectTypes: ["Warna Abnormal", "Retak Mikro"],
+    escalationScore: 0.74,
+    timeAgo: "6 mnt lalu",
+    slaSeconds: 780, // 13m 00s
+    defectSummary: "Warna abnormal berulang (94.2%) dan 3 micro-crack pada base mounting.",
+    supplierName: "PT Krakatau Scrap Ind.",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0731",
+    productName: "Gearbox Housing C2",
+    zone: "quarantine",
+    status: "pending",
+    totalPcs: 320,
+    defectCount: 5,
+    defectTypes: ["Lubang Gas (Porosity)"],
+    escalationScore: 0.62,
+    timeAgo: "14 mnt lalu",
+    slaSeconds: 420, // 7m 00s
+    defectSummary: "Porositas permukaan melampaui toleransi 1.2mm pada area seal flange.",
+    supplierName: "CV Logam Mandiri",
+    line: "Line #02 (Conveyor Cam-02)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0732",
+    productName: "Flange Pinion X1",
+    zone: "standard",
+    status: "pending",
+    totalPcs: 800,
+    defectCount: 3,
+    defectTypes: ["Burr Berlebih"],
+    escalationScore: 0.45,
+    timeAgo: "22 mnt lalu",
+    slaSeconds: 1140, // 19m 00s
+    defectSummary: "Burr pada ulir baut terdeteksi sporadis, butuh konfirmasi visual operator.",
+    supplierName: "PT Baja Presisi Prima",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspector: "Budi Pratama (Supervisor)",
+  },
+  {
+    id: "#B-2026-0728",
+    productName: "Rotor Casing D4",
+    zone: "standard",
+    status: "released",
+    totalPcs: 650,
+    defectCount: 0,
+    defectTypes: [],
+    escalationScore: 0.08,
+    timeAgo: "45 mnt lalu",
+    supplierName: "PT Cipta Logam Nusantara",
+    line: "Line #03 (Conveyor Cam-03)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0729",
+    productName: "Piston Base Ring 55",
+    zone: "standard",
+    status: "released",
+    totalPcs: 1200,
+    defectCount: 1,
+    defectTypes: ["Goresan Minor"],
+    escalationScore: 0.12,
+    timeAgo: "1 jam lalu",
+    supplierName: "PT Dharma Precision",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0727",
+    productName: "Support Arm T-9",
+    zone: "standard",
+    status: "released",
+    totalPcs: 450,
+    defectCount: 0,
+    defectTypes: [],
+    escalationScore: 0.05,
+    timeAgo: "1.5 jam lalu",
+    supplierName: "PT Cipta Logam Nusantara",
+    line: "Line #02 (Conveyor Cam-02)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0726",
+    productName: "Exhaust Manifold K3",
+    zone: "quarantine",
+    status: "held",
+    totalPcs: 280,
+    defectCount: 22,
+    defectTypes: ["Retak Kritis", "Dimensi Out-of-Spec"],
+    escalationScore: 0.88,
+    timeAgo: "2 jam lalu",
+    slaSeconds: 180, // 3m 00s
+    defectSummary: "Retakan tembus terdeteksi pada sambungan pipa inlet, resiko kebocoran gas.",
+    supplierName: "PT Indometal Foundry",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0725",
+    productName: "Shaft Coupling 40mm",
+    zone: "standard",
+    status: "rejected",
+    totalPcs: 400,
+    defectCount: 38,
+    defectTypes: ["Dimensi Out-of-Spec"],
+    escalationScore: 0.95,
+    timeAgo: "2.5 jam lalu",
+    supplierName: "CV Mega Teknik",
+    line: "Line #02 (Conveyor Cam-02)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0724",
+    productName: "Valve Body V-12",
+    zone: "standard",
+    status: "released",
+    totalPcs: 520,
+    defectCount: 0,
+    defectTypes: [],
+    escalationScore: 0.04,
+    timeAgo: "3 jam lalu",
+    supplierName: "PT Baja Presisi Prima",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0723",
+    productName: "Bearing Sleeve B8",
+    zone: "standard",
+    status: "rejected",
+    totalPcs: 600,
+    defectCount: 42,
+    defectTypes: ["Kekasaran Permukaan", "Retak Mikro"],
+    escalationScore: 0.91,
+    timeAgo: "3.5 jam lalu",
+    supplierName: "PT Krakatau Scrap Ind.",
+    line: "Line #03 (Conveyor Cam-03)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0722",
+    productName: "Mounting Flange M10",
+    zone: "standard",
+    status: "released",
+    totalPcs: 950,
+    defectCount: 2,
+    defectTypes: ["Bintik Cat"],
+    escalationScore: 0.15,
+    timeAgo: "4 jam lalu",
+    supplierName: "CV Logam Mandiri",
+    line: "Line #02 (Conveyor Cam-02)",
+    inspector: "Agent Vision Bedrock",
+  },
+  {
+    id: "#B-2026-0721",
+    productName: "Camshaft Gear 18T",
+    zone: "standard",
+    status: "released",
+    totalPcs: 700,
+    defectCount: 0,
+    defectTypes: [],
+    escalationScore: 0.02,
+    timeAgo: "4.5 jam lalu",
+    supplierName: "PT Dharma Precision",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspector: "Agent Vision Bedrock",
+  },
+];

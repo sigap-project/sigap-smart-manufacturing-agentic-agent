@@ -1,0 +1,130 @@
+// Prisma Schema for SIGAP Smart Manufacturing Agentic AI
+// Provider: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 1: BATCH (Manufacturing Lot & Escalation Status)
+// -----------------------------------------------------------------------------
+model Batch {
+  id              String           @id @default(cuid())
+  lotId           String           @unique // e.g. "#B-2026-0730"
+  productType     String           // e.g. "Bracket Motor A7"
+  supplierId      String?
+  supplierName    String?          // e.g. "PT Krakatau Scrap Ind."
+  line            String?          // e.g. "Line #01 (Conveyor Cam-01)"
+  createdAt       DateTime         @default(now())
+  inspectionCount Int              @default(0)
+  defectCount     Int              @default(0)
+  defectTypes     String[]         @default([]) // e.g. ["Warna Abnormal", "Retak Mikro"]
+  escalationScore Float?           @default(0.0) // 0.0 - 1.0 (Formula score)
+  status          String           @default("pending") // "pending", "held", "released", "rejected"
+  storageZone     String           @default("standard") // "standard", "quarantine"
+  pendingApproval Boolean          @default(false)
+  slaSeconds      Int?             // Sisa detik SLA sebelum auto-escalate
+  defectSummary   String?          @db.Text
+
+  // Relasi: 1 Batch memiliki banyak Inspeksi & Catatan Dispatch
+  inspections     Inspection[]
+  dispatchRecords DispatchRecord[]
+
+  @@index([status])
+  @@index([storageZone])
+  @@index([pendingApproval])
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 2: INSPECTION (Conveyor Optical Camera Inspection Frame)
+// -----------------------------------------------------------------------------
+model Inspection {
+  id                  String     @id @default(cuid()) // e.g. "INS-2026-8842"
+  batchId             String
+  timestamp           DateTime   @default(now())
+  imageUrl            String?
+  defectDetected      Boolean    @default(false)
+  defectClass         String     @default("OK") // "OK", "warna_abnormal", "retak_permukaan", "lubang_gas", dll.
+  confidence          Float      @default(99.0) // e.g. 94.2
+  severity            String?    // "Low", "Medium", "High", "Critical"
+  agentReasoningTrace Json       // JSON Array of reasoning deduction steps
+  status              String     @default("Lolos QC") // "Lolos QC", "Ditahan", "Pending Review", "Ditolak"
+
+  // Relasi: Belongs to Batch, Has many AgentLogs
+  batch               Batch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  agentLogs           AgentLog[]
+
+  @@index([batchId])
+  @@index([defectClass])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 3: DISPATCH RECORD (SAP QM / MM / PP ERP & Notification Outbound)
+// -----------------------------------------------------------------------------
+model DispatchRecord {
+  id            String    @id @default(cuid()) // e.g. "DSP-2026-0419"
+  batchId       String
+  triggerReason String    @db.Text // e.g. "3 anomali warna_abnormal berulang dalam 8 menit"
+  consumer      String    // "SAP QM", "SAP MM", "SAP PP", "Human Notification"
+  payload       Json      // Structured OData JSON payload
+  status        String    @default("Dispatched") // "Dispatched", "Pending Approval", "Rejected"
+  approvedBy    String?   // e.g. "Autonomous Vision Agent" / "Budi Pratama"
+  dispatchedAt  DateTime? @default(now())
+  sapResponse   Json?     // Response body from ERP API
+  sapTicketId   String?   // e.g. "QM-NOTIF-98214"
+  defectCode    String?   // e.g. "DEF-CAST-04"
+
+  // Relasi: Belongs to Batch
+  batch         Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([consumer])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 4: AGENT LOG (Detailed Step-by-Step Autonomous Reasoning Log)
+// -----------------------------------------------------------------------------
+model AgentLog {
+  id           String     @id @default(cuid())
+  inspectionId String
+  step         String     // e.g. "01", "02", "03"
+  stepName     String     // e.g. "DETECT", "MEMORY", "FORMULA", "DECISION", "DISPATCH"
+  input        Json?      // Input payload / sensor data
+  output       Json?      // Agent deduction output
+  decision     String?    // Decision tag
+  latencyMs    Int?       // Execution latency in ms
+  timestamp    DateTime   @default(now())
+
+  // Relasi: Belongs to Inspection
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+  @@index([stepName])
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 5: SETTING (Global System Runtime & Agentic Calibration Config)
+// -----------------------------------------------------------------------------
+model Setting {
+  id                           String   @id @default("default") // Single row per deployment
+  detectionConfidenceThreshold Float    @default(85.0) // 50.0 - 95.0%
+  escalationWindowMinutes      Int      @default(8)    // 2 - 30 minutes
+  escalationCountTrigger       Int      @default(3)    // repeating count
+  autoStoreEnabled             Boolean  @default(true) // auto-store to Batch Board
+  autoDispatchMode             String   @default("autonomous") // "autonomous" | "human_approval"
+  approvalSlaMinutes           Int      @default(15)   // SLA timeout minutes
+  mockMode                     Boolean  @default(true) // Mock hardware toggle
+  cameraSource                 String   @default("mock") // "mock" | "rtsp"
+  rtspUrl                      String?  @default("rtsp://192.168.1.120:8554/live/station-01")
+  autoExportCsv                Boolean  @default(true) // Auto-export CSV per shift
+  logRetentionDays             Int      @default(30)   // 7, 14, 30 days
+  monitoredProducts            String[] @default(["Bracket Motor A7", "Gearbox Housing C2", "Flange Pinion X1", "Rotor Casing D4", "Piston Base Ring 55"])
+  updatedAt                    DateTime @updatedAt
+}
