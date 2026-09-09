@@ -19,7 +19,7 @@ SIGAP menghubungkan dunia *Computer Vision* di lini konveyor produksi pabrik den
 │               SIGAP NEXT.JS PLATFORM                   │
 │                                                        │
 │  ┌────────────────────┐      ┌──────────────────────┐  │
-│  │  Next.js 15 App    │◄────►│ Neon PostgreSQL DB   │  │
+│  │  Next.js 15 App    │◄────►│ AWS RDS PostgreSQL   │  │
 │  │  Route Handlers    │      │ (Prisma 6 ORM)       │  │
 │  └─────────┬──────────┘      └──────────────────────┘  │
 │            │                                           │
@@ -70,9 +70,10 @@ SIGAP menghubungkan dunia *Computer Vision* di lini konveyor produksi pabrik den
 
 - **Framework**: [Next.js 15](https://nextjs.org/) (App Router, Turbopack, React Server Components)
 - **Frontend UI**: React 19, [Tailwind CSS v4](https://tailwindcss.com/), Framer Motion, Lucide Icons, Lenis Smooth Scroll
-- **Database & ORM**: [PostgreSQL (Neon Serverless)](https://neon.tech/) & [Prisma ORM v6](https://www.prisma.io/)
+- **Database & ORM**: PostgreSQL on [AWS RDS](https://aws.amazon.com/rds/) (Free Tier: `db.t4g.micro`) & [Prisma ORM v6](https://www.prisma.io/)
 - **Real-Time Streaming**: Server-Sent Events (SSE) dengan EventEmitter terdistribusi
-- **Integrasi Eksternal**: YOLOv8 Vision Service, AWS Bedrock Agentic Orchestrator, SAP OData Gateway
+- **Integrasi Cloud & Enterprise**: YOLOv8 Vision Service, AWS Bedrock (Claude 3.5 / Llama 3), AWS S3, SAP Cloud SDK & OData v4 Gateway
+- **Hosting**: [AWS Amplify Hosting](https://aws.amazon.com/amplify/)
 
 ---
 
@@ -80,7 +81,7 @@ SIGAP menghubungkan dunia *Computer Vision* di lini konveyor produksi pabrik den
 
 ### 1. Prasyarat
 - Node.js versi 18.18+ atau 20+
-- Akun database PostgreSQL (Bisa menggunakan [Neon.tech](https://neon.tech/) gratis atau PostgreSQL lokal)
+- Database PostgreSQL (Bisa menggunakan AWS RDS PostgreSQL Free Tier, Neon serverless, atau PostgreSQL lokal)
 
 ### 2. Kloning & Install Dependencies
 ```bash

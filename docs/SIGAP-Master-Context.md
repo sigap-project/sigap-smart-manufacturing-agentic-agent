@@ -106,36 +106,35 @@ Tidak seperti dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambi
 ### 4.3 AI / Inference Layer
 | Layer | Pilihan | Alasan |
 |---|---|---|
-| Model deteksi cacat | **YOLOv8-nano** (.onnx) | Ringan, bisa inference <100ms per frame |
-| Model klasifikasi jenis cacat | **MobileNetV3-Small** (.onnx) | Klasifikasi 4 kelas cacat post-detection |
-| Runtime inference | **Python 3.11** + **onnxruntime** | Cross-platform, tanpa CUDA dependency |
-| Serving | **FastAPI** (microservice internal) | REST endpoint `/inference` dipanggil Backend |
-| Sumber dataset | **NEU-DET** (steel surface defect, publik) — fine-tune ke 4 kelas cacat: `sisik_sisa`, `warna_abnormal`, `luka_rebekan`, `lendir_berlebih` | Dataset berlabel publik siap pakai |
+| Model deteksi cacat | **YOLOv8-nano** (`sigap-casting-yolov8-detect.onnx`) | Deteksi bounding box cacat casting impeller <100ms |
+| Model klasifikasi cacat | **YOLOv8-nano-cls** (`sigap-casting-yolov8-cls.onnx`) | Klasifikasi biner cacat impeller (`def_front` vs `ok_front`) |
+| Runtime inference | **Python 3.11** + **onnxruntime** / **Node.js** | Edge deployment ringan tanpa ketergantungan GPU |
+| Sumber dataset | **Submersible Pump Impeller Casting Defect** (Roboflow v14 & Kaggle) | Komponen nyata manufaktur pengecoran logam presisi |
 
 ### 4.4 AWS Layer
 | Service | Fungsi |
 |---|---|
-| **AWS Bedrock Agent** | Orchestrator utama — menerima inspection event, menjalankan reasoning multi-step, memutuskan aksi mana yang dieksekusi dan dengan parameter apa |
-| **AWS Lambda** | Action Groups: masing-masing SAP action diimplementasikan sebagai Lambda function terpisah |
-| **Amazon S3** | Penyimpanan gambar inspeksi (bukti cacat) + model ONNX artifacts |
-| **Amazon CloudWatch** | Logging agent reasoning trace untuk audit |
-| **AWS Step Functions** | Opsional: orkestrasi fallback kalau Bedrock Agent timeout |
+| **AWS Bedrock Agent** | Orchestrator utama — menerima inspection event, menjalankan reasoning multi-step deduktif, menghitung skor eskalasi, dan menyusun aksi SAP |
+| **AWS RDS PostgreSQL** | Database transaksional (Free Tier: `db.t4g.micro`) untuk batch, inspection, dan audit log (Prisma 6 ORM) |
+| **Amazon S3** | Penyimpanan gambar inspeksi frame konveyor + model ONNX artifacts |
+| **AWS Amplify** | Platform CI/CD hosting Next.js 15 App Router |
+| **Amazon CloudWatch** | Logging telemetri agent reasoning trace untuk audit |
 
-### 4.5 SAP Mock Layer
+### 4.5 SAP Enterprise Mock Layer
 | Service | Fungsi |
 |---|---|
-| **SAP CAP** (Node.js/CDS) | Framework resmi SAP untuk membangun OData v4 service — dipakai untuk membuat mock QM/MM/PP |
-| **Mock QM** — `POST /QualityNotification` | Membuat notifikasi kualitas dari defect event |
-| **Mock MM** — `PATCH /SupplierRecord/{id}` | Menambahkan flag "Under Review" ke supplier terkait |
-| **Mock PP** — `POST /RescheduleRequest` | Mengirim request reschedule production order |
-| **SAP API Business Hub** | Referensi struktur data OData asli (bukan dipakai langsung, tapi dijadikan acuan schema agar mock API-compatible) |
+| **SAP Cloud SDK** (Node.js) | Standard client resmi SAP untuk membangun & memanggil OData v4 service QM/MM/PP |
+| **Mock QM** — `POST /QualityNotifications` | Membuat notifikasi kualitas resmi dari anomali cacat |
+| **Mock MM** — `POST /SupplierFlags` | Menambahkan flag blokir kualitas ke supplier material |
+| **Mock PP** — `POST /ProductionOrderHolds` | Mengirim permintaan hold/reschedule production order |
+| **SAP BTP Destination** | Kesiapan transisi instan dari mock mode ke live SAP S/4HANA (Top 40) |
 
 ### 4.6 Database & Storage
 | Layer | Pilihan | Fungsi |
 |---|---|---|
-| **PostgreSQL** | via Railway/Supabase | Tabel: inspections, batches, dispatch_records, agent_logs, settings |
-| **Redis** | via Upstash | Session state agent, antrian inspeksi real-time, pub/sub Socket.io |
-| **Amazon S3** | AWS | Penyimpanan gambar cacat per inspection event |
+| **PostgreSQL** | AWS RDS (`db.t4g.micro`) | Tabel: inspections, batches, dispatch_records, agent_logs, settings (Prisma 6) |
+| **Amazon S3** | AWS | Penyimpanan gambar frame cacat per inspection event |
+| **Real-time SSE** | Next.js API Routes (`/api/events`) | Broadcast telemetri inspeksi & jejak penalaran agen secara efisien |
 
 ---
 
