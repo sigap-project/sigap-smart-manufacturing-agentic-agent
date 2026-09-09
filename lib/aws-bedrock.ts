@@ -31,7 +31,9 @@ export async function deduceDefectReasoning(
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const region = process.env.AWS_REGION || "ap-southeast-1";
-  const modelId = process.env.AWS_BEDROCK_MODEL_ID || "anthropic.claude-3-5-haiku-20241022-v1:0";
+  // Default: Amazon Nova Lite (AWS Native Foundation Model, ~16x cheaper & ultra-low latency for industrial deductions)
+  // Fallbacks via env: "anthropic.claude-3-5-haiku-20241022-v1:0" | "meta.llama3-8b-instruct-v1:0"
+  const modelId = process.env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
 
   // Fallback if AWS credentials are not configured in current environment
   if (!accessKeyId || !secretAccessKey || accessKeyId.startsWith("AKIAXXXX")) {

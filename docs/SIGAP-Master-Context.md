@@ -42,99 +42,82 @@ Tidak seperti dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambi
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        FRONTEND (Next.js)                    │
-│  Dashboard | Inspection | Batch Board | Dispatch | Settings  │
-└────────────────────┬────────────────────────────────────────┘
-                     │ REST + WebSocket/SSE
-┌────────────────────▼────────────────────────────────────────┐
-│                   BACKEND API GATEWAY (Node.js/Express)      │
-│   /inspection   /batches   /dispatch   /agent   /settings    │
-└──────┬──────────────────────────────┬───────────────────────┘
-       │                              │
-┌──────▼──────────┐        ┌──────────▼──────────────────────┐
-│   INFERENCE     │        │       AWS BEDROCK AGENT          │
-│   LAYER         │        │   (Orchestration + Reasoning)    │
-│   Python/ONNX   │        │                                  │
-│   YOLOv8-nano   │        │  ┌─────────────────────────────┐ │
-│   (defect det.) │        │  │     Action Groups (Lambda)  │ │
-│   MobileNetV3   │        │  │  - store_batch()            │ │
-│   (freshness)   │        │  │  - dispatch_to_sap_qm()     │ │
-└──────┬──────────┘        │  │  - flag_supplier_sap_mm()   │ │
-       │                   │  │  - reschedule_sap_pp()      │ │
-       │                   │  │  - notify_human()           │ │
-       │                   │  └─────────────┬───────────────┘ │
-       │                   └────────────────┼────────────────┘
-       │                                    │
-┌──────▼────────────────────────────────────▼────────────────┐
-│                     DATA LAYER                              │
-│  PostgreSQL (records)  |  S3 (images)  |  Redis (state)    │
-└───────────────────────────────┬────────────────────────────┘
-                                │
-┌───────────────────────────────▼────────────────────────────┐
-│              SAP MOCK LAYER (SAP CAP — Node.js/CDS)         │
-│   QM Notification  |  MM Supplier Record  |  PP Prod Order  │
-│   [OData v4 endpoints — API-compatible dengan SAP real]     │
-└────────────────────────────────────────────────────────────┘
+│               SIGAP UNIFIED WEB PLATFORM (Next.js 15)       │
+│  Dashboard | Inspection | Batches | Dispatch | Settings     │
+│  - React 19 + Tailwind CSS v4 + Framer Motion               │
+│  - Server-Sent Events (SSE) Bus (/api/events)               │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+       ┌───────────────────────┼───────────────────────┐
+       │ Internal Webhooks     │ Route Handlers        │ OData Dispatch
+       │ (Protected Shared Key)│ (Prisma 6 ORM)        │
+       ▼                       ▼                       ▼
+┌──────────────┐     ┌───────────────────┐     ┌──────────────────┐
+│ INFERENCE    │     │ DATA LAYER        │     │ SAP ERP MOCK     │
+│ EDGE LAYER   │     │ AWS RDS PostgreSQL│     │ LAYER (/api/mock)│
+│ - YOLOv8-Nano│     │ (Free Tier)       │     │ - Mock QM Notif  │
+│   (deteksi)  │     │ Amazon S3 Frames  │     │ - Mock MM Flag   │
+│ - YOLOv8-Cls │     └─────────▲─────────┘     │ - Mock PP Hold   │
+│   (verifikasi│               │               │ (BTP-Ready)      │
+└──────────────┘               │               └──────────────────┘
+                               │
+                     ┌─────────┴─────────┐
+                     │ AWS BEDROCK CORE  │
+                     │ Amazon Nova Lite  │
+                     │ (~16x cost-saving,│
+                     │ ultra-low latency)│
+                     │ ConverseCommand   │
+                     │ + Local Fallback  │
+                     └───────────────────┘
 ```
 
 ---
 
 ## 4. Tech Stack Lengkap
 
-### 4.1 Frontend
+### 4.1 Frontend & User Interface
 | Layer | Pilihan | Alasan |
 |---|---|---|
-| Framework | **Next.js 14** (App Router) | Familiar tim, SSR untuk initial load cepat |
-| Language | **TypeScript** | Type-safety untuk data model yg kompleks |
-| Styling | **Tailwind CSS** + shadcn/ui | Konsisten, cepat build |
-| State management | **Zustand** | Ringan, cocok untuk real-time state |
-| Real-time | **WebSocket** (via `socket.io-client`) | Live feed inspection + agent reasoning trace |
-| Charts | **Recharts** | Defect trend di dashboard |
-| Data fetching | **TanStack Query (React Query)** | Caching + polling untuk data batch/dispatch |
-| Export | **xlsx + file-saver** | Export history ke CSV/Excel |
+| Framework | **Next.js 15** (App Router) | Turbopack, React Server Components, zero-CLS Leaf Loading Suspense |
+| Language | **TypeScript 5** | Type-safety untuk model manufaktur kompleks |
+| Styling | **Tailwind CSS v4** + Framer Motion | Modern industrial dark aesthetic, micro-animations |
+| Real-time | **Server-Sent Events (SSE)** via `/api/events` | Ringan, native HTTP streaming tanpa overhead cluster WebSocket |
+| Charts & Gauges | **SVG & CSS-based Gauges** | Visualisasi tren OEE, Pareto cacat, dan Escalation Gauge presisi |
+| Icons | **Lucide React** | Ikonografi modern dan konsisten |
 
-### 4.2 Backend API Gateway
+### 4.2 Backend & API Layer
 | Layer | Pilihan | Alasan |
 |---|---|---|
-| Runtime | **Node.js 20** | Konsisten dengan frontend ecosystem |
-| Framework | **Express.js** | Ringan, familier |
-| Real-time | **Socket.io** | Broadcast live inspection events ke frontend |
-| Validation | **Zod** | Schema validation request/response |
-| ORM | **Prisma** | Type-safe query ke PostgreSQL |
-| Queue | **Bull (Redis-backed)** | Queue gambar inspeksi agar tidak bottleneck model |
+| Runtime | **Node.js 20+** (Next.js Route Handlers) | Monolith modern terintegrasi, latency rendah |
+| ORM | **Prisma 6** | Type-safe query ke PostgreSQL, migration & seeding terintegrasi |
+| Security | **Shared API Key Barrier** (`lib/auth.ts`) | Proteksi endpoint internal `/api/internal/*` |
+| Real-time Bus | **Node.js EventEmitter** | Distribusi telemetri real-time ke koneksi SSE |
 
-### 4.3 AI / Inference Layer
-| Layer | Pilihan | Alasan |
-|---|---|---|
-| Model deteksi cacat | **YOLOv8-nano** (`sigap-casting-yolov8-detect.onnx`) | Deteksi bounding box cacat casting impeller <100ms |
-| Model klasifikasi cacat | **YOLOv8-nano-cls** (`sigap-casting-yolov8-cls.onnx`) | Klasifikasi biner cacat impeller (`def_front` vs `ok_front`) |
-| Runtime inference | **Python 3.11** + **onnxruntime** / **Node.js** | Edge deployment ringan tanpa ketergantungan GPU |
-| Sumber dataset | **Submersible Pump Impeller Casting Defect** (Roboflow v14 & Kaggle) | Komponen nyata manufaktur pengecoran logam presisi |
+### 4.3 AI / Inference Layer (Two-Stage Edge Pipeline)
+| Layer | Pilihan | Hasil Benchmark Aktual | Peran Arsitektur |
+|---|---|---|---|
+| **Stage 1: Deteksi Cacat** | **YOLOv8-nano** (`sigap-casting-yolov8-detect.onnx`) | **mAP50: 55.05%**, Precision: 56.7%, Latensi: **5.2ms** | Memindai frame konveyor & melokalisasi Bounding Box [x, y, w, h] untuk overlay visual UI |
+| **Stage 2: Verifikasi Presisi** | **YOLOv8-nano-cls** (`sigap-casting-yolov8-cls.onnx`) | **Top-1 Acc: 99.72%**, Top-5: 100%, Latensi: **0.8ms** | Memvalidasi keabsahan cacat dan mematikan false alarm akibat pantulan kilau cahaya logam |
+| **Pipeline Gabungan (Both)** | Two-Stage Cascaded Edge | Total Latensi: **6.0ms** (5.2ms + 0.8ms) | Throughput tinggi (>150 FPS) memenuhi standar lini konveyor manufaktur berkecepatan tinggi |
+| **Runtime & Artefak** | ONNX Runtime / PyTorch | Ekspor ONNX slim (`.onnx` 11.7MB & 5.5MB) | Deployment edge ringan pada CPU/Edge IPC tanpa ketergantungan GPU |
+| **Dataset Sumber** | Submersible Pump Impeller Casting Defect | 7.348 citra klasifikasi + 1.875 citra beranotasi bounding box | Data nyata industri pengecoran logam presisi |
 
-### 4.4 AWS Layer
+### 4.4 AWS Cloud Layer (Sponsor Hackathon)
 | Service | Fungsi |
 |---|---|
-| **AWS Bedrock Agent** | Orchestrator utama — menerima inspection event, menjalankan reasoning multi-step deduktif, menghitung skor eskalasi, dan menyusun aksi SAP |
-| **AWS RDS PostgreSQL** | Database transaksional (Free Tier: `db.t4g.micro`) untuk batch, inspection, dan audit log (Prisma 6 ORM) |
-| **Amazon S3** | Penyimpanan gambar inspeksi frame konveyor + model ONNX artifacts |
+| **AWS Bedrock Runtime** | **Amazon Nova Lite (`amazon.nova-lite-v1:0`)** sebagai model deduksi utama (~16x lebih hemat biaya & ultra-low latency), dengan opsi Claude 3.5 Haiku |
+| **AWS RDS PostgreSQL** | Database transaksional (`db.t4g.micro`) untuk batch, inspeksi, dispatch, dan audit logs |
+| **Amazon S3** | Penyimpanan frame citra inspeksi cacat konveyor |
 | **AWS Amplify** | Platform CI/CD hosting Next.js 15 App Router |
-| **Amazon CloudWatch** | Logging telemetri agent reasoning trace untuk audit |
 
 ### 4.5 SAP Enterprise Mock Layer
 | Service | Fungsi |
 |---|---|
-| **SAP Cloud SDK** (Node.js) | Standard client resmi SAP untuk membangun & memanggil OData v4 service QM/MM/PP |
-| **Mock QM** — `POST /QualityNotifications` | Membuat notifikasi kualitas resmi dari anomali cacat |
-| **Mock MM** — `POST /SupplierFlags` | Menambahkan flag blokir kualitas ke supplier material |
-| **Mock PP** — `POST /ProductionOrderHolds` | Mengirim permintaan hold/reschedule production order |
-| **SAP BTP Destination** | Kesiapan transisi instan dari mock mode ke live SAP S/4HANA (Top 40) |
-
-### 4.6 Database & Storage
-| Layer | Pilihan | Fungsi |
-|---|---|---|
-| **PostgreSQL** | AWS RDS (`db.t4g.micro`) | Tabel: inspections, batches, dispatch_records, agent_logs, settings (Prisma 6) |
-| **Amazon S3** | AWS | Penyimpanan gambar frame cacat per inspection event |
-| **Real-time SSE** | Next.js API Routes (`/api/events`) | Broadcast telemetri inspeksi & jejak penalaran agen secara efisien |
+| **Internal OData v4 Mock** | Endpoints `/api/mock/sap/(qm\|mm\|pp)` kompatibel skema payload SAP S/4HANA |
+| **Mock QM** | `POST /api/mock/sap/qm` — Menerbitkan Quality Notification resmi |
+| **Mock MM** | `POST /api/mock/sap/mm` — Memberi flag blokir kualitas supplier material |
+| **Mock PP** | `POST /api/mock/sap/pp` — Mengajukan hold/reschedule Work Order produksi |
+| **SAP BTP Ready** | Kesiapan transisi instan dari mock mode ke live SAP S/4HANA BTP Destination |
 
 ---
 
@@ -160,7 +143,7 @@ Ini inti proyek — pastikan semua anggota tim paham flow ini karena ini yang ak
   → Query: apakah batch bahan baku ini pernah bermasalah sebelumnya? (SAP MM history)
   → Hitung Escalation Score berdasarkan:
       - Frekuensi: N cacat dalam T menit
-      - Severity: jenis cacat (warna_abnormal > luka_rebekan > luka_sisik)
+      - Severity: jenis cacat (lubang_gas > retak_permukaan > warna_abnormal > burr_berlebih)
       - Supplier history: repeat offender?
      │
      ├─ Score rendah (sporadis) ──→ [Auto-store ke Batch Board: status HELD]
@@ -214,16 +197,16 @@ Threshold:
 ### 6.1 `inspections`
 ```typescript
 {
-  id: string                    // "INSP-2026-0730-001"
+  id: string                    // "INS-2026-8842"
   batch_id: string              // referensi ke batches
   timestamp: DateTime
   image_url: string             // S3 URL
   defect_detected: boolean
-  defect_class: "sisik_sisa" | "warna_abnormal" | "luka_rebekan" | "lendir_berlebih" | null
-  confidence: number            // 0.0–1.0
-  severity: "low" | "medium" | "high"
-  agent_reasoning_trace: Json   // step-by-step reasoning Bedrock Agent
-  status: "ok" | "held" | "dispatched" | "rejected"
+  defect_class: "warna_abnormal" | "retak_permukaan" | "lubang_gas" | "burr_berlebih" | "dimensi_cacat" | null
+  confidence: number            // 0.0–100.0%
+  severity: "Low" | "Medium" | "High" | "Critical"
+  agent_reasoning_trace: Json   // 5-step deduction array (DETECT, MEMORY, FORMULA, DECISION, DISPATCH)
+  status: "Lolos QC" | "Ditahan" | "Pending Review" | "Ditolak"
 }
 ```
 
@@ -464,64 +447,69 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3001
 
 ---
 
-## 10. Repo Structure (Rekomendasi Monorepo)
+## 10. Repo Structure (Arsitektur Terpadu Next.js 15)
 
 ```
 sigap/
-├── apps/
-│   ├── web/                  # Next.js frontend
-│   │   ├── app/
-│   │   │   ├── (dashboard)/page.tsx
-│   │   │   ├── inspection/page.tsx
-│   │   │   ├── lot-history/page.tsx
-│   │   │   ├── batch-board/page.tsx
-│   │   │   ├── dispatch/page.tsx
-│   │   │   └── settings/page.tsx
-│   │   ├── components/
-│   │   │   ├── agent-reasoning-trace.tsx  ← komponen kritis untuk Demo Day
-│   │   │   ├── batch-grid.tsx
-│   │   │   ├── dispatch-table.tsx
-│   │   │   └── camera-feed.tsx
-│   │   └── lib/
-│   │       ├── socket.ts
-│   │       └── api.ts
-│   │
-│   ├── api/                  # Node.js/Express backend
-│   │   ├── src/
-│   │   │   ├── routes/
-│   │   │   ├── services/
-│   │   │   │   ├── agent.service.ts       ← panggil Bedrock Agent
-│   │   │   │   ├── inspection.service.ts
-│   │   │   │   └── dispatch.service.ts
-│   │   │   ├── sockets/
-│   │   │   └── prisma/
-│   │   └── prisma/schema.prisma
-│   │
-│   └── inference/            # Python FastAPI
-│       ├── main.py
-│       ├── models/
-│       │   ├── defect_detector.onnx
-│       │   └── classifier.onnx
-│       └── predict.py
+├── app/
+│   ├── (public)/                 # Landing Page & Demo Modal
+│   │   ├── page.tsx
+│   │   └── layout.tsx
+│   ├── dashboard/                # Operational Control Center
+│   │   ├── page.tsx              # Overview (OEE, Pareto, Agent Feed)
+│   │   ├── inspection/           # Stasiun Inspeksi Visi & Reasoning Trace
+│   │   ├── batches/              # Batch Quarantine Board & Human Approval
+│   │   ├── dispatch/             # SAP ERP Dispatch Records & Outbound
+│   │   ├── history/              # Lot Audit History & Export CSV
+│   │   └── settings/             # AI Calibration & Hardware Config
+│   └── api/                      # Full Backend Route Handlers
+│       ├── batches/              # CRUD Batch & Human Approval PATCH
+│       ├── inspections/          # Riwayat Inspeksi & Detail Trace
+│       ├── dispatch/             # Outbound Mutasi ERP & Approval
+│       ├── events/               # Real-Time SSE Event Streamer Bus
+│       ├── settings/             # Konfigurasi Sistem
+│       ├── internal/             # Edge Camera & Worker Webhook Barrier
+│       │   ├── inspection-result/
+│       │   └── agent-decision/
+│       └── mock/sap/             # SAP S/4HANA OData v4 Mock Gateway
+│           ├── qm/               # Quality Notifications
+│           ├── mm/               # Supplier Quality Block Flags
+│           └── pp/               # Work Order Hold / Reschedule
 │
-├── packages/
-│   └── types/                # Shared TypeScript types (dipakai web + api)
-│       └── index.ts
+├── ai_models/                    # Edge Vision Training & Artifacts
+│   ├── README.md                 # Dokumentasi Model & Dataset
+│   ├── train_yolov8_detection.py # Pipeline Deteksi Bounding Box YOLOv8
+│   └── train_casting_classification.py # Pipeline Klasifikasi Impeller
 │
-├── sap-mock/                 # SAP CAP project
-│   ├── db/schema.cds
-│   ├── srv/
-│   │   ├── qm-service.cds
-│   │   ├── mm-service.cds
-│   │   └── pp-service.cds
-│   └── package.json
+├── components/                   # Modular UI Components (React 19)
+│   ├── inspection/               # Video player, Canvas overlay, Reasoning trace
+│   ├── batches/                  # Visual grid status karantina
+│   ├── dispatch/                 # Tabel dispatch OData & modal rincian
+│   ├── dashboard/                # Gauge OEE, Pareto chart, Live Activity
+│   └── ui/                       # Glassmorphic primitives & buttons
 │
-└── aws/
-    └── lambda/
-        ├── store-batch/index.js
-        ├── dispatch-qm/index.js
-        ├── flag-supplier-mm/index.js
-        └── reschedule-pp/index.js
+├── lib/                          # Core Engine & Integrations
+│   ├── aws-bedrock.ts            # Amazon Nova Lite Reasoning Engine + Fallback
+│   ├── aws-s3.ts                 # S3 Image Upload & Presigned URLs
+│   ├── sap-client.ts             # Client OData ERP (Mock & BTP Ready)
+│   ├── auth.ts                   # Internal API Key Barrier
+│   ├── events.ts                 # Real-time SSE Node.js EventEmitter Bus
+│   └── prisma.ts                 # Prisma Client Singleton
+│
+├── prisma/                       # Database Schema & Migrations
+│   ├── schema.prisma             # PostgreSQL Database Schema
+│   └── seed.ts                   # Realistic Industrial Seed Data
+│
+├── scripts/                      # Quality Assurance & Tooling
+│   ├── README.md                 # Panduan Audit & Eksekusi Skrip
+│   ├── qa-full-e2e.ts            # Full End-to-End Test Suite (10 Endpoints)
+│   └── tools/                    # Utilitas Pemrosesan Video & Asset Frame
+│
+└── docs/                         # Single Source of Truth
+    ├── HACKATHON-GUIDEBOOK.md    # Panduan Resmi SOKRATES x BINUS 2026
+    ├── AI-ENGINEER-HANDOFF.md    # Handoff Spesifikasi API Edge AI
+    ├── SIGAP-Master-Context.md   # Single Source of Truth Sistem SIGAP
+    └── SIGAP-Page-Section-Breakdown.md # Spesifikasi Komponen & Roadmap
 ```
 
 ---

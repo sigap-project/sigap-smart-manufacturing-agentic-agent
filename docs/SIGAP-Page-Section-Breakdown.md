@@ -57,6 +57,9 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ### 2. Login Page
 
+> [!NOTE]
+> **Status Implementasi (Roadmap Finalis Top 40)**: Untuk mempermudah evaluasi juri dan demonstrasi langsung, autentikasi saat ini dibypass sehingga seluruh pengguna dan juri dapat langsung mengakses antarmuka operasional `/dashboard` tanpa hambatan form login.
+
 **Section 1 (Form Utama)**
 - Field: Email, Password
 - Toggle show/hide password
@@ -98,6 +101,9 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ### 4. Onboarding / First-Time Setup Wizard
 
+> [!NOTE]
+> **Status Roadmap**: Wizard onboarding dialokasikan untuk fase inkubasi finalis Top 40. Konfigurasi awal saat ini telah disediakan secara transparan melalui halaman `/dashboard/settings`.
+
 **Step 1 — Selamat Datang**
 - Sapaan dengan nama user, penjelasan singkat 1 kalimat apa yang akan dikonfigurasi
 
@@ -116,9 +122,9 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ---
 
-## C. HALAMAN APLIKASI (setelah login)
+## C. HALAMAN APLIKASI (OPERASIONAL DASHBOARD)
 
-### 5. Dashboard
+### 5. Dashboard (`/dashboard`)
 
 **Top Bar (persisten di semua halaman aplikasi)**
 - Badge status kamera (Online/Offline/Mock Mode)
@@ -142,7 +148,7 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ---
 
-### 6. Inspection (Live Feed)
+### 6. Inspection — Live Feed (`/dashboard/inspection`)
 
 **Header**
 - Status kamera, tombol Pause/Resume scan, indikator threshold confidence aktif saat ini
@@ -164,7 +170,7 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ---
 
-### 7. Batch Quarantine Board
+### 7. Batch Quarantine Board (`/dashboard/batches`)
 
 **Header Stats**
 - Total Batches / Held / Released / Rejected / Pending Assignment
@@ -184,7 +190,7 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ---
 
-### 8. Export Dispatch
+### 8. Export Dispatch (`/dashboard/dispatch`)
 
 **Header Stats**
 - Total Dispatches / Pending / Dispatched
@@ -203,7 +209,7 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ---
 
-### 9. Lot History
+### 9. Lot History (`/dashboard/history`)
 
 **Section 1 (Filter Bar)**
 - Filter by rentang tanggal, status (ok/held/dispatched/rejected), jenis cacat, batch
@@ -219,7 +225,7 @@ Total: **9 halaman inti + 1 opsional (Onboarding)**
 
 ---
 
-### 10. Settings
+### 10. Settings (`/dashboard/settings`)
 
 **Section 1 (Hardware Configuration)**
 - Toggle Mock Hardware Mode

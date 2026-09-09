@@ -72,7 +72,7 @@ SIGAP menghubungkan dunia *Computer Vision* di lini konveyor produksi pabrik den
 - **Frontend UI**: React 19, [Tailwind CSS v4](https://tailwindcss.com/), Framer Motion, Lucide Icons, Lenis Smooth Scroll
 - **Database & ORM**: PostgreSQL on [AWS RDS](https://aws.amazon.com/rds/) (Free Tier: `db.t4g.micro`) & [Prisma ORM v6](https://www.prisma.io/)
 - **Real-Time Streaming**: Server-Sent Events (SSE) dengan EventEmitter terdistribusi
-- **Integrasi Cloud & Enterprise**: YOLOv8 Vision Service, AWS Bedrock (Claude 3.5 / Llama 3), AWS S3, SAP Cloud SDK & OData v4 Gateway
+- **Integrasi Cloud & Enterprise**: YOLOv8 Vision Edge Inference, AWS Bedrock (**Amazon Nova Lite** / Claude 3.5 Haiku), AWS S3 Image Vault, SAP S/4HANA OData v4 Mock Gateway
 - **Hosting**: [AWS Amplify Hosting](https://aws.amazon.com/amplify/)
 
 ---
