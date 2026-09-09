@@ -1,14 +1,14 @@
 # %% [markdown]
 # # SIGAP Vision Pipeline: YOLOv8 Object Detection
 # **Model Name**: `sigap-casting-yolov8-detect`  
-# **Dataset**: Roboflow `casting-defect-detection-s3abt` (Version 14)  
+# **Dataset Path**: `/kaggle/input/datasets/raykapranandita/casting-defect-yolo`  
 # **Runtime**: Kaggle GPU (T4 / P100) or Local CUDA  
 #
 # **Workflow**:
 # 1. Environment Setup & Dependency Installation
-# 2. Data Ingestion from Roboflow Universe
+# 2. Kaggle Input Path Discovery & Path Resolution
 # 3. Exploratory Data Analysis (EDA) & Ground Truth Visualization
-# 4. Preprocessing & Path Normalization
+# 4. Patch data.yaml into Working Directory (Read-Only Safety)
 # 5. Transfer Learning with YOLOv8n
 # 6. Test Set Evaluation & Production ONNX Export
 
@@ -23,7 +23,7 @@ from typing import Dict, List
 
 # Install required packages if running in clean Kaggle/Colab environment
 if "kaggle" in os.environ.get("PWD", "").lower() or "google.colab" in sys.modules:
-    os.system("pip install -q ultralytics roboflow opencv-python-headless matplotlib pyyaml")
+    os.system("pip install -q ultralytics opencv-python-headless matplotlib pyyaml")
 
 import cv2
 import matplotlib.pyplot as plt
@@ -35,6 +35,7 @@ print("[INFO] Libraries loaded successfully.")
 # %%
 # CELL 2: GLOBAL CONFIGURATIONS
 MODEL_NAME = "sigap-casting-yolov8-detect"
+KAGGLE_INPUT_ROOT = "/kaggle/input/datasets/raykapranandita/casting-defect-yolo"
 WORKSPACE_DIR = "/kaggle/working" if os.path.exists("/kaggle") else os.path.abspath("./workspace")
 RUNS_DIR = os.path.join(WORKSPACE_DIR, "runs", MODEL_NAME)
 EXPORT_DIR = os.path.join(WORKSPACE_DIR, "export", MODEL_NAME)
@@ -42,33 +43,40 @@ EXPORT_DIR = os.path.join(WORKSPACE_DIR, "export", MODEL_NAME)
 os.makedirs(RUNS_DIR, exist_ok=True)
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
-# Roboflow credentials (set in Kaggle secrets or override here)
-ROBOFLOW_API_KEY = os.environ.get("ROBOFLOW_API_KEY", "YOUR_ROBOFLOW_API_KEY_HERE")
-
 print(f"[INFO] Model: {MODEL_NAME}")
+print(f"[INFO] Target Input: {KAGGLE_INPUT_ROOT}")
 print(f"[INFO] Working Directory: {WORKSPACE_DIR}")
 
 # %%
-# CELL 3: DATASET INGESTION (ROBOFLOW)
-def get_dataset(api_key: str, dest_dir: str) -> str:
-    target = os.path.join(dest_dir, "casting-defect-detection-14")
-    if os.path.exists(target) and os.path.exists(os.path.join(target, "data.yaml")):
-        print(f"[INFO] Using existing dataset at: {target}")
-        return target
+# CELL 3: DATASET PATH RESOLUTION
+def resolve_detection_dataset(base_path: str) -> str:
+    candidates = [
+        base_path,
+        os.path.join(base_path, "casting-defect-yolo"),
+        "/kaggle/input/casting-defect-yolo",
+        "/kaggle/input/casting-defect-detection-yolo"
+    ]
+    for c in candidates:
+        yaml_file = os.path.join(c, "data.yaml")
+        if os.path.exists(yaml_file):
+            print(f"[INFO] Found data.yaml at: {c}")
+            return c
 
-    from roboflow import Roboflow
-    os.chdir(dest_dir)
-    rf = Roboflow(api_key=api_key)
-    project = rf.workspace("computer-vision-bij2k").project("casting-defect-detection-s3abt")
-    dataset = project.version(14).download("yolov8")
-    return dataset.location
+    # Fallback: search recursively for data.yaml under /kaggle/input
+    found = glob.glob(os.path.join("/kaggle/input", "**", "data.yaml"), recursive=True)
+    if found:
+        parent = str(Path(found[0]).parent)
+        print(f"[INFO] Auto-discovered dataset at: {parent}")
+        return parent
 
-dataset_path = get_dataset(ROBOFLOW_API_KEY, WORKSPACE_DIR)
+    raise FileNotFoundError(f"data.yaml not found under {base_path} or /kaggle/input")
+
+dataset_path = resolve_detection_dataset(KAGGLE_INPUT_ROOT)
 
 # %%
 # CELL 4: EXPLORATORY DATA ANALYSIS (EDA)
-yaml_path = os.path.join(dataset_path, "data.yaml")
-with open(yaml_path, "r") as f:
+orig_yaml_path = os.path.join(dataset_path, "data.yaml")
+with open(orig_yaml_path, "r") as f:
     data_cfg = yaml.safe_load(f)
 
 classes = data_cfg.get("names", [])
@@ -79,7 +87,12 @@ for s in splits:
     img_dir = os.path.join(dataset_path, s, "images")
     lbl_dir = os.path.join(dataset_path, s, "labels")
     if not os.path.exists(lbl_dir):
-        continue
+        # Fallback if split folder is named 'val' instead of 'valid'
+        if s == "valid" and os.path.exists(os.path.join(dataset_path, "val", "labels")):
+            img_dir = os.path.join(dataset_path, "val", "images")
+            lbl_dir = os.path.join(dataset_path, "val", "labels")
+        else:
+            continue
 
     images = glob.glob(os.path.join(img_dir, "*.*"))
     labels = glob.glob(os.path.join(lbl_dir, "*.txt"))
@@ -104,8 +117,9 @@ for s, stats in distribution.items():
 
 # %%
 # CELL 5: VISUALIZE SAMPLE GROUND TRUTH
-train_imgs = glob.glob(os.path.join(dataset_path, "train", "images", "*.*"))[:4]
-train_lbls = os.path.join(dataset_path, "train", "labels")
+train_img_dir = os.path.join(dataset_path, "train", "images")
+train_lbl_dir = os.path.join(dataset_path, "train", "labels")
+train_imgs = glob.glob(os.path.join(train_img_dir, "*.*"))[:4]
 
 plt.figure(figsize=(14, 5))
 for i, path in enumerate(train_imgs):
@@ -113,7 +127,7 @@ for i, path in enumerate(train_imgs):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     h, w, _ = img.shape
 
-    txt_file = os.path.join(train_lbls, Path(path).stem + ".txt")
+    txt_file = os.path.join(train_lbl_dir, Path(path).stem + ".txt")
     if os.path.exists(txt_file):
         with open(txt_file, "r") as f:
             for line in f:
@@ -138,16 +152,25 @@ plt.tight_layout()
 plt.show()
 
 # %%
-# CELL 6: PREPROCESSING & DATA.YAML NORMALIZATION
-data_cfg["path"] = os.path.abspath(dataset_path)
-data_cfg["train"] = "train/images"
-data_cfg["val"] = "valid/images"
-data_cfg["test"] = "test/images"
+# CELL 6: WRITE PATCHED DATA.YAML TO WORKING DIRECTORY (READ-ONLY SAFE)
+# Kaggle /kaggle/input is read-only, so we write working_data.yaml to /kaggle/working
+val_folder = "valid/images" if os.path.exists(os.path.join(dataset_path, "valid")) else "val/images"
 
-with open(yaml_path, "w") as f:
-    yaml.safe_dump(data_cfg, f)
+patched_cfg = {
+    "path": os.path.abspath(dataset_path),
+    "train": "train/images",
+    "val": val_folder,
+    "test": "test/images",
+    "names": classes,
+    "nc": len(classes)
+}
 
-print(f"[INFO] data.yaml updated with base path: {data_cfg['path']}")
+working_yaml_path = os.path.join(WORKSPACE_DIR, "sigap_casting_data.yaml")
+with open(working_yaml_path, "w") as f:
+    yaml.safe_dump(patched_cfg, f)
+
+print(f"[INFO] Working data.yaml written to: {working_yaml_path}")
+print(f"[INFO] Pointing images base path to: {patched_cfg['path']}")
 
 # %%
 # CELL 7: MODEL TRAINING (YOLOV8-NANO DETECTION)
@@ -157,7 +180,7 @@ print(f"[INFO] Using compute device: {device}")
 model = YOLO("yolov8n.pt")
 
 train_results = model.train(
-    data=yaml_path,
+    data=working_yaml_path,
     epochs=30,
     imgsz=640,
     batch=16,
@@ -182,7 +205,7 @@ print(f"[INFO] Best model checkpoint: {best_pt_path}")
 # %%
 # CELL 8: TEST SPLIT EVALUATION
 eval_model = YOLO(best_pt_path)
-metrics = eval_model.val(data=yaml_path, split="test", imgsz=640)
+metrics = eval_model.val(data=working_yaml_path, split="test", imgsz=640)
 
 print("\n--- TEST METRICS SUMMARY ---")
 print(f"mAP50:     {metrics.box.map50:.4f}")
