@@ -10,7 +10,7 @@ export function DashboardPriorityItems() {
     {
       lotId: "Lot #B-2026-0730",
       partName: "Bracket Motor A7",
-      defectType: "Retak Permukaan • 45 pcs",
+      defectType: "Karantina Otomatis • 45 pcs",
       escalationScore: "0.74",
       scoreColor: "text-rose-400",
       badge: "CRITICAL",
@@ -21,7 +21,7 @@ export function DashboardPriorityItems() {
     {
       lotId: "Lot #A-2026-0811",
       partName: "Housing Gearbox SME",
-      defectType: "Lubang Gas • 28 pcs",
+      defectType: "Pending Review • 28 pcs",
       escalationScore: "0.68",
       scoreColor: "text-amber-400",
       badge: "ELEVATED",
@@ -32,7 +32,7 @@ export function DashboardPriorityItems() {
     {
       lotId: "Lot #C-2026-0902",
       partName: "Manifold Exhaust 4-Cyl",
-      defectType: "Inklusi Pasir • 16 pcs",
+      defectType: "Review QM • 16 pcs",
       escalationScore: "0.55",
       scoreColor: "text-amber-300",
       badge: "REVIEW QM",
@@ -43,7 +43,7 @@ export function DashboardPriorityItems() {
     {
       lotId: "Lot #B-2026-0728",
       partName: "Flange Pipe High-Temp",
-      defectType: "Dimensi Minor • 12 pcs",
+      defectType: "Monitoring Lini • 12 pcs",
       escalationScore: "0.42",
       scoreColor: "text-cyan-400",
       badge: "MODERATE",
@@ -54,7 +54,7 @@ export function DashboardPriorityItems() {
     {
       lotId: "Lot #D-2026-0914",
       partName: "Crankcase Valve Cap",
-      defectType: "Penyusutan Sudut • 8 pcs",
+      defectType: "Disposisi Scrap • 8 pcs",
       escalationScore: "0.38",
       scoreColor: "text-emerald-400",
       badge: "AUTO-STORE",

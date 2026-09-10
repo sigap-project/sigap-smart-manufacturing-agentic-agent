@@ -69,7 +69,10 @@ export default async function DashboardPage() {
           <DashboardTrendChart />
         </div>
         <div className="lg:col-span-4">
-          <DashboardDefectDistribution />
+          <DashboardDefectDistribution
+            disposition={stats.defectDisposition}
+            totalDefects={stats.totalDefects}
+          />
         </div>
       </div>
 

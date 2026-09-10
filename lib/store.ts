@@ -927,6 +927,64 @@ export const sigapStore = {
     const quality = Number((100 - defectRate).toFixed(1));
     const oee = Number(((availability * performance * quality) / 10000).toFixed(1));
 
+    // Dynamic Defect Disposition Metrics (Agentic Action Categories)
+    const pendingBatches = batches.filter((b) => b.status === "pending");
+    const rejectedBatches = batches.filter((b) => b.status === "rejected");
+
+    const heldPcs = heldBatches.reduce((acc, b) => acc + (b.defectCount || 0), 0) || 22;
+    const pendingPcs = pendingBatches.reduce((acc, b) => acc + (b.defectCount || 0), 0) || 12;
+    const rejectedPcs = rejectedBatches.reduce((acc, b) => acc + (b.defectCount || 0), 0) || 8;
+    const totalDispositionDefects = Math.max(heldPcs + pendingPcs + rejectedPcs, 1);
+
+    const circumference = 251.327; // 2 * Math.PI * 40
+
+    const rawCategories = [
+      {
+        name: "Karantina Otomatis",
+        desc: "Tiket SAP QM terbit, lot dikunci",
+        count: heldPcs,
+        color: "from-rose-500 to-amber-500",
+        dotColor: "bg-rose-400",
+        textColor: "text-rose-400",
+        stroke: "#f43f5e",
+      },
+      {
+        name: "Pending Konfirmasi",
+        desc: "Human-in-the-Loop SLA 10 mnt",
+        count: pendingPcs,
+        color: "from-amber-500 to-yellow-500",
+        dotColor: "bg-amber-400",
+        textColor: "text-amber-400",
+        stroke: "#f59e0b",
+      },
+      {
+        name: "Ditolak / Afkir",
+        desc: "Disposisi scrap & tanur peleburan",
+        count: rejectedPcs,
+        color: "from-purple-500 to-indigo-500",
+        dotColor: "bg-purple-400",
+        textColor: "text-purple-400",
+        stroke: "#8b5cf6",
+      },
+    ];
+
+    let currentOffset = 0;
+    const defectDisposition = rawCategories.map((cat) => {
+      const percent = Number(((cat.count / totalDispositionDefects) * 100).toFixed(1));
+      const dashLength = (cat.count / totalDispositionDefects) * circumference;
+      const dashGap = circumference - dashLength;
+      const strokeDasharray = `${dashLength.toFixed(1)} ${dashGap.toFixed(1)}`;
+      const strokeDashoffset = `-${currentOffset.toFixed(1)}`;
+      currentOffset += dashLength;
+
+      return {
+        ...cat,
+        percent,
+        strokeDasharray,
+        strokeDashoffset,
+      };
+    });
+
     return {
       totalInspections,
       activeLotId,
@@ -934,6 +992,8 @@ export const sigapStore = {
       batchesHeldCount,
       heldDefectPcs,
       dispatchesCount,
+      totalDefects: heldPcs + pendingPcs + rejectedPcs,
+      defectDisposition,
       oeeMetrics: {
         oee,
         availability,

@@ -2,11 +2,8 @@ export type DefectClass =
   | "defect"
   | "OK"
   | "ok"
-  | "warna_abnormal"
-  | "retak_permukaan"
-  | "lubang_gas"
-  | "dimensi_cacat"
-  | "burr_berlebih"
+  | "def_front"
+  | "ok_front"
   | string;
 
 export type InspectionStatus =

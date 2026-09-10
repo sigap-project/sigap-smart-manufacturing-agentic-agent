@@ -1,63 +1,73 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ArrowUpRight, PieChart } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
-export function DashboardDefectDistribution() {
+export interface DefectDispositionItem {
+  name: string;
+  desc: string;
+  count: number;
+  percent: number;
+  color: string;
+  dotColor: string;
+  textColor: string;
+  stroke: string;
+  strokeDasharray: string;
+  strokeDashoffset: string;
+}
+
+interface DashboardDefectDistributionProps {
+  disposition?: DefectDispositionItem[];
+  totalDefects?: number;
+}
+
+const DEFAULT_DISPOSITION: DefectDispositionItem[] = [
+  {
+    name: "Karantina Otomatis",
+    desc: "Tiket SAP QM terbit, lot dikunci",
+    count: 22,
+    percent: 52.4,
+    color: "from-rose-500 to-amber-500",
+    dotColor: "bg-rose-400",
+    textColor: "text-rose-400",
+    stroke: "#f43f5e",
+    strokeDasharray: "131.6 119.7",
+    strokeDashoffset: "0",
+  },
+  {
+    name: "Pending Konfirmasi",
+    desc: "Human-in-the-Loop SLA 10 mnt",
+    count: 12,
+    percent: 28.6,
+    color: "from-amber-500 to-yellow-500",
+    dotColor: "bg-amber-400",
+    textColor: "text-amber-400",
+    stroke: "#f59e0b",
+    strokeDasharray: "71.8 179.5",
+    strokeDashoffset: "-131.6",
+  },
+  {
+    name: "Ditolak / Afkir",
+    desc: "Disposisi scrap & tanur peleburan",
+    count: 8,
+    percent: 19.0,
+    color: "from-purple-500 to-indigo-500",
+    dotColor: "bg-purple-400",
+    textColor: "text-purple-400",
+    stroke: "#8b5cf6",
+    strokeDasharray: "47.9 203.4",
+    strokeDashoffset: "-203.4",
+  },
+];
+
+export function DashboardDefectDistribution({
+  disposition,
+  totalDefects: propTotalDefects,
+}: DashboardDefectDistributionProps) {
   const [filter, setFilter] = useState("Hari Ini");
 
-  const defectClasses = [
-    {
-      name: "Retak Permukaan",
-      desc: "Surface Cracks (Lot B)",
-      count: 18,
-      percent: 42.8,
-      color: "from-rose-500 to-amber-500",
-      dotColor: "bg-rose-400",
-      textColor: "text-rose-400",
-      stroke: "#f43f5e",
-      strokeDasharray: "107 144",
-      strokeDashoffset: "0",
-    },
-    {
-      name: "Lubang Gas",
-      desc: "Gas Porosity (Furnace)",
-      count: 12,
-      percent: 28.5,
-      color: "from-cyan-500 to-blue-500",
-      dotColor: "bg-cyan-400",
-      textColor: "text-cyan-400",
-      stroke: "#06b6d4",
-      strokeDasharray: "71 180",
-      strokeDashoffset: "-107",
-    },
-    {
-      name: "Inklusi Pasir",
-      desc: "Sand Inclusion (Molding)",
-      count: 8,
-      percent: 19.0,
-      color: "from-emerald-500 to-teal-500",
-      dotColor: "bg-emerald-400",
-      textColor: "text-emerald-400",
-      stroke: "#10b981",
-      strokeDasharray: "47 204",
-      strokeDashoffset: "-178",
-    },
-    {
-      name: "Penyusutan",
-      desc: "Shrinkage Cavity",
-      count: 4,
-      percent: 9.5,
-      color: "from-violet-500 to-purple-500",
-      dotColor: "bg-violet-400",
-      textColor: "text-violet-400",
-      stroke: "#8b5cf6",
-      strokeDasharray: "24 227",
-      strokeDashoffset: "-225",
-    },
-  ];
-
-  const totalDefects = defectClasses.reduce((acc, curr) => acc + curr.count, 0);
+  const items = disposition && disposition.length > 0 ? disposition : DEFAULT_DISPOSITION;
+  const total = propTotalDefects !== undefined ? propTotalDefects : items.reduce((acc, curr) => acc + curr.count, 0);
 
   return (
     <div className="rounded-3xl p-6 sm:p-7 bg-[#0b0e14]/80 backdrop-blur-md border border-white/[0.08] shadow-xl shadow-black/40 flex flex-col justify-between">
@@ -65,10 +75,10 @@ export function DashboardDefectDistribution() {
       <div className="flex items-center justify-between gap-3 mb-6">
         <div>
           <h3 className="font-display text-lg sm:text-xl font-bold text-white tracking-tight">
-            Distribusi Cacat
+            Disposisi Cacat
           </h3>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Proporsi 4 kelas anomali pengecoran
+            Status penanganan anomali defect terdeteksi
           </p>
         </div>
 
@@ -91,8 +101,8 @@ export function DashboardDefectDistribution() {
               strokeWidth="12"
               fill="transparent"
             />
-            {/* 4 Segment Arcs */}
-            {defectClasses.map((item, idx) => (
+            {/* 3 Disposition Segment Arcs */}
+            {items.map((item, idx) => (
               <circle
                 key={idx}
                 cx="50"
@@ -112,7 +122,7 @@ export function DashboardDefectDistribution() {
           {/* Center Readout Text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
             <span className="font-display text-3xl font-bold text-white tracking-tight">
-              {totalDefects}
+              {total}
             </span>
             <span className="font-mono text-[10px] uppercase text-zinc-400 tracking-wider">
               Total Cacat
@@ -123,7 +133,7 @@ export function DashboardDefectDistribution() {
 
       {/* Legend Row List with colored dots & counts */}
       <div className="mt-4 space-y-2.5 pt-4 border-t border-white/[0.06]">
-        {defectClasses.map((item, idx) => (
+        {items.map((item, idx) => (
           <div
             key={idx}
             className="flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.03] transition-colors"

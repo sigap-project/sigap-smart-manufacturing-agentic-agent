@@ -1,8 +1,10 @@
 export type DefectClass = 
-  | "sisik_sisa" 
-  | "warna_abnormal" 
-  | "luka_rebekan" 
-  | "lendir_berlebih";
+  | "DEFECT"
+  | "OK"
+  | "defect"
+  | "ok"
+  | "def_front"
+  | "ok_front";
 
 export type DefectSeverity = "low" | "medium" | "high";
 
