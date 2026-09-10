@@ -5,6 +5,8 @@ frontend:
       commands:
         - npm ci
         - npx prisma generate
+        - rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32 node_modules/onnxruntime-node/bin/napi-v6/linux/arm64
+        - rm -rf node_modules/ffmpeg-static
     build:
       commands:
         - env | grep -e DATABASE_URL -e SIGAP_ -e SAP_ -e INTERNAL_API_KEY -e EDGE_CAMERA_API_KEY >> .env.production
@@ -19,6 +21,11 @@ frontend:
     postBuild:
       commands:
         - rm -rf .next/cache
+        - rm -rf node_modules/ffmpeg-static
+        - rm -rf node_modules/prisma
+        - rm -rf node_modules/typescript
+        - rm -rf node_modules/@types
+        - rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32 node_modules/onnxruntime-node/bin/napi-v6/linux/arm64
   artifacts:
     baseDirectory: .next
     files:
