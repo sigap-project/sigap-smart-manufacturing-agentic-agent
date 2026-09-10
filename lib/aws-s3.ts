@@ -15,7 +15,7 @@ export async function uploadInspectionFrame(
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const sessionToken = process.env.AWS_SESSION_TOKEN;
-  const region = process.env.AWS_REGION || "ap-southeast-1";
+  const region = process.env.AWS_S3_REGION || process.env.AWS_REGION || "ap-southeast-2";
   const bucket = process.env.AWS_S3_BUCKET_NAME || "sigap-inspection-frames";
 
   const key = `inspections/${new Date().toISOString().split("T")[0]}/${fileName}`;
@@ -68,7 +68,7 @@ export async function getPresignedDownloadUrl(key: string, expiresInSeconds: num
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const sessionToken = process.env.AWS_SESSION_TOKEN;
-  const region = process.env.AWS_REGION || "ap-southeast-1";
+  const region = process.env.AWS_S3_REGION || process.env.AWS_REGION || "ap-southeast-2";
   const bucket = process.env.AWS_S3_BUCKET_NAME || "sigap-inspection-frames";
 
   if (!accessKeyId || !secretAccessKey || accessKeyId.startsWith("AKIAXXXX")) {
