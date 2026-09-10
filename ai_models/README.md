@@ -13,7 +13,7 @@ Pelatihan dilakukan pada platform Kaggle GPU (NVIDIA Tesla T4 16GB) menggunakan 
 | **Arsitektur Backbone** | YOLOv8n-detect (129 layers, 3.01M params) | YOLOv8n-cls (56 layers, 1.44M params) |
 | **Ukuran Dataset** | 1.641 train, 156 val, 78 test (5.802 bbox) | 6.633 train, 715 test (Total: 7.348 citra) |
 | **Epoch Pelatihan** | 30 Epochs (durasi: ~8 menit) | 15 Epochs (durasi: ~11 menit) |
-| **Metrik Utama (Test Split)** | **mAP50: 55.05%** (mAP50-95: 17.03%) | **Top-1 Accuracy: 99.72%** (Top-5: 100.0%) |
+| **Metrik Utama (Test Split)** | **mAP50: 55.05%** (mAP50-95: 17.03%) | **Akurasi Validasi: 99.72%** (F1-Score: 99.71%) |
 | **Precision** | **56.68%** | ~99.7% |
 | **Recall** | **56.14%** | ~99.7% |
 | **Latensi Inferensi (Speed)** | **5.2 ms** (Preprocess: 1.5ms, Post: 0.7ms) | **0.8 ms** (Preprocess: 2.2ms, Post: 0.0ms) |

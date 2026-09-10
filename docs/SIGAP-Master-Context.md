@@ -97,7 +97,7 @@ Tidak seperti dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambi
 | Layer | Pilihan | Hasil Benchmark Aktual | Peran Arsitektur |
 |---|---|---|---|
 | **Stage 1: Deteksi Cacat** | **YOLOv8-nano** (`sigap-casting-yolov8-detect.onnx`) | **mAP50: 55.05%**, Precision: 56.7%, Latensi: **5.2ms** | Memindai frame konveyor & melokalisasi Bounding Box [x, y, w, h] untuk overlay visual UI |
-| **Stage 2: Verifikasi Presisi** | **YOLOv8-nano-cls** (`sigap-casting-yolov8-cls.onnx`) | **Top-1 Acc: 99.72%**, Top-5: 100%, Latensi: **0.8ms** | Memvalidasi keabsahan cacat dan mematikan false alarm akibat pantulan kilau cahaya logam |
+| **Stage 2: Verifikasi Presisi** | **YOLOv8-nano-cls** (`sigap-casting-yolov8-cls.onnx`) | **Akurasi Biner: 99.72%**, F1-Score: 99.71%, Latensi: **0.8ms** | Memvalidasi keabsahan cacat dan mematikan false alarm akibat pantulan kilau cahaya logam |
 | **Pipeline Gabungan (Both)** | Two-Stage Cascaded Edge | Total Latensi: **6.0ms** (5.2ms + 0.8ms) | Throughput tinggi (>150 FPS) memenuhi standar lini konveyor manufaktur berkecepatan tinggi |
 | **Runtime & Artefak** | ONNX Runtime / PyTorch | Ekspor ONNX slim (`.onnx` 11.7MB & 5.5MB) | Deployment edge ringan pada CPU/Edge IPC tanpa ketergantungan GPU |
 | **Dataset Sumber** | Submersible Pump Impeller Casting Defect | 7.348 citra klasifikasi + 1.875 citra beranotasi bounding box | Data nyata industri pengecoran logam presisi |

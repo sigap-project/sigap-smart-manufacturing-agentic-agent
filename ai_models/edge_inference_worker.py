@@ -69,61 +69,68 @@ def letterbox(img: np.ndarray, target_shape=(640, 640)) -> Tuple[np.ndarray, flo
     return padded, scale, (left, top)
 
 
-def nms_boxes(boxes: np.ndarray, scores: np.ndarray, iou_thresh: float = 0.45) -> List[int]:
-    """Non-Maximum Suppression sederhana untuk deduplikasi bounding box."""
+def nms_boxes(boxes: np.ndarray, scores: np.ndarray, iou_thresh: float = 0.35, iom_thresh: float = 0.60) -> List[int]:
+    """
+    Non-Maximum Suppression dengan IoU dan Containment (IoM) Filtering.
+    Menghilangkan bounding box yang tertimpa/beririsan terlalu besar atau double-double (nested).
+    """
     if len(boxes) == 0:
         return []
     x1 = boxes[:, 0] - boxes[:, 2] / 2
     y1 = boxes[:, 1] - boxes[:, 3] / 2
     x2 = boxes[:, 0] + boxes[:, 2] / 2
     y2 = boxes[:, 1] + boxes[:, 3] / 2
-    areas = (x2 - x1) * (y2 - y1)
+    areas = np.maximum(0.0, x2 - x1) * np.maximum(0.0, y2 - y1)
     order = scores.argsort()[::-1]
 
     keep = []
     while order.size > 0:
         i = order[0]
         keep.append(i)
-        xx1 = np.maximum(x1[i], x1[order[1:]])
-        yy1 = np.maximum(y1[i], y1[order[1:]])
-        xx2 = np.minimum(x2[i], x2[order[1:]])
-        yy2 = np.minimum(y2[i], y2[order[1:]])
+
+        if order.size == 1:
+            break
+
+        remaining = order[1:]
+        xx1 = np.maximum(x1[i], x1[remaining])
+        yy1 = np.maximum(y1[i], y1[remaining])
+        xx2 = np.minimum(x2[i], x2[remaining])
+        yy2 = np.minimum(y2[i], y2[remaining])
 
         w = np.maximum(0.0, xx2 - xx1)
         h = np.maximum(0.0, yy2 - yy1)
         inter = w * h
-        ovr = inter / (areas[i] + areas[order[1:]] - inter + 1e-6)
 
-        inds = np.where(ovr <= iou_thresh)[0]
-        order = order[inds + 1]
+        # 1. Standard IoU
+        union = areas[i] + areas[remaining] - inter + 1e-6
+        ovr = inter / union
+
+        # 2. Containment / IoM: menekan nested double boxes
+        min_areas = np.minimum(areas[i], areas[remaining]) + 1e-6
+        containment = inter / min_areas
+
+        # Loloskan hanya yang TIDAK beririsan besar dan TIDAK nested
+        inds = np.where((ovr <= iou_thresh) & (containment <= iom_thresh))[0]
+        order = remaining[inds]
 
     return keep
 
 
 def diagnose_defect_type(bbox: List[float], img_w: int, img_h: int, conf: float) -> Tuple[str, str]:
     """
-    Mendiagnosis sub-kelas cacat casting logam berdasarkan karakteristik
-    geometri anomali bounding box (Aspect Ratio, Area Ratio, Lokasi).
+    Mendiagnosis tingkat keparahan (severity) anomali cacat casting logam (defect vs OK)
+    berdasarkan karakteristik geometri anomali bounding box dan confidence deteksi.
     """
     _, _, bw, bh = bbox
     area_ratio = (bw * bh) / (img_w * img_h + 1e-6)
-    aspect_ratio = bw / (bh + 1e-6)
 
-    # 1. Retak Permukaan: rasio pipih/memanjang
-    if aspect_ratio > 2.2 or aspect_ratio < 0.45:
-        return "retak_permukaan", "High"
-    # 2. Lubang Gas / Porositas: area kecil membulat
-    elif area_ratio < 0.025:
-        return "lubang_gas", "Medium"
-    # 3. Burr Berlebih: area besar di tepi
-    elif area_ratio > 0.12 and conf > 0.75:
-        return "burr_berlebih", "High"
-    # 4. Dimensi Cacat: anomali ukuran ekstrem
-    elif area_ratio > 0.20:
-        return "dimensi_cacat", "Critical"
-    # 5. Default: Anomali termal/warna
+    # Tingkat keparahan (severity) berdasarkan proporsi area & tingkat kepastian
+    if area_ratio > 0.15 or conf > 0.90:
+        return "defect", "Critical"
+    elif area_ratio > 0.05 or conf > 0.80:
+        return "defect", "High"
     else:
-        return "warna_abnormal", "High"
+        return "defect", "Medium"
 
 
 # ==============================================================================
@@ -192,7 +199,7 @@ class SigapEdgeWorker:
         if len(boxes) == 0:
             return [], [], t_lat
 
-        keep_idx = nms_boxes(boxes, scores, iou_thresh=0.45)
+        keep_idx = nms_boxes(boxes, scores, iou_thresh=0.35, iom_thresh=0.60)
         boxes = boxes[keep_idx]
         scores = scores[keep_idx]
 
