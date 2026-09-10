@@ -28,28 +28,21 @@ export interface DefectReasoningInput {
 export async function deduceDefectReasoning(
   input: DefectReasoningInput
 ): Promise<BedrockDeductionResult> {
+  // Support both new Bedrock API Key (ABSK... Bearer Token) and traditional IAM credentials
+  const bedrockApiKey =
+    process.env.AWS_BEDROCK_API_KEY ||
+    process.env.AWS_BEARER_TOKEN_BEDROCK ||
+    (process.env.AWS_ACCESS_KEY_ID?.startsWith("ABSK")
+      ? process.env.AWS_ACCESS_KEY_ID
+      : undefined);
+
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const region = process.env.AWS_REGION || "ap-southeast-1";
-  // Default: Amazon Nova Lite (AWS Native Foundation Model, ~16x cheaper & ultra-low latency for industrial deductions)
-  // Fallbacks via env: "anthropic.claude-3-5-haiku-20241022-v1:0" | "meta.llama3-8b-instruct-v1:0"
-  const modelId = process.env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
+  const sessionToken = process.env.AWS_SESSION_TOKEN;
+  const region = process.env.AWS_REGION || "us-east-1";
+  const modelId = process.env.AWS_BEDROCK_MODEL_ID;
 
-  // Fallback if AWS credentials are not configured in current environment
-  if (!accessKeyId || !secretAccessKey || accessKeyId.startsWith("AKIAXXXX")) {
-    return generateDeterministicFallback(input);
-  }
-
-  try {
-    const client = new BedrockRuntimeClient({
-      region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    });
-
-    const systemPrompt = `Anda adalah Manufacturing Quality AI Agent untuk platform SIGAP.
+  const systemPrompt = `Anda adalah Manufacturing Quality AI Agent untuk platform SIGAP.
 Tugas Anda: Analisis inspeksi optik komponen impeller casting, tentukan korelasi cacat, hitung skor eskalasi resiko (0.0 - 1.0), dan tentukan tindakan ERP SAP.
 Output WAJIB berupa JSON murni tanpa markdown fence dengan format:
 {
@@ -66,7 +59,7 @@ Output WAJIB berupa JSON murni tanpa markdown fence dengan format:
   ]
 }`;
 
-    const userMessage = `Data Inspeksi:
+  const userMessage = `Data Inspeksi:
 - Lot ID: ${input.lotId}
 - Produk: ${input.productType}
 - Jenis Cacat: ${input.defectClass}
@@ -74,35 +67,97 @@ Output WAJIB berupa JSON murni tanpa markdown fence dengan format:
 - Supplier: ${input.supplierName || "PT Mitra Logam Presisi"}
 - Frekuensi Cacat dalam Window: ${input.defectCountInWindow || 1}`;
 
-    const command = new ConverseCommand({
-      modelId,
-      system: [{ text: systemPrompt }],
-      messages: [{ role: "user", content: [{ text: userMessage }] }],
-      inferenceConfig: {
-        maxTokens: 1000,
-        temperature: 0.1,
-      },
-    });
+  // MODE 1: Amazon Bedrock Long-Term API Key (Bearer Token, prefix ABSK...) via Bedrock Mantle
+  if (bedrockApiKey && bedrockApiKey.startsWith("ABSK") && !bedrockApiKey.startsWith("ABSKXXXX")) {
+    try {
+      const mantleRegion = process.env.AWS_REGION || "us-east-1";
+      const mantleModel = modelId || "deepseek.v3.1";
 
-    const response = await client.send(command);
-    const rawContent = response.output?.message?.content?.[0]?.text || "{}";
-    const cleaned = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
+      const res = await fetch(`https://bedrock-mantle.${mantleRegion}.api.aws/v1/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${bedrockApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: mantleModel,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0.1,
+          max_tokens: 800,
+        }),
+      });
 
-    return {
-      escalationScore: typeof parsed.escalationScore === "number" ? parsed.escalationScore : 0.85,
-      recommendation: parsed.recommendation || "quarantine",
-      rootCause: parsed.rootCause || `Anomali ${input.defectClass} pada komponen casting`,
-      sapActions: Array.isArray(parsed.sapActions) ? parsed.sapActions : ["SAP_QM"],
-      reasoningSteps: Array.isArray(parsed.reasoningSteps)
-        ? parsed.reasoningSteps
-        : generateDeterministicFallback(input).reasoningSteps,
-      source: "aws-bedrock",
-    };
-  } catch (error) {
-    console.error("[AWS Bedrock Error] Falling back to deterministic reasoning:", error);
-    return generateDeterministicFallback(input);
+      if (res.ok) {
+        const json = await res.json();
+        const rawContent = json.choices?.[0]?.message?.content || "{}";
+        const cleaned = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+
+        return {
+          escalationScore: typeof parsed.escalationScore === "number" ? parsed.escalationScore : 0.85,
+          recommendation: parsed.recommendation || "quarantine",
+          rootCause: parsed.rootCause || `Anomali ${input.defectClass} pada komponen casting`,
+          sapActions: Array.isArray(parsed.sapActions) ? parsed.sapActions : ["SAP_QM"],
+          reasoningSteps: Array.isArray(parsed.reasoningSteps)
+            ? parsed.reasoningSteps
+            : generateDeterministicFallback(input).reasoningSteps,
+          source: "aws-bedrock",
+        };
+      } else {
+        console.warn(`[Bedrock Mantle API] HTTP ${res.status}: ${await res.text()}`);
+      }
+    } catch (apiError) {
+      console.error("[Bedrock Mantle Error] Falling back:", apiError);
+    }
   }
+
+  // MODE 2: AWS IAM SigV4 Credentials (Access Key & Secret Key) via AWS SDK ConverseCommand
+  if (accessKeyId && secretAccessKey && !accessKeyId.startsWith("AKIAXXXX") && !accessKeyId.startsWith("ABSK")) {
+    try {
+      const client = new BedrockRuntimeClient({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+          ...(sessionToken ? { sessionToken } : {}),
+        },
+      });
+
+      const command = new ConverseCommand({
+        modelId: modelId || "amazon.nova-lite-v1:0",
+        system: [{ text: systemPrompt }],
+        messages: [{ role: "user", content: [{ text: userMessage }] }],
+        inferenceConfig: {
+          maxTokens: 1000,
+          temperature: 0.1,
+        },
+      });
+
+      const response = await client.send(command);
+      const rawContent = response.output?.message?.content?.[0]?.text || "{}";
+      const cleaned = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+
+      return {
+        escalationScore: typeof parsed.escalationScore === "number" ? parsed.escalationScore : 0.85,
+        recommendation: parsed.recommendation || "quarantine",
+        rootCause: parsed.rootCause || `Anomali ${input.defectClass} pada komponen casting`,
+        sapActions: Array.isArray(parsed.sapActions) ? parsed.sapActions : ["SAP_QM"],
+        reasoningSteps: Array.isArray(parsed.reasoningSteps)
+          ? parsed.reasoningSteps
+          : generateDeterministicFallback(input).reasoningSteps,
+        source: "aws-bedrock",
+      };
+    } catch (error) {
+      console.error("[AWS Bedrock SDK Error] Falling back to deterministic reasoning:", error);
+    }
+  }
+
+  // MODE 3: Fallback Deterministic Engine
+  return generateDeterministicFallback(input);
 }
 
 function generateDeterministicFallback(input: DefectReasoningInput): BedrockDeductionResult {
