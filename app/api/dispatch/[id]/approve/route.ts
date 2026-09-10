@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { findDispatchById, formatDispatchRecord } from "../../helper";
-import { emitSigapEvent } from "@/lib/events";
+import { sigapStore } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
 
 // -----------------------------------------------------------------------------
 // PATCH /api/dispatch/[id]/approve
-// Menyetujui tiket dispatch yang berstatus Pending Approval:
-// - status: "Dispatched"
-// - approvedBy: nama supervisor peninjau
-// - dispatchedAt: waktu persetujuan
-// - sapResponse: simulasi penerimaan berhasil dari SAP Gateway
+// Menyetujui tiket dispatch yang berstatus Pending Approval menjadi Dispatched
 // -----------------------------------------------------------------------------
 export async function PATCH(
   request: NextRequest,
@@ -17,18 +13,6 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-
-    const existingDispatch = await findDispatchById(id);
-
-    if (!existingDispatch) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Tiket dispatch dengan ID '${id}' tidak ditemukan.`,
-        },
-        { status: 404 }
-      );
-    }
 
     let approvedBy = "Budi Pratama (QC Supervisor)";
     try {
@@ -40,42 +24,29 @@ export async function PATCH(
       // Body opsional jika hanya panggilan PATCH kosong
     }
 
-    const updatedDispatch = await prisma.dispatchRecord.update({
-      where: { id: existingDispatch.id },
-      data: {
-        status: "Dispatched",
-        approvedBy,
-        dispatchedAt: new Date(),
-        sapResponse: {
-          status: "APPROVED_AND_SYNCED",
-          code: 200,
-          message: `Tiket disetujui oleh ${approvedBy} dan diteruskan ke SAP Gateway.`,
-          timestamp: new Date().toISOString(),
+    const updated = await sigapStore.approveDispatch(id, approvedBy);
+
+    if (!updated) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Tiket dispatch dengan ID '${id}' tidak ditemukan.`,
         },
-      },
-      include: {
-        batch: true,
-      },
-    });
-
-    const formatted = formatDispatchRecord(updatedDispatch);
-
-    // Broadcast status tiket dispatch yang disetujui ke seluruh klien SSE
-    emitSigapEvent("dispatch:status_changed", formatted);
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Tiket dispatch ${updatedDispatch.id} berhasil DISETUJUI dan DIKIRIM ke modul ${updatedDispatch.consumer}.`,
-      data: formatted,
+      message: `Tiket ${updated.id} (${updated.consumer}) disetujui & berstatus Dispatched.`,
+      data: updated,
     });
   } catch (error) {
+    console.error("[PATCH /api/dispatch/[id]/approve Error]:", error);
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Gagal memproses persetujuan tiket dispatch",
+        error: error instanceof Error ? error.message : "Gagal menyetujui tiket dispatch",
       },
       { status: 500 }
     );

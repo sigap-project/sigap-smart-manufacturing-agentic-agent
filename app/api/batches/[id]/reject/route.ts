@@ -1,73 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { findBatchByIdOrLot, formatBatchRecord } from "../../helper";
-import { emitSigapEvent } from "@/lib/events";
+import { sigapStore } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
 
 // -----------------------------------------------------------------------------
 // PATCH /api/batches/[id]/reject
-// Menolak batch (Human Rejection / Escalation):
-// - status: "rejected"
-// - pendingApproval: false
-// - storageZone: "quarantine"
-// - slaSeconds: null
+// Menolak batch menjadi status 'rejected' dan mengisolasi ke Zona Karantina
 // -----------------------------------------------------------------------------
 export async function PATCH(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    const existingBatch = await findBatchByIdOrLot(id);
-
-    if (!existingBatch) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Batch dengan ID atau Lot '${id}' tidak ditemukan.`,
-        },
-        { status: 404 }
-      );
-    }
-
-    const updatedBatch = await prisma.batch.update({
-      where: { id: existingBatch.id },
-      data: {
-        status: "rejected",
-        pendingApproval: false,
-        storageZone: "quarantine",
-        slaSeconds: null,
-        escalationScore: Math.max(existingBatch.escalationScore ?? 0, 0.85),
-      },
-      include: {
-        inspections: {
-          orderBy: { timestamp: "desc" },
-          take: 20,
-        },
-        dispatchRecords: {
-          orderBy: { dispatchedAt: "desc" },
-        },
-      },
-    });
-
-    const formatted = formatBatchRecord(updatedBatch);
-
-    // Broadcast perubahan status batch ke seluruh klien SSE
-    emitSigapEvent("batch:status_changed", formatted);
+    const updated = await sigapStore.rejectBatch(id);
 
     return NextResponse.json({
       success: true,
-      message: `Batch ${updatedBatch.lotId} DITOLAK dan dialihkan ke Zona Karantina. Tiket notifikasi mutu diteruskan ke SAP QM.`,
-      data: formatted,
+      message: `Batch ${updated.lotId || updated.id} DITOLAK dan dialihkan ke Zona Karantina.`,
+      data: updated,
     });
   } catch (error) {
+    console.error("[PATCH /api/batches/[id]/reject Error]:", error);
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Gagal memproses penolakan batch",
+        error: error instanceof Error ? error.message : "Gagal memproses penolakan batch",
       },
       { status: 500 }
     );

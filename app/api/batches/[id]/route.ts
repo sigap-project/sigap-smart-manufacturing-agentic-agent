@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findBatchByIdOrLot, formatBatchRecord } from "../helper";
+import { sigapStore } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
 
 // -----------------------------------------------------------------------------
 // GET /api/batches/[id]
-// Mengambil detail 1 rekaman batch beserta riwayat inspeksi & dispatch records.
-// Parameter [id] dapat berupa CUID database maupun lotId (e.g. #B-2026-0730)
+// Mengambil rincian detail 1 batch berdasarkan CUID database maupun lotId (#B-2026-0730)
 // -----------------------------------------------------------------------------
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    const batch = await findBatchByIdOrLot(id);
+    const batch = await sigapStore.getBatchById(id);
 
     if (!batch) {
       return NextResponse.json(
@@ -27,16 +27,14 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: formatBatchRecord(batch),
+      data: batch,
     });
   } catch (error) {
+    console.error("[GET /api/batches/[id] Error]:", error);
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Gagal mengambil data detail batch",
+        error: error instanceof Error ? error.message : "Gagal mengambil data detail batch",
       },
       { status: 500 }
     );
