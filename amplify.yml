@@ -15,6 +15,10 @@ frontend:
         - echo "AWS_S3_BUCKET_NAME=${SIGAP_S3_BUCKET_NAME:-sigap-inspection-frames}" >> .env.production
         - echo "AWS_S3_REGION=${SIGAP_S3_REGION:-ap-southeast-2}" >> .env.production
         - npm run build
+        - rm -rf .next/cache
+    postBuild:
+      commands:
+        - rm -rf .next/cache
   artifacts:
     baseDirectory: .next
     files:
@@ -22,4 +26,3 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
-      - .next/cache/**/*
