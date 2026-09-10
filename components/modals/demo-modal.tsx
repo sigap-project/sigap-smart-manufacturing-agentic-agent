@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import {
   X,
@@ -13,6 +14,8 @@ import {
   ShieldCheck,
   Zap,
   ArrowRight,
+  Camera,
+  Upload,
 } from "lucide-react";
 
 interface DemoModalProps {
@@ -121,6 +124,24 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-6">
+          {/* Quick Nav Banner to Full Inspection Station */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+            <div className="flex items-center gap-2.5 text-emerald-300">
+              <Camera className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>
+                Ingin <strong>Upload File Gambar</strong> sendiri atau aktifkan <strong>Live Webcam</strong>?
+              </span>
+            </div>
+            <Link
+              href="/dashboard/inspection"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-all shadow-md shadow-emerald-500/20 shrink-0"
+            >
+              <span>Buka Stasiun Inspeksi</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
           {/* Autonomy Mode Switcher (Core Differentiator from Master Context) */}
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
             <div className="flex items-center gap-2">
@@ -318,14 +339,25 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-white/[0.08] bg-[#07090f] flex items-center justify-between text-xs text-zinc-400">
+        <div className="px-6 py-3.5 border-t border-white/[0.08] bg-[#07090f] flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-400">
           <span>AI Agentic Hackathon SOKRATES × BINUS Alam Sutera 2026</span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-zinc-200 transition-colors"
-          >
-            Tutup Simulasi
-          </button>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/dashboard/inspection"
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 font-semibold flex items-center gap-1.5 transition-all text-xs"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Stasiun Upload &amp; Kamera</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-zinc-200 transition-colors"
+            >
+              Tutup Simulasi
+            </button>
+          </div>
         </div>
       </div>
     </div>
