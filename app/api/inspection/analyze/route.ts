@@ -4,6 +4,7 @@ import { deduceDefectReasoning } from "@/lib/aws-bedrock";
 import { uploadInspectionFrame } from "@/lib/aws-s3";
 import { dispatchToSap, SapConsumer } from "@/lib/sap-client";
 import { sigapStore } from "@/lib/store";
+import { runOnnxInspection } from "@/lib/onnx-inference";
 
 export const dynamic = "force-dynamic";
 
@@ -60,17 +61,36 @@ export async function POST(request: NextRequest) {
       confidence: number;
     }> = [];
 
-    if (testType === "defect") {
+    let imageBuffer: Buffer | null = null;
+    let imageMimeType = "image/jpeg";
+
+    if (imageBase64 && imageBase64.startsWith("data:")) {
+      const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches[2]) {
+        imageBuffer = Buffer.from(matches[2], "base64");
+        imageMimeType = matches[1] || "image/jpeg";
+      }
+    }
+
+    if (imageBuffer) {
+      // 1A. REAL YOLOv8 ONNX RUNTIME INFERENCE (Casting Classification & Detection)
+      const onnxRes = await runOnnxInspection(imageBuffer, imageMimeType);
+      isDefect = onnxRes.isDefect;
+      defectClass = onnxRes.defectClass;
+      confidence = onnxRes.confidence;
+      severity = onnxRes.severity;
+      boundingBoxes = onnxRes.boundingBoxes;
+    } else if (testType === "defect") {
       isDefect = true;
       defectClass = "defect";
       confidence = 96.4;
       severity = "High";
       boundingBoxes = [
         {
-          x: 12,
-          y: 10,
-          width: 26,
-          height: 28,
+          x: 14.4,
+          y: 10.9,
+          width: 24.5,
+          height: 26.0,
           label: "defect",
           confidence: 96.4,
         },
@@ -80,66 +100,19 @@ export async function POST(request: NextRequest) {
       defectClass = "ok";
       confidence = 99.4;
       severity = "None";
-      boundingBoxes = [
-        {
-          x: 10,
-          y: 10,
-          width: 80,
-          height: 80,
-          label: "ok",
-          confidence: 99.4,
-        },
-      ];
-    } else if (imageBase64) {
-      // Jika upload citra kustom (Webcam atau File):
-      // Analisis heuristic berdasarkan payload citra
-      const isNamedDefect =
-        typeof testType === "string" && testType.toLowerCase().includes("defect");
-
-      // Default jika diunggah dari kamera atau file: evaluasi deteksi
-      isDefect = isNamedDefect || (testType !== "ok" && Math.random() > 0.35);
-
-      if (isDefect) {
-        defectClass = "defect";
-        confidence = Number((93.5 + Math.random() * 5.0).toFixed(1));
-        severity = confidence > 96.0 ? "Critical" : "High";
-        boundingBoxes = [
-          {
-            x: Number((12 + Math.random() * 6).toFixed(1)),
-            y: Number((10 + Math.random() * 6).toFixed(1)),
-            width: Number((24 + Math.random() * 4).toFixed(1)),
-            height: Number((24 + Math.random() * 4).toFixed(1)),
-            label: "defect",
-            confidence,
-          },
-        ];
-      } else {
-        defectClass = "ok";
-        confidence = Number((98.2 + Math.random() * 1.5).toFixed(1));
-        severity = "None";
-        boundingBoxes = [
-          {
-            x: 10,
-            y: 10,
-            width: 80,
-            height: 80,
-            label: "ok",
-            confidence,
-          },
-        ];
-      }
+      boundingBoxes = [];
     } else {
       // Fallback default
       isDefect = true;
-      defectClass = "Cacat Pengecoran (Defect)";
+      defectClass = "defect";
       confidence = 95.8;
       severity = "High";
       boundingBoxes = [
         {
-          x: 12,
-          y: 10,
-          width: 26,
-          height: 28,
+          x: 14.4,
+          y: 10.9,
+          width: 24.5,
+          height: 26.0,
           label: "defect",
           confidence: 95.8,
         },
