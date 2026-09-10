@@ -58,12 +58,12 @@ export function AgentTelemetryCard({ onOpenDemo }: AgentTelemetryCardProps) {
     detect: {
       title: "YOLOv8-Nano Live Optical Scan",
       description:
-        "Kamera piramid optik Station #01 memindai komponen impeller casting lot #B-2026-0730. Anomali 'defect' terdeteksi dalam 5.2ms.",
+        "Kamera piramid optik Station #01 memindai komponen impeller casting lot #B-2026-0730. Anomali 'defect' terdeteksi dalam 5.3ms.",
       badge: "Frame #1428 • Scan Passed",
       badgeColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/25",
       telemetry: [
-        { label: "Confidence", value: "94.2%", highlight: true },
-        { label: "Latency", value: "5.2ms" },
+        { label: "Confidence", value: "95.0%", highlight: true },
+        { label: "Latency", value: "5.3ms" },
         { label: "Status Deteksi", value: "defect" },
       ],
     },

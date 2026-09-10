@@ -126,15 +126,15 @@ export function HeroTypography({ onOpenDemo }: HeroTypographyProps) {
         <div>
           <div className="flex items-center gap-2">
             <span className="font-display text-sm font-semibold text-white tracking-normal">
-              99.7% Akurasi Validasi
+              99.72% Akurasi Validasi
             </span>
             <span className="text-zinc-600">•</span>
             <span className="font-mono text-xs text-emerald-400 font-medium">
-              &lt;6ms Two-Stage YOLOv8
+              80.4% Precision • 5.3ms YOLOv8
             </span>
           </div>
           <p className="font-sans text-xs text-zinc-400 mt-0.5">
-            Teruji pada dataset inspeksi biner (Defect vs OK) pengecoran logam SME
+            0% Defect Escape Rate • Teruji pada dataset biner (Defect vs OK) pengecoran logam SME
           </p>
         </div>
       </motion.div>
