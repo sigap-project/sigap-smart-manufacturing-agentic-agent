@@ -7,7 +7,13 @@ frontend:
         - npx prisma generate
     build:
       commands:
-        - env | grep -e DATABASE_URL -e AWS_ -e SAP_ -e INTERNAL_API_KEY -e EDGE_CAMERA_API_KEY >> .env.production
+        - env | grep -e DATABASE_URL -e SIGAP_ -e SAP_ -e INTERNAL_API_KEY -e EDGE_CAMERA_API_KEY >> .env.production
+        - echo "AWS_ACCESS_KEY_ID=$SIGAP_AWS_ACCESS_KEY_ID" >> .env.production
+        - echo "AWS_SECRET_ACCESS_KEY=$SIGAP_AWS_SECRET_ACCESS_KEY" >> .env.production
+        - echo "AWS_REGION=${SIGAP_AWS_REGION:-us-east-1}" >> .env.production
+        - echo "AWS_BEDROCK_MODEL_ID=${SIGAP_BEDROCK_MODEL_ID:-amazon.nova-lite-v1:0}" >> .env.production
+        - echo "AWS_S3_BUCKET_NAME=${SIGAP_S3_BUCKET_NAME:-sigap-inspection-frames}" >> .env.production
+        - echo "AWS_S3_REGION=${SIGAP_S3_REGION:-ap-southeast-2}" >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next

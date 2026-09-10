@@ -36,11 +36,11 @@ function isOkOutcome(input: DefectReasoningInput): boolean {
 export async function deduceDefectReasoning(
   input: DefectReasoningInput
 ): Promise<BedrockDeductionResult> {
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const sessionToken = process.env.AWS_SESSION_TOKEN;
-  const region = process.env.AWS_REGION || "us-east-1";
-  const modelId = process.env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
+  const accessKeyId = process.env.SIGAP_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.SIGAP_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  const sessionToken = process.env.SIGAP_AWS_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN;
+  const region = process.env.SIGAP_AWS_REGION || process.env.AWS_REGION || "us-east-1";
+  const modelId = process.env.SIGAP_BEDROCK_MODEL_ID || process.env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
 
   const isOk = isOkOutcome(input);
   const outcomeLabel = isOk ? "OK (Normal / Lolos QC)" : "DEFECT (Cacat Terdeteksi)";

@@ -12,11 +12,11 @@ export async function uploadInspectionFrame(
   fileName: string,
   contentType: string = "image/jpeg"
 ): Promise<S3UploadResult> {
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const sessionToken = process.env.AWS_SESSION_TOKEN;
-  const region = process.env.AWS_S3_REGION || process.env.AWS_REGION || "ap-southeast-2";
-  const bucket = process.env.AWS_S3_BUCKET_NAME || "sigap-inspection-frames";
+  const accessKeyId = process.env.SIGAP_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.SIGAP_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  const sessionToken = process.env.SIGAP_AWS_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN;
+  const region = process.env.SIGAP_S3_REGION || process.env.AWS_S3_REGION || process.env.SIGAP_AWS_REGION || process.env.AWS_REGION || "ap-southeast-2";
+  const bucket = process.env.SIGAP_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME || "sigap-inspection-frames";
 
   const key = `inspections/${new Date().toISOString().split("T")[0]}/${fileName}`;
 
@@ -65,11 +65,11 @@ export async function uploadInspectionFrame(
 }
 
 export async function getPresignedDownloadUrl(key: string, expiresInSeconds: number = 3600): Promise<string> {
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const sessionToken = process.env.AWS_SESSION_TOKEN;
-  const region = process.env.AWS_S3_REGION || process.env.AWS_REGION || "ap-southeast-2";
-  const bucket = process.env.AWS_S3_BUCKET_NAME || "sigap-inspection-frames";
+  const accessKeyId = process.env.SIGAP_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.SIGAP_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  const sessionToken = process.env.SIGAP_AWS_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN;
+  const region = process.env.SIGAP_S3_REGION || process.env.AWS_S3_REGION || process.env.SIGAP_AWS_REGION || process.env.AWS_REGION || "ap-southeast-2";
+  const bucket = process.env.SIGAP_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME || "sigap-inspection-frames";
 
   if (!accessKeyId || !secretAccessKey || accessKeyId.startsWith("AKIAXXXX")) {
     return `/${key}`;
