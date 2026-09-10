@@ -60,110 +60,115 @@ async function main() {
   console.log("📦 2/4 Seeding 5 Sample Batches (varied statuses)...");
 
   // Batch 1: Held (Quarantine Zone, Pattern Confirmed)
+  const b1Data = {
+    id: "batch-b-2026-0730",
+    lotId: "#B-2026-0730",
+    productType: "Bracket Motor A7",
+    supplierName: "PT Krakatau Scrap Ind.",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspectionCount: 500,
+    defectCount: 14,
+    defectTypes: ["defect"],
+    escalationScore: 0.74,
+    status: "held",
+    storageZone: "quarantine",
+    pendingApproval: true,
+    slaSeconds: 780,
+    defectSummary: "3 anomali cacat (defect) berulang dalam 8 menit terdeteksi pada area casting.",
+  };
   const batch1 = await prisma.batch.upsert({
     where: { lotId: "#B-2026-0730" },
-    update: {},
-    create: {
-      id: "batch-b-2026-0730",
-      lotId: "#B-2026-0730",
-      productType: "Bracket Motor A7",
-      supplierName: "PT Krakatau Scrap Ind.",
-      line: "Line #01 (Conveyor Cam-01)",
-      inspectionCount: 500,
-      defectCount: 14,
-      defectTypes: ["Warna Abnormal", "Retak Mikro"],
-      escalationScore: 0.74,
-      status: "held",
-      storageZone: "quarantine",
-      pendingApproval: true,
-      slaSeconds: 780,
-      defectSummary: "Warna abnormal berulang (94.2%) dan 3 micro-crack pada base mounting.",
-    },
+    update: b1Data,
+    create: b1Data,
   });
 
-  // Batch 2: Pending Review (Quarantine Zone, Gas Porosity)
+  // Batch 2: Pending Review (Quarantine Zone, Elevated Risk)
+  const b2Data = {
+    id: "batch-b-2026-0731",
+    lotId: "#B-2026-0731",
+    productType: "Gearbox Housing C2",
+    supplierName: "CV Logam Mandiri",
+    line: "Line #02 (Conveyor Cam-02)",
+    inspectionCount: 320,
+    defectCount: 5,
+    defectTypes: ["defect"],
+    escalationScore: 0.62,
+    status: "pending_review",
+    storageZone: "quarantine",
+    pendingApproval: true,
+    slaSeconds: 420,
+    defectSummary: "Anomali cacat (defect) terdeteksi berulang melebihi ambang batas toleransi.",
+  };
   const batch2 = await prisma.batch.upsert({
     where: { lotId: "#B-2026-0731" },
-    update: {},
-    create: {
-      id: "batch-b-2026-0731",
-      lotId: "#B-2026-0731",
-      productType: "Gearbox Housing C2",
-      supplierName: "CV Logam Mandiri",
-      line: "Line #02 (Conveyor Cam-02)",
-      inspectionCount: 320,
-      defectCount: 5,
-      defectTypes: ["Lubang Gas (Porosity)"],
-      escalationScore: 0.62,
-      status: "pending_review",
-      storageZone: "quarantine",
-      pendingApproval: true,
-      slaSeconds: 420,
-      defectSummary: "Porositas permukaan melampaui toleransi 1.2mm pada area seal flange.",
-    },
+    update: b2Data,
+    create: b2Data,
   });
 
-  // Batch 3: Pending Review (Standard Zone, Burr issue)
+  // Batch 3: Pending Review (Standard Zone, Sporadic defect)
+  const b3Data = {
+    id: "batch-b-2026-0732",
+    lotId: "#B-2026-0732",
+    productType: "Flange Pinion X1",
+    supplierName: "PT Baja Presisi Prima",
+    line: "Line #01 (Conveyor Cam-01)",
+    inspectionCount: 800,
+    defectCount: 3,
+    defectTypes: ["defect"],
+    escalationScore: 0.45,
+    status: "pending_review",
+    storageZone: "standard",
+    pendingApproval: true,
+    slaSeconds: 1140,
+    defectSummary: "Anomali cacat (defect) terdeteksi sporadis, butuh konfirmasi visual operator.",
+  };
   const batch3 = await prisma.batch.upsert({
     where: { lotId: "#B-2026-0732" },
-    update: {},
-    create: {
-      id: "batch-b-2026-0732",
-      lotId: "#B-2026-0732",
-      productType: "Flange Pinion X1",
-      supplierName: "PT Baja Presisi Prima",
-      line: "Line #01 (Conveyor Cam-01)",
-      inspectionCount: 800,
-      defectCount: 3,
-      defectTypes: ["Burr Berlebih"],
-      escalationScore: 0.45,
-      status: "pending_review",
-      storageZone: "standard",
-      pendingApproval: true,
-      slaSeconds: 1140,
-      defectSummary: "Burr pada ulir baut terdeteksi sporadis, butuh konfirmasi visual operator.",
-    },
+    update: b3Data,
+    create: b3Data,
   });
 
   // Batch 4: Released (Standard Zone, Clean passed)
+  const b4Data = {
+    id: "batch-b-2026-0728",
+    lotId: "#B-2026-0728",
+    productType: "Rotor Casing D4",
+    supplierName: "PT Cipta Logam Nusantara",
+    line: "Line #03 (Conveyor Cam-03)",
+    inspectionCount: 650,
+    defectCount: 0,
+    defectTypes: [],
+    escalationScore: 0.08,
+    status: "released",
+    storageZone: "standard",
+    pendingApproval: false,
+  };
   const batch4 = await prisma.batch.upsert({
     where: { lotId: "#B-2026-0728" },
-    update: {},
-    create: {
-      id: "batch-b-2026-0728",
-      lotId: "#B-2026-0728",
-      productType: "Rotor Casing D4",
-      supplierName: "PT Cipta Logam Nusantara",
-      line: "Line #03 (Conveyor Cam-03)",
-      inspectionCount: 650,
-      defectCount: 0,
-      defectTypes: [],
-      escalationScore: 0.08,
-      status: "released",
-      storageZone: "standard",
-      pendingApproval: false,
-    },
+    update: b4Data,
+    create: b4Data,
   });
 
   // Batch 5: Rejected (Scrap disposition, Fatal defect)
+  const b5Data = {
+    id: "batch-b-2026-0725",
+    lotId: "#B-2026-0725",
+    productType: "Shaft Coupling 40mm",
+    supplierName: "CV Mega Teknik",
+    line: "Line #02 (Conveyor Cam-02)",
+    inspectionCount: 400,
+    defectCount: 38,
+    defectTypes: ["defect"],
+    escalationScore: 0.95,
+    status: "rejected",
+    storageZone: "standard",
+    pendingApproval: false,
+    defectSummary: "Akumulasi cacat (38 defect) melampaui batas kritis toleransi ISO 286.",
+  };
   const batch5 = await prisma.batch.upsert({
     where: { lotId: "#B-2026-0725" },
-    update: {},
-    create: {
-      id: "batch-b-2026-0725",
-      lotId: "#B-2026-0725",
-      productType: "Shaft Coupling 40mm",
-      supplierName: "CV Mega Teknik",
-      line: "Line #02 (Conveyor Cam-02)",
-      inspectionCount: 400,
-      defectCount: 38,
-      defectTypes: ["Dimensi Out-of-Spec"],
-      escalationScore: 0.95,
-      status: "rejected",
-      storageZone: "standard",
-      pendingApproval: false,
-      defectSummary: "Penyimpangan diameter poros fatal -1.4mm di luar toleransi ISO 286.",
-    },
+    update: b5Data,
+    create: b5Data,
   });
 
   // ===========================================================================
@@ -177,13 +182,13 @@ async function main() {
       batchId: batch1.id,
       timestamp: new Date("2026-09-08T14:32:10Z"),
       defectDetected: true,
-      defectClass: "warna_abnormal",
+      defectClass: "defect",
       confidence: 94.2,
       severity: "High",
       status: "Ditahan",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "YOLOv8-Nano Inference", detail: "Cacat diskolorasi terdeteksi koordinat X:524 Y:312 (94.2%).", latency: "78ms" },
-        { step: "02", phase: "MEMORY", title: "Bedrock Memory Analysis", detail: "3 anomali warna abnormal berulang dalam 8 menit.", latency: "124ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat casting (defect) terdeteksi koordinat X:524 Y:312 (94.2%).", latency: "78ms" },
+        { step: "02", phase: "MEMORY", title: "Bedrock Memory Analysis", detail: "3 anomali cacat (defect) berulang dalam 8 menit.", latency: "124ms" },
         { step: "03", phase: "FORMULA", title: "Escalation Score Calculation", detail: "Kalkulasi formula menghasilkan nilai 0.74.", latency: "12ms" },
         { step: "04", phase: "DECISION", title: "Autonomous Decision", detail: "Ambang batas 0.70 terlampaui (Level 3). Tahan lot ke karantina.", latency: "45ms" },
         { step: "05", phase: "DISPATCH", title: "SAP QM Integration", detail: "Tiket notifikasi mutu QM-NOTIF-98214 terbit otomatis.", latency: "180ms" },
@@ -199,7 +204,7 @@ async function main() {
       severity: "None",
       status: "Lolos QC",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "YOLOv8-Nano Inference", detail: "Permukaan casting bersih sesuai baseline CAD.", latency: "76ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Permukaan casting bersih sesuai baseline CAD (OK).", latency: "76ms" },
         { step: "02", phase: "DECISION", title: "Passed", detail: "Confidence 99.1% tanpa cacat.", latency: "15ms" },
       ],
     },
@@ -208,12 +213,12 @@ async function main() {
       batchId: batch2.id,
       timestamp: new Date("2026-09-08T14:14:22Z"),
       defectDetected: true,
-      defectClass: "lubang_gas",
+      defectClass: "defect",
       confidence: 88.5,
       severity: "Medium",
       status: "Pending Review",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "YOLOv8-Nano Inference", detail: "Porositas 1.4mm terdeteksi pada area seal flange.", latency: "82ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat casting (defect) terdeteksi pada area seal flange.", latency: "82ms" },
         { step: "02", phase: "FORMULA", title: "Formula Score", detail: "Skor 0.62 (Elevated Risk). Alihkan ke antrean supervisor.", latency: "14ms" },
       ],
     },
@@ -222,12 +227,12 @@ async function main() {
       batchId: batch1.id,
       timestamp: new Date("2026-09-08T12:45:08Z"),
       defectDetected: true,
-      defectClass: "retak_permukaan",
+      defectClass: "defect",
       confidence: 96.8,
       severity: "Critical",
       status: "Ditahan",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Edge Contrast Analysis", detail: "Retakan mikro 6.2mm pada sambungan base.", latency: "79ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat struktural (defect) pada sambungan base.", latency: "79ms" },
         { step: "02", phase: "DECISION", title: "Safety Quarantine", detail: "Skor 0.88 memicu isolasi seketika.", latency: "32ms" },
       ],
     },
@@ -236,12 +241,12 @@ async function main() {
       batchId: batch5.id,
       timestamp: new Date("2026-09-08T11:30:45Z"),
       defectDetected: true,
-      defectClass: "dimensi_cacat",
+      defectClass: "defect",
       confidence: 97.4,
       severity: "Critical",
       status: "Ditolak",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Optical Metrology", detail: "Deviasi diameter -1.4mm di luar spesifikasi.", latency: "68ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat fatal (defect) pada spesifikasi casting.", latency: "68ms" },
         { step: "02", phase: "DECISION", title: "Immediate Scrap", detail: "Produk dialihkan ke scrap bin.", latency: "20ms" },
       ],
     },
@@ -250,12 +255,12 @@ async function main() {
       batchId: batch3.id,
       timestamp: new Date("2026-09-08T10:12:18Z"),
       defectDetected: true,
-      defectClass: "burr_berlebih",
+      defectClass: "defect",
       confidence: 86.1,
       severity: "Low",
       status: "Pending Review",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Contour Filter", detail: "Burr pada ulir baut sebesar 0.8mm.", latency: "74ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat (defect) terdeteksi pada ulir baut.", latency: "74ms" },
         { step: "02", phase: "DECISION", title: "Rework Flag", detail: "Kandidat deburring manual.", latency: "25ms" },
       ],
     },
@@ -269,7 +274,7 @@ async function main() {
       severity: "None",
       status: "Lolos QC",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Optical Scan", detail: "Geometri rotor presisi.", latency: "75ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Geometri rotor presisi tanpa anomali (OK).", latency: "75ms" },
       ],
     },
     {
@@ -277,12 +282,12 @@ async function main() {
       batchId: batch1.id,
       timestamp: new Date("2026-09-07T14:10:30Z"),
       defectDetected: true,
-      defectClass: "warna_abnormal",
+      defectClass: "defect",
       confidence: 91.8,
       severity: "High",
       status: "Ditahan",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Colorimeter Scan", detail: "Oksidasi termal pada raceway bearing.", latency: "80ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat (defect) terdeteksi pada raceway bearing.", latency: "80ms" },
       ],
     },
     {
@@ -295,7 +300,7 @@ async function main() {
       severity: "None",
       status: "Lolos QC",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Scan Clean", detail: "Casting homogen.", latency: "72ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Casting homogen sesuai toleransi standar (OK).", latency: "72ms" },
       ],
     },
     {
@@ -303,12 +308,12 @@ async function main() {
       batchId: batch2.id,
       timestamp: new Date("2026-09-06T15:45:50Z"),
       defectDetected: true,
-      defectClass: "lubang_gas",
+      defectClass: "defect",
       confidence: 89.2,
       severity: "Medium",
       status: "Pending Review",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Porosity Check", detail: "Cluster porositas mikro 1.1mm.", latency: "77ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat casting (defect) terdeteksi pada area housing.", latency: "77ms" },
       ],
     },
     {
@@ -321,7 +326,7 @@ async function main() {
       severity: "None",
       status: "Lolos QC",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Gear Scan", detail: "Gigi gear 18T sempurna tanpa chipping.", latency: "74ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Gigi gear 18T sempurna tanpa cacat (OK).", latency: "74ms" },
       ],
     },
     {
@@ -329,12 +334,12 @@ async function main() {
       batchId: batch1.id,
       timestamp: new Date("2026-09-05T14:15:00Z"),
       defectDetected: true,
-      defectClass: "retak_permukaan",
+      defectClass: "defect",
       confidence: 95.0,
       severity: "High",
       status: "Ditahan",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Defect Analysis", detail: "Micro-crack pada sudut radius mounting.", latency: "79ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat struktural (defect) pada sudut radius mounting.", latency: "79ms" },
       ],
     },
     {
@@ -347,7 +352,7 @@ async function main() {
       severity: "None",
       status: "Lolos QC",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Clean Surface", detail: "Flange bersih sesuai toleransi.", latency: "71ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Flange bersih sesuai toleransi (OK).", latency: "71ms" },
       ],
     },
     {
@@ -355,12 +360,12 @@ async function main() {
       batchId: batch5.id,
       timestamp: new Date("2026-09-04T16:05:40Z"),
       defectDetected: true,
-      defectClass: "dimensi_cacat",
+      defectClass: "defect",
       confidence: 96.2,
       severity: "Critical",
       status: "Ditolak",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Caliper Metric", detail: "Ketebalan dinding casting di bawah spek.", latency: "83ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali ketebalan cacat (defect) di bawah spek.", latency: "83ms" },
       ],
     },
     {
@@ -368,12 +373,12 @@ async function main() {
       batchId: batch2.id,
       timestamp: new Date("2026-09-04T10:18:22Z"),
       defectDetected: true,
-      defectClass: "lubang_gas",
+      defectClass: "defect",
       confidence: 87.9,
       severity: "Medium",
       status: "Pending Review",
       agentReasoningTrace: [
-        { step: "01", phase: "DETECT", title: "Pore Detect", detail: "Lubang gas pada permukaan atas housing.", latency: "78ms" },
+        { step: "01", phase: "DETECT", title: "Two-Stage YOLOv8 Inference", detail: "Anomali cacat (defect) pada permukaan atas housing.", latency: "78ms" },
       ],
     },
   ];
@@ -381,7 +386,7 @@ async function main() {
   for (const ins of sampleInspections) {
     await prisma.inspection.upsert({
       where: { id: ins.id },
-      update: {},
+      update: ins,
       create: ins,
     });
   }
@@ -395,7 +400,7 @@ async function main() {
     {
       id: "DSP-2026-0419",
       batchId: batch1.id,
-      triggerReason: "3 anomali warna_abnormal berulang dalam 8 menit",
+      triggerReason: "3 anomali cacat (defect) berulang dalam 8 menit",
       consumer: "SAP QM",
       status: "Dispatched",
       approvedBy: "Autonomous Vision Agent (Score > 0.70)",
@@ -404,7 +409,7 @@ async function main() {
       dispatchedAt: new Date("2026-09-08T14:32:00Z"),
       payload: {
         plant: "PLANT-01",
-        defectClass: "Warna Abnormal",
+        defectClass: "Anomali Cacat (Defect)",
         lotId: "#B-2026-0730",
         action: "QUALITY_HOLD",
       },
@@ -462,7 +467,7 @@ async function main() {
     {
       id: "DSP-2026-0415",
       batchId: batch1.id,
-      triggerReason: "Retak mikro (micro-crack) terdeteksi pada 4 unit berurutan",
+      triggerReason: "Anomali cacat (defect) terdeteksi pada 4 unit berurutan",
       consumer: "SAP QM",
       status: "Dispatched",
       approvedBy: "Autonomous Vision Agent (Score > 0.70)",
@@ -470,7 +475,7 @@ async function main() {
       defectCode: "DEF-CAST-01",
       dispatchedAt: new Date("2026-09-08T12:45:00Z"),
       payload: {
-        defect: "Retak Mikro",
+        defect: "Anomali Cacat (Defect)",
         blockingLocation: "STORAGE-QUARANTINE",
       },
       sapResponse: { status: 201, message: "Blocking notification created" },
@@ -478,7 +483,7 @@ async function main() {
     {
       id: "DSP-2026-0414",
       batchId: batch5.id,
-      triggerReason: "Kebutuhan pergeseran slot produksi akibat cacat dimensi",
+      triggerReason: "Kebutuhan pergeseran slot produksi akibat anomali cacat (defect)",
       consumer: "SAP PP",
       status: "Rejected",
       approvedBy: "Ditolak oleh Budi Pratama (QC Supervisor)",
@@ -493,7 +498,7 @@ async function main() {
     {
       id: "DSP-2026-0413",
       batchId: batch2.id,
-      triggerReason: "Porositas lubang gas melebihi 1.2mm pada seal ring",
+      triggerReason: "Anomali cacat (defect) berulang melebihi ambang batas pada seal ring",
       consumer: "SAP QM",
       status: "Dispatched",
       approvedBy: "Autonomous Vision Agent (Score > 0.70)",
@@ -526,7 +531,7 @@ async function main() {
   for (const dsp of sampleDispatches) {
     await prisma.dispatchRecord.upsert({
       where: { id: dsp.id },
-      update: {},
+      update: dsp,
       create: dsp,
     });
   }
@@ -535,7 +540,7 @@ async function main() {
   console.log("📊 Rekap Data:");
   console.log("   - 1 Setting Record (Detection Threshold: 68%, Window: 10m)");
   console.log("   - 5 Batch Records (held, pending_review, released, rejected)");
-  console.log("   - 15 Inspection Records (varied defect classes & confidence)");
+  console.log("   - 15 Inspection Records (binary Defect vs OK & varied confidence)");
   console.log("   - 8 Dispatch Records (SAP QM, MM, PP, Human Notification)");
 }
 

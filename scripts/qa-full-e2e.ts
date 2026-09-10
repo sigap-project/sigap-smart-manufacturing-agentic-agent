@@ -264,7 +264,7 @@ async function runAudit() {
     const payload = {
       batchId: sampleBatchId || "BATCH-01",
       defectDetected: true,
-      defectClass: "retak_permukaan",
+      defectClass: "defect",
       confidence: 94.2,
       severity: "critical",
       imageUrl: "/mock/camera-frame-qa.jpg",

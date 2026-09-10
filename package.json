@@ -34,6 +34,8 @@
     "tailwindcss": "^4.0.9"
   },
   "devDependencies": {
+    "@aws-sdk/client-ec2": "^3.1129.0",
+    "@aws-sdk/client-rds": "^3.1129.0",
     "@types/node": "^22.13.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

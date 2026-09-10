@@ -23,7 +23,7 @@ model Batch {
   createdAt       DateTime         @default(now())
   inspectionCount Int              @default(0)
   defectCount     Int              @default(0)
-  defectTypes     String[]         @default([]) // e.g. ["Warna Abnormal", "Retak Mikro"]
+  defectTypes     String[]         @default([]) // e.g. ["defect"]
   escalationScore Float?           @default(0.0) // 0.0 - 1.0 (Formula score)
   status          String           @default("pending") // "pending", "held", "released", "rejected"
   storageZone     String           @default("standard") // "standard", "quarantine"
@@ -49,7 +49,7 @@ model Inspection {
   timestamp           DateTime   @default(now())
   imageUrl            String?
   defectDetected      Boolean    @default(false)
-  defectClass         String     @default("OK") // "OK", "warna_abnormal", "retak_permukaan", "lubang_gas", dll.
+  defectClass         String     @default("OK") // "OK", "defect", "def_front", "ok_front"
   confidence          Float      @default(99.0) // e.g. 94.2
   severity            String?    // "Low", "Medium", "High", "Critical"
   agentReasoningTrace Json       // JSON Array of reasoning deduction steps
@@ -70,7 +70,7 @@ model Inspection {
 model DispatchRecord {
   id            String    @id @default(cuid()) // e.g. "DSP-2026-0419"
   batchId       String
-  triggerReason String    @db.Text // e.g. "3 anomali warna_abnormal berulang dalam 8 menit"
+  triggerReason String    @db.Text // e.g. "3 anomali cacat (defect) berulang dalam 8 menit"
   consumer      String    // "SAP QM", "SAP MM", "SAP PP", "Human Notification"
   payload       Json      // Structured OData JSON payload
   status        String    @default("Dispatched") // "Dispatched", "Pending Approval", "Rejected"
