@@ -3,10 +3,10 @@ frontend:
   phases:
     preBuild:
       commands:
+        - rm -rf .agents ai_models/logs scripts/tools
         - npm ci
         - npx prisma generate
-        - rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32 node_modules/onnxruntime-node/bin/napi-v6/linux/arm64
-        - rm -rf node_modules/ffmpeg-static
+        - rm -rf node_modules/onnxruntime-node node_modules/ffmpeg-static
     build:
       commands:
         - env | grep -e DATABASE_URL -e SIGAP_ -e SAP_ -e INTERNAL_API_KEY -e EDGE_CAMERA_API_KEY >> .env.production
@@ -17,22 +17,16 @@ frontend:
         - echo "AWS_S3_BUCKET_NAME=${SIGAP_S3_BUCKET_NAME:-sigap-inspection-frames}" >> .env.production
         - echo "AWS_S3_REGION=${SIGAP_S3_REGION:-ap-southeast-2}" >> .env.production
         - npm run build
-        - rm -rf .next/cache .next/standalone
     postBuild:
       commands:
         - rm -rf .next/cache .next/standalone
-        - rm -rf node_modules/ffmpeg-static
-        - rm -rf node_modules/prisma
-        - rm -rf node_modules/typescript
-        - rm -rf node_modules/@types
-        - rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32 node_modules/onnxruntime-node/bin/napi-v6/linux/arm64
+        - rm -rf node_modules/onnxruntime-node node_modules/ffmpeg-static node_modules/prisma node_modules/typescript node_modules/@types
   artifacts:
     baseDirectory: .next
     files:
-      - 'BUILD_ID'
-      - '*.json'
-      - 'server/**/*'
-      - 'static/**/*'
+      - '**/*'
+    exclude:
+      - 'cache/**/*'
   cache:
     paths:
       - node_modules/**/*

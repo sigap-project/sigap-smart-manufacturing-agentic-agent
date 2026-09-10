@@ -32,7 +32,7 @@ let ortModule: any = null;
 async function getOrt() {
   if (!ortModule) {
     try {
-      ortModule = await import("onnxruntime-node");
+      ortModule = await import(/* webpackIgnore: true */ "onnxruntime-node");
     } catch (err) {
       console.warn("[ONNX] onnxruntime-node tidak dapat dimuat:", err);
       return null;
