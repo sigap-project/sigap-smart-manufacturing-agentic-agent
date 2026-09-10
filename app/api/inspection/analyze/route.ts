@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (testType === "defect") {
       isDefect = true;
-      defectClass = "Cacat Pengecoran (Defect)";
+      defectClass = "defect";
       confidence = 96.4;
       severity = "High";
       boundingBoxes = [
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       ];
     } else if (testType === "ok") {
       isDefect = false;
-      defectClass = "OK";
+      defectClass = "ok";
       confidence = 99.4;
       severity = "None";
       boundingBoxes = [
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
           y: 10,
           width: 80,
           height: 80,
-          label: "produk_ok",
+          label: "ok",
           confidence: 99.4,
         },
       ];
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       isDefect = isNamedDefect || (testType !== "ok" && Math.random() > 0.35);
 
       if (isDefect) {
-        defectClass = "Cacat Pengecoran (Defect)";
+        defectClass = "defect";
         confidence = Number((93.5 + Math.random() * 5.0).toFixed(1));
         severity = confidence > 96.0 ? "Critical" : "High";
         boundingBoxes = [
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
           },
         ];
       } else {
-        defectClass = "OK";
+        defectClass = "ok";
         confidence = Number((98.2 + Math.random() * 1.5).toFixed(1));
         severity = "None";
         boundingBoxes = [
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
             y: 10,
             width: 80,
             height: 80,
-            label: "produk_ok",
+            label: "ok",
             confidence,
           },
         ];

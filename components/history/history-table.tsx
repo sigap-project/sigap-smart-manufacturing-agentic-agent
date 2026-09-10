@@ -62,34 +62,18 @@ export function HistoryTable({
 
   // Defect Class Badge Styling
   const renderDefectBadge = (defectClass: DefectClass) => {
-    if (defectClass === "OK") {
+    if (defectClass === "OK" || defectClass === "ok") {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          OK (Bersih)
-        </span>
-      );
-    }
-    if (defectClass === "warna_abnormal") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-          warna_abnormal
-        </span>
-      );
-    }
-    if (defectClass === "retak_permukaan") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-          retak_permukaan
+          ok (Lolos QC)
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-        {defectClass}
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
+        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+        defect (Cacat)
       </span>
     );
   };

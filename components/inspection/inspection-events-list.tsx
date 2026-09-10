@@ -7,23 +7,23 @@ import { useSigapEvents } from "@/hooks/useSigapEvents";
 const DEFAULT_EVENTS = [
   {
     id: "EV-1428",
-    label: "warna_abnormal",
+    label: "defect",
     status: "DEFECT",
-    confidence: 94.2,
+    confidence: 96.4,
     time: "0.4s lalu",
     lot: "Lot #B-2026-0730",
     part: "Bracket A7",
     isDefect: true,
-    badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-    barColor: "bg-amber-400",
-    thumbCode: "A7",
-    thumbBg: "bg-amber-950/40 border-amber-500/40 text-amber-300",
+    badgeColor: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+    barColor: "bg-rose-400",
+    thumbCode: "DEF",
+    thumbBg: "bg-rose-950/40 border-rose-500/40 text-rose-300",
   },
   {
     id: "EV-1427",
-    label: "produk_ok",
+    label: "ok",
     status: "PASSED",
-    confidence: 99.1,
+    confidence: 99.4,
     time: "1.8s lalu",
     lot: "Lot #B-2026-0730",
     part: "Bracket A7",
@@ -35,21 +35,21 @@ const DEFAULT_EVENTS = [
   },
   {
     id: "EV-1426",
-    label: "retak_permukaan",
+    label: "defect",
     status: "DEFECT",
-    confidence: 88.5,
+    confidence: 94.8,
     time: "3.2s lalu",
     lot: "Lot #B-2026-0730",
     part: "Bracket A7",
     isDefect: true,
     badgeColor: "bg-rose-500/15 text-rose-300 border-rose-500/30",
     barColor: "bg-rose-400",
-    thumbCode: "CR",
+    thumbCode: "DEF",
     thumbBg: "bg-rose-950/40 border-rose-500/40 text-rose-300",
   },
   {
     id: "EV-1425",
-    label: "produk_ok",
+    label: "ok",
     status: "PASSED",
     confidence: 98.7,
     time: "4.5s lalu",
@@ -83,12 +83,14 @@ export function InspectionEventsList({ events: initialEvents }: InspectionEvents
   // Dengarkan event SSE live
   const { isConnected } = useSigapEvents({
     onInspectionCreated: (newIns) => {
-      const isDefect = newIns.defectDetected ?? (newIns.defectClass !== "OK");
+      const isDefect =
+        newIns.defectDetected ??
+        (newIns.defectClass?.toLowerCase() !== "ok");
       const eventId = `EV-${String(newIns.id).slice(-4)}`;
 
       const newItem = {
         id: eventId,
-        label: newIns.defectClass || "warna_abnormal",
+        label: isDefect ? "defect" : "ok",
         status: isDefect ? "DEFECT" : "PASSED",
         confidence: Number((newIns.confidence ?? 95).toFixed(1)),
         time: "Baru saja",
@@ -100,16 +102,12 @@ export function InspectionEventsList({ events: initialEvents }: InspectionEvents
         part: newIns.partName || "Bracket A7",
         isDefect,
         badgeColor: isDefect
-          ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+          ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
           : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-        barColor: isDefect ? "bg-amber-400" : "bg-emerald-400",
-        thumbCode: isDefect
-          ? String(newIns.defectClass).includes("retak")
-            ? "CR"
-            : "A7"
-          : "OK",
+        barColor: isDefect ? "bg-rose-400" : "bg-emerald-400",
+        thumbCode: isDefect ? "DEF" : "OK",
         thumbBg: isDefect
-          ? "bg-amber-950/40 border-amber-500/40 text-amber-300"
+          ? "bg-rose-950/40 border-rose-500/40 text-rose-300"
           : "bg-emerald-950/40 border-emerald-500/40 text-emerald-300",
       };
 

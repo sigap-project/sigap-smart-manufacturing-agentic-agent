@@ -40,13 +40,9 @@ export function HistoryFilterBar({
   ];
 
   const defectClasses: { id: DefectClass | "all"; label: string }[] = [
-    { id: "all", label: "Semua Kelas Cacat" },
-    { id: "OK", label: "OK (Bersih)" },
-    { id: "warna_abnormal", label: "warna_abnormal" },
-    { id: "retak_permukaan", label: "retak_permukaan" },
-    { id: "lubang_gas", label: "lubang_gas" },
-    { id: "dimensi_cacat", label: "dimensi_cacat" },
-    { id: "burr_berlebih", label: "burr_berlebih" },
+    { id: "all", label: "Semua Hasil (defect & OK)" },
+    { id: "defect", label: "defect (Cacat Terdeteksi)" },
+    { id: "OK", label: "OK (Lolos QC)" },
   ];
 
   return (

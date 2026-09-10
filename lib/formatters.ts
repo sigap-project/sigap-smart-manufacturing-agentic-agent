@@ -62,7 +62,7 @@ export function formatInspectionRecord(item: any): InspectionRecord & { [key: st
     rawDate: dateObj.toISOString(),
     imageUrl: item.imageUrl || null,
     defectDetected: item.defectDetected ?? false,
-    defectClass: item.defectClass || "OK",
+    defectClass: item.defectClass || (item.defectDetected ? "defect" : "OK"),
     confidence: typeof item.confidence === "number" ? item.confidence : 95.0,
     severity: item.severity || "None",
     status: item.status || (item.defectDetected ? "Ditahan" : "Lolos QC"),

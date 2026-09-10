@@ -506,11 +506,13 @@ export const sigapStore = {
   },
 
   async createInspection(payload: any) {
-    const isDefect = payload.defectDetected ?? (payload.defectClass !== "OK");
+    const isDefect =
+      payload.defectDetected ??
+      (payload.defectClass?.toLowerCase() !== "ok");
     const formatted = formatInspectionRecord({
       id: payload.id || `INS-${Date.now().toString().slice(-6)}`,
       batchId: payload.batchId || "#B-2026-0730",
-      defectClass: payload.defectClass || (isDefect ? "warna_abnormal" : "OK"),
+      defectClass: payload.defectClass || (isDefect ? "defect" : "OK"),
       confidence: typeof payload.confidence === "number" ? payload.confidence : 95.0,
       severity: payload.severity || (isDefect ? "High" : "None"),
       defectDetected: isDefect,

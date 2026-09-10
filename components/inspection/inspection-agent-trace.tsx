@@ -11,7 +11,7 @@ const DEFAULT_TRACES = [
     tag: "YOLOv8-Nano",
     tagColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     content:
-      "Cacat casting 'warna_abnormal' terdeteksi pada frame #1428 di konveyor Station #01.",
+      "Anomali casting 'defect' terdeteksi pada frame #1428 di konveyor Station #01.",
     metric: "Confidence: 94.2% • Latensi: 78ms",
   },
   {
@@ -20,7 +20,7 @@ const DEFAULT_TRACES = [
     tag: "Bedrock-Memory",
     tagColor: "text-amber-400 bg-amber-500/10 border-amber-500/20",
     content:
-      "Analisis korelasi temporal: 3 anomali serupa terdeteksi dalam 8 menit terakhir pada lot yang sama.",
+      "Analisis korelasi temporal: 3 anomali defect serupa terdeteksi dalam 8 menit terakhir pada lot yang sama.",
     metric: "Vendor: PT Krakatau Scrap • Pola Berulang",
   },
   {

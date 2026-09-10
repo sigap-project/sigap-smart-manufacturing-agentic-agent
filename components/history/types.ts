@@ -1,10 +1,13 @@
 export type DefectClass =
+  | "defect"
   | "OK"
+  | "ok"
   | "warna_abnormal"
   | "retak_permukaan"
   | "lubang_gas"
   | "dimensi_cacat"
-  | "burr_berlebih";
+  | "burr_berlebih"
+  | string;
 
 export type InspectionStatus =
   | "Lolos QC"
@@ -40,7 +43,7 @@ export interface InspectionRecord {
 export const INITIAL_INSPECTIONS: InspectionRecord[] = [
   {
     id: "INS-2026-8842",
-    defectClass: "warna_abnormal",
+    defectClass: "defect",
     confidence: 94.2,
     batchId: "BATCH-2026-0730-008",
     partName: "Bracket Motor A7",
@@ -56,14 +59,14 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
         step: "01",
         phase: "DETECT",
         title: "YOLOv8-Nano Inference",
-        detail: "Cacat diskolorasi terdeteksi pada koordinat X:524 Y:312 dengan confidence 94.2%.",
+        detail: "Anomali cacat casting (defect) terdeteksi pada koordinat X:524 Y:312 dengan confidence 94.2%.",
         latency: "78ms",
       },
       {
         step: "02",
         phase: "MEMORY",
         title: "Bedrock Temporal Memory",
-        detail: "Ditemukan 3 anomali diskolorasi serupa dalam 8 menit terakhir pada supplier PT Krakatau Scrap.",
+        detail: "Ditemukan 3 anomali defect serupa dalam 8 menit terakhir pada supplier PT Krakatau Scrap.",
         latency: "124ms",
       },
       {
@@ -120,7 +123,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
   },
   {
     id: "INS-2026-8840",
-    defectClass: "lubang_gas",
+    defectClass: "defect",
     confidence: 88.5,
     batchId: "BATCH-2026-0731-002",
     partName: "Gearbox Housing C2",
@@ -136,7 +139,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
         step: "01",
         phase: "DETECT",
         title: "YOLOv8-Nano Inference",
-        detail: "Porositas gas 1.4mm terdeteksi pada area sealing surface flange.",
+        detail: "Anomali permukaan (defect) terdeteksi pada area sealing surface flange.",
         latency: "82ms",
       },
       {
@@ -157,7 +160,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
   },
   {
     id: "INS-2026-8839",
-    defectClass: "retak_permukaan",
+    defectClass: "defect",
     confidence: 96.8,
     batchId: "BATCH-2026-0726-004",
     partName: "Exhaust Manifold K3",
@@ -173,7 +176,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
         step: "01",
         phase: "DETECT",
         title: "YOLOv8-Nano Inference",
-        detail: "Retak struktural tembus terdeteksi sepanjang 6.2mm pada sambungan las pipa inlet.",
+        detail: "Cacat struktural (defect) terdeteksi sepanjang sambungan las pipa inlet.",
         latency: "79ms",
       },
       {
@@ -187,7 +190,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
   },
   {
     id: "INS-2026-8838",
-    defectClass: "dimensi_cacat",
+    defectClass: "defect",
     confidence: 97.4,
     batchId: "BATCH-2026-0725-010",
     partName: "Shaft Coupling 40mm",
@@ -202,8 +205,8 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
       {
         step: "01",
         phase: "DETECT",
-        title: "Optical Gauge Metrology",
-        detail: "Diameter poros 38.6mm, deviasi -1.4mm di luar batas toleransi ISO 286.",
+        title: "YOLOv8-Nano Inference",
+        detail: "Anomali geometri (defect) terdeteksi di luar batas toleransi ISO 286.",
         latency: "68ms",
       },
       {
@@ -217,7 +220,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
   },
   {
     id: "INS-2026-8837",
-    defectClass: "burr_berlebih",
+    defectClass: "defect",
     confidence: 86.1,
     batchId: "BATCH-2026-0732-003",
     partName: "Flange Pinion X1",
@@ -232,8 +235,8 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
       {
         step: "01",
         phase: "DETECT",
-        title: "Edge Contour Analyzer",
-        detail: "Burr pada ulir baut terdeteksi sebesar 0.8mm.",
+        title: "YOLOv8-Nano Inference",
+        detail: "Anomali cacat tepi (defect) terdeteksi pada ulir baut.",
         latency: "74ms",
       },
       {
@@ -269,7 +272,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
   },
   {
     id: "INS-2026-8835",
-    defectClass: "warna_abnormal",
+    defectClass: "defect",
     confidence: 91.8,
     batchId: "BATCH-2026-0723-005",
     partName: "Bearing Sleeve B8",
@@ -285,7 +288,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
         step: "01",
         phase: "DETECT",
         title: "YOLOv8-Nano Inference",
-        detail: "Bercak oksidasi abnormal terdeteksi pada raceway bearing.",
+        detail: "Anomali cacat casting (defect) terdeteksi pada raceway bearing.",
         latency: "80ms",
       },
       {
@@ -321,7 +324,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
   },
   {
     id: "INS-2026-8833",
-    defectClass: "lubang_gas",
+    defectClass: "defect",
     confidence: 89.2,
     batchId: "BATCH-2026-0722-004",
     partName: "Mounting Flange M10",
@@ -335,8 +338,8 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
       {
         step: "01",
         phase: "DETECT",
-        title: "Defect Classifier",
-        detail: "Mikro-porositas sporadis terdeteksi pada bibir flange.",
+        title: "YOLOv8-Nano Inference",
+        detail: "Anomali cacat casting (defect) terdeteksi pada bibir flange.",
         latency: "77ms",
       },
     ],
@@ -359,14 +362,14 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
         step: "01",
         phase: "DETECT",
         title: "Conveyor Vision Scan",
-        detail: "Gigi gear presisi sempurna tanpa burr.",
+        detail: "Gigi gear presisi sempurna tanpa cacat.",
         latency: "74ms",
       },
     ],
   },
   {
     id: "INS-2026-8831",
-    defectClass: "retak_permukaan",
+    defectClass: "defect",
     confidence: 95.0,
     batchId: "BATCH-2026-0727-001",
     partName: "Support Arm T-9",
@@ -381,7 +384,7 @@ export const INITIAL_INSPECTIONS: InspectionRecord[] = [
         step: "01",
         phase: "DETECT",
         title: "YOLOv8-Nano Inference",
-        detail: "Retakan mikro pada leher penopang arm.",
+        detail: "Cacat struktural (defect) terdeteksi pada leher penopang arm.",
         latency: "79ms",
       },
     ],

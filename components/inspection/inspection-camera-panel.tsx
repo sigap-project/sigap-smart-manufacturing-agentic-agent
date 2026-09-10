@@ -76,7 +76,7 @@ export function InspectionCameraPanel({
     timestamp: string;
   }>({
     status: "defect",
-    defectClass: "Cacat Pengecoran (Defect)",
+    defectClass: "defect",
     confidence: 96.4,
     severity: "High",
     escalationScore: 0.74,
@@ -216,7 +216,7 @@ export function InspectionCameraPanel({
 
         setLastResult({
           status: isDef ? "defect" : "ok",
-          defectClass: data.inspection?.defectClass || (isDef ? "Cacat Pengecoran (Defect)" : "OK"),
+          defectClass: data.inspection?.defectClass || (isDef ? "defect" : "ok"),
           confidence: data.inspection?.confidence || 95.0,
           severity: data.inspection?.severity || (isDef ? "High" : "None"),
           escalationScore: data.escalationScore ?? 0.74,

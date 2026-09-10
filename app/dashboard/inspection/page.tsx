@@ -35,10 +35,10 @@ export default async function InspectionPage() {
 
     if (inspections && inspections.length > 0) {
       liveEvents = inspections.map((ins, idx) => {
-        const isDefect = ins.defectClass !== "OK";
+        const isDefect = ins.defectClass?.toLowerCase() !== "ok";
         return {
           id: `EV-${ins.id.slice(-4)}`,
-          label: ins.defectClass,
+          label: isDefect ? "defect" : "ok",
           status: isDefect ? "DEFECT" : "PASSED",
           confidence: Number(ins.confidence.toFixed(1)),
           time: `${((idx + 1) * 1.2).toFixed(1)}s lalu`,
@@ -46,16 +46,12 @@ export default async function InspectionPage() {
           part: ins.partName ? ins.partName.replace("Bracket Motor ", "Bracket ") : "Bracket A7",
           isDefect,
           badgeColor: isDefect
-            ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+            ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
             : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-          barColor: isDefect ? "bg-amber-400" : "bg-emerald-400",
-          thumbCode: isDefect
-            ? ins.defectClass.includes("retak")
-              ? "CR"
-              : "A7"
-            : "OK",
+          barColor: isDefect ? "bg-rose-400" : "bg-emerald-400",
+          thumbCode: isDefect ? "DEF" : "OK",
           thumbBg: isDefect
-            ? "bg-amber-950/40 border-amber-500/40 text-amber-300"
+            ? "bg-rose-950/40 border-rose-500/40 text-rose-300"
             : "bg-emerald-950/40 border-emerald-500/40 text-emerald-300",
         };
       });
