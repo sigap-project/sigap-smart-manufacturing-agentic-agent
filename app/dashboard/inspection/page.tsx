@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { sigapStore } from "@/lib/store";
 import { InspectionCameraPanel } from "@/components/inspection/inspection-camera-panel";
 import { InspectionEventsList } from "@/components/inspection/inspection-events-list";
 import { InspectionAgentTrace } from "@/components/inspection/inspection-agent-trace";
@@ -19,39 +19,31 @@ export default async function InspectionPage() {
   let liveTraces: any[] | undefined = undefined;
 
   try {
-    const [batch, inspections, logs] = await Promise.all([
-      prisma.batch.findFirst({
-        where: { status: "held" },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.inspection.findMany({
-        take: 6,
-        orderBy: { timestamp: "desc" },
-        include: { batch: true },
-      }),
-      prisma.agentLog.findMany({
-        orderBy: { step: "asc" },
-        include: { inspection: true },
-      }),
+    const [batchesResult, inspectionsResult] = await Promise.all([
+      sigapStore.getBatches({ limit: 1 }),
+      sigapStore.getInspections({ limit: 6 }),
     ]);
 
+    const batch = batchesResult.data[0];
+    const inspections = inspectionsResult.data;
+
     if (batch) {
-      activeLot = batch.lotId;
-      activePart = batch.productType;
+      activeLot = batch.lotId || activeLot;
+      activePart = batch.productType || batch.productName || activePart;
       escalationScore = batch.escalationScore ?? 0.74;
     }
 
     if (inspections && inspections.length > 0) {
       liveEvents = inspections.map((ins, idx) => {
-        const isDefect = ins.defectDetected;
+        const isDefect = ins.defectClass !== "OK";
         return {
           id: `EV-${ins.id.slice(-4)}`,
           label: ins.defectClass,
           status: isDefect ? "DEFECT" : "PASSED",
           confidence: Number(ins.confidence.toFixed(1)),
           time: `${((idx + 1) * 1.2).toFixed(1)}s lalu`,
-          lot: ins.batch?.lotId || activeLot,
-          part: ins.batch?.productType ? ins.batch.productType.replace("Bracket Motor ", "Bracket ") : "Bracket A7",
+          lot: ins.batchId || activeLot,
+          part: ins.partName ? ins.partName.replace("Bracket Motor ", "Bracket ") : "Bracket A7",
           isDefect,
           badgeColor: isDefect
             ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
@@ -67,19 +59,33 @@ export default async function InspectionPage() {
             : "bg-emerald-950/40 border-emerald-500/40 text-emerald-300",
         };
       });
-    }
 
-    // Jika ada rekaman log agen atau trace inspeksi terbaru
-    if (inspections && inspections[0] && Array.isArray(inspections[0].agentReasoningTrace) && inspections[0].agentReasoningTrace.length > 0) {
-      const traceData = inspections[0].agentReasoningTrace as any[];
-      liveTraces = traceData.map((t) => ({
-        step: `${t.step}. ${t.phase}`,
-        timestamp: "14:32:01.180",
-        tag: t.phase === "DETECT" ? "YOLOv8-Nano" : t.phase === "MEMORY" ? "Bedrock-Memory" : t.phase === "FORMULA" ? "Formula-Engine" : t.phase === "DECISION" ? "Autonomous-Agent" : "SAP-Integration",
-        tagColor: t.phase === "DETECT" ? "text-cyan-400 bg-cyan-500/10 border-cyan-500/20" : t.phase === "MEMORY" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : t.phase === "DECISION" ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-        content: t.detail,
-        metric: t.latency ? `Latensi: ${t.latency}` : "Confidence Verified",
-      }));
+      if (inspections[0]?.reasoningSteps && inspections[0].reasoningSteps.length > 0) {
+        liveTraces = inspections[0].reasoningSteps.map((t) => ({
+          step: `${t.step}. ${t.phase}`,
+          timestamp: "14:32:01.180",
+          tag:
+            t.phase === "DETECT"
+              ? "YOLOv8-Nano"
+              : t.phase === "MEMORY"
+              ? "Bedrock-Memory"
+              : t.phase === "FORMULA"
+              ? "Formula-Engine"
+              : t.phase === "DECISION"
+              ? "Autonomous-Agent"
+              : "SAP-Integration",
+          tagColor:
+            t.phase === "DETECT"
+              ? "text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
+              : t.phase === "MEMORY"
+              ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
+              : t.phase === "DECISION"
+              ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
+              : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+          content: t.detail,
+          metric: t.latency ? `Latensi: ${t.latency}` : "Confidence Verified",
+        }));
+      }
     }
   } catch (err) {
     console.warn("Koneksi DB untuk Stasiun Inspeksi offline, menggunakan nilai default:", err);
@@ -119,9 +125,9 @@ export default async function InspectionPage() {
 
       {/* Two-Column Split Layout (60% Left, 40% Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT COLUMN (60%): Live Camera Panel with Bounding Boxes & HUD Controls */}
+        {/* LEFT COLUMN (60%): Live Camera & File Upload Panel with Bounding Boxes & HUD Controls */}
         <div className="lg:col-span-7 xl:col-span-7">
-          <InspectionCameraPanel />
+          <InspectionCameraPanel lotId={activeLot} productType={activePart} />
         </div>
 
         {/* RIGHT COLUMN (40%): Stacked Recent Events, Agent Reasoning Trace, and Escalation Gauge */}

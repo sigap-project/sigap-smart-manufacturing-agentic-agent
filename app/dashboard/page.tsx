@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { sigapStore } from "@/lib/store";
 import { DashboardStatCards } from "@/components/dashboard/dashboard-stat-cards";
 import { DashboardTrendChart } from "@/components/dashboard/dashboard-trend-chart";
 import { DashboardDefectDistribution } from "@/components/dashboard/dashboard-defect-distribution";
@@ -13,61 +13,14 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  // Ambil agregasi data riil langsung dari database PostgreSQL
-  let totalInspections = 1428;
-  let activeLotId = "#B-2026-0730";
-  let defectRate = 1.84;
-  let batchesHeldCount = 3;
-  let heldDefectPcs = 45;
-  let dispatchesCount = 18;
+  const stats = await sigapStore.getDashboardStats();
 
-  try {
-    const [
-      batchAggregate,
-      inspectionCount,
-      defectInspectionsCount,
-      heldBatches,
-      dispatchesTotal,
-      latestActiveBatch,
-    ] = await Promise.all([
-      prisma.batch.aggregate({
-        _sum: { inspectionCount: true, defectCount: true },
-      }),
-      prisma.inspection.count(),
-      prisma.inspection.count({ where: { defectDetected: true } }),
-      prisma.batch.findMany({
-        where: { status: "held" },
-        select: { defectCount: true },
-      }),
-      prisma.dispatchRecord.count(),
-      prisma.batch.findFirst({
-        orderBy: { createdAt: "desc" },
-        select: { lotId: true },
-      }),
-    ]);
-
-    if (batchAggregate._sum.inspectionCount) {
-      totalInspections = batchAggregate._sum.inspectionCount;
-    } else if (inspectionCount > 0) {
-      totalInspections = inspectionCount;
-    }
-
-    if (latestActiveBatch?.lotId) {
-      activeLotId = latestActiveBatch.lotId;
-    }
-
-    if (totalInspections > 0 && defectInspectionsCount > 0) {
-      const calculatedRate = (defectInspectionsCount / Math.max(totalInspections, 1)) * 100;
-      defectRate = calculatedRate > 10 ? 2.14 : calculatedRate;
-    }
-
-    batchesHeldCount = heldBatches.length > 0 ? heldBatches.length : 3;
-    const computedHeldDefectPcs = heldBatches.reduce((acc, curr) => acc + (curr.defectCount || 0), 0);
-    heldDefectPcs = computedHeldDefectPcs > 0 ? computedHeldDefectPcs : 45;
-    dispatchesCount = dispatchesTotal > 0 ? dispatchesTotal : 18;
-  } catch (err) {
-    console.warn("Koneksi DB untuk Dashboard Overview offline, menggunakan nilai default:", err);
-  }
+  const totalInspections = stats.totalInspections;
+  const activeLotId = stats.activeLotId;
+  const defectRate = stats.defectRate;
+  const batchesHeldCount = stats.batchesHeldCount;
+  const heldDefectPcs = stats.heldDefectPcs;
+  const dispatchesCount = stats.dispatchesCount;
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
