@@ -38,3 +38,6 @@ Thumbs.db
 # Temporary scratch test files & media storage
 /scratch/
 /.tempmediaStorage/
+*.log
+log.txt
+Deployment*
