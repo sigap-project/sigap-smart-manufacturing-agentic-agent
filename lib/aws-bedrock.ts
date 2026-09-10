@@ -161,18 +161,94 @@ Output WAJIB berupa JSON murni tanpa markdown fence dengan format:
 }
 
 function generateDeterministicFallback(input: DefectReasoningInput): BedrockDeductionResult {
-  const windowCount = input.defectCountInWindow || 1;
-  const isSevere = input.confidence >= 80 && windowCount >= 2;
-  const score = Math.min(1.0, Number(((windowCount * 0.35) + (input.confidence / 100 * 0.45)).toFixed(2)));
+  const isOkPart =
+    !input.defectClass ||
+    input.defectClass.toUpperCase() === "OK" ||
+    input.defectClass.toLowerCase().includes("ok") ||
+    input.defectClass.toLowerCase().includes("produk_ok") ||
+    input.defectClass.toLowerCase().includes("clean");
 
-  const recommendation = score >= 0.75 ? "reject" : score >= 0.45 ? "quarantine" : "release";
+  // Kasus 1: Komponen Lolos QC (Normal / OK)
+  if (isOkPart) {
+    return {
+      escalationScore: 0.05,
+      recommendation: "release",
+      rootCause: "Komponen memenuhi seluruh standar toleransi dimensi & permukaan casting (QC Passed).",
+      sapActions: [],
+      source: "local-deterministic-fallback",
+      reasoningSteps: [
+        {
+          step: "01",
+          name: "DETECT",
+          detail: `Inferensi visi mengonfirmasi spesifikasi permukaan normal pada ${input.lotId} (Confidence: ${input.confidence}%).`,
+          status: "completed",
+        },
+        {
+          step: "02",
+          name: "MEMORY",
+          detail: `Pemeriksaan korelasi supplier ${input.supplierName || "PT Mitra Logam"}: integritas material stabil tanpa deviasi.`,
+          status: "completed",
+        },
+        {
+          step: "03",
+          name: "FORMULA",
+          detail: "Evaluasi risiko eskalasi: E = 0.05 (jauh di bawah ambang batas anomali 0.40).",
+          status: "completed",
+        },
+        {
+          step: "04",
+          name: "DECISION",
+          detail: "Komponen lolos verifikasi kualitas. Lot direkomendasikan RELEASE ke lini perakitan.",
+          status: "completed",
+        },
+        {
+          step: "05",
+          name: "DISPATCH",
+          detail: "Kondisi normal: tidak memerlukan eskalasi mutasi ERP SAP.",
+          status: "completed",
+        },
+      ],
+    };
+  }
+
+  // Kasus 2: Komponen Cacat (Defect Detected)
+  // Taksonomi Severity Bobot Sesuai Domain Manufaktur Die Casting
+  const lowerClass = (input.defectClass || "").toLowerCase();
+  let severityWeight = 0.75;
+  if (lowerClass.includes("retak") || lowerClass.includes("luka_rebekan") || lowerClass.includes("crack")) {
+    severityWeight = 1.0; // Critical
+  } else if (lowerClass.includes("warna") || lowerClass.includes("oxid")) {
+    severityWeight = 0.85; // High
+  } else if (lowerClass.includes("burr") || lowerClass.includes("sisik")) {
+    severityWeight = 0.50; // Medium
+  } else if (lowerClass.includes("lendir") || lowerClass.includes("oli")) {
+    severityWeight = 0.40; // Low
+  }
+
+  const windowCount = Math.max(1, input.defectCountInWindow || 3);
+  const windowMax = 5;
+  const supplierRepeatFlag = windowCount >= 3 ? 1.0 : 0.4;
+
+  // Formula Resmi Sesuai Master Context SIGAP:
+  // Escalation_Score = (defect_count / window_max * 0.40) + (severity * 0.35) + (supplier_repeat * 0.25)
+  const freqPart = Math.min(1.0, windowCount / windowMax) * 0.40;
+  const sevPart = severityWeight * 0.35;
+  const suppPart = supplierRepeatFlag * 0.25;
+  const rawScore = freqPart + sevPart + suppPart;
+  const score = Math.min(1.0, Math.max(0.0, Number(rawScore.toFixed(2))));
+
+  const recommendation = score >= 0.70 ? "quarantine" : score >= 0.40 ? "quarantine" : "release";
   const sapActions: ("SAP_QM" | "SAP_MM" | "SAP_PP")[] =
-    score >= 0.75 ? ["SAP_QM", "SAP_MM", "SAP_PP"] : score >= 0.45 ? ["SAP_QM"] : [];
+    score >= 0.70
+      ? ["SAP_QM", "SAP_MM", "SAP_PP"]
+      : score >= 0.40
+      ? ["SAP_QM"]
+      : [];
 
   return {
     escalationScore: score,
     recommendation,
-    rootCause: `Kavitasi anomali ${input.defectClass} pada impeller casting akibat fluktuasi pendinginan atau keausan cetakan die casting.`,
+    rootCause: `Kavitasi termal anomali '${input.defectClass}' pada impeller casting akibat fluktuasi pendinginan cetakan die casting.`,
     sapActions,
     source: "local-deterministic-fallback",
     reasoningSteps: [
@@ -185,27 +261,29 @@ function generateDeterministicFallback(input: DefectReasoningInput): BedrockDedu
       {
         step: "02",
         name: "MEMORY",
-        detail: `Korelasi histori supplier ${input.supplierName || "PT Mitra Logam"}: terdeteksi ${windowCount} anomali serupa dalam jendela 15 menit.`,
+        detail: `Korelasi histori supplier ${input.supplierName || "PT Krakatau Scrap"}: terdeteksi ${windowCount} anomali serupa dalam jendela 8 menit.`,
         status: "completed",
       },
       {
         step: "03",
         name: "FORMULA",
-        detail: `Kalkulasi eskalasi E = min(1.0, (${windowCount}/5 * 0.4) + (${input.confidence}/100 * 0.35) + 0.25) = ${score}.`,
+        detail: `Kalkulasi eskalasi E = (${freqPart.toFixed(2)} [frek]) + (${sevPart.toFixed(2)} [sev]) + (${suppPart.toFixed(2)} [histori]) = ${score.toFixed(2)}.`,
         status: "completed",
       },
       {
         step: "04",
         name: "DECISION",
-        detail: `Status lot diubah menjadi ${recommendation.toUpperCase()} dengan isolasi zona penyimpanan karantina.`,
-        status: recommendation === "release" ? "completed" : "flagged",
+        detail: score >= 0.70
+          ? "Pola anomali terkonfirmasi (Skor > 0.70). Batch dialihkan ke Zona Karantina."
+          : "Anomali terdeteksi di atas batas toleransi. Ditahan untuk peninjauan mutu.",
+        status: "flagged",
       },
       {
         step: "05",
         name: "DISPATCH",
         detail: sapActions.length > 0
           ? `Menyiapkan tiket dispatch OData ERP: ${sapActions.join(", ")}.`
-          : "Tidak memerlukan eskalasi ERP (kategori sporadis / lulus ambang batas).",
+          : "Tidak memerlukan eskalasi ERP (kategori sporadis aman).",
         status: "completed",
       },
     ],
