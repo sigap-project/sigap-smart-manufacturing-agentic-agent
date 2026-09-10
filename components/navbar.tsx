@@ -39,11 +39,10 @@ export function Navbar({ onOpenDemo }: NavbarProps) {
       <div className="w-full max-w-5xl lg:max-w-6xl pointer-events-auto flex flex-col items-center">
         {/* Main Floating Rounded-Full Pill Bar */}
         <div
-          className={`w-full rounded-full transition-all duration-300 flex items-center justify-between border ${
-            scrolled
+          className={`w-full rounded-full transition-all duration-300 flex items-center justify-between border ${scrolled
               ? "bg-[#06080d]/90 backdrop-blur-2xl border-white/[0.14] py-2 sm:py-2.5 px-4 sm:px-6 shadow-2xl shadow-black/80"
               : "bg-[#080b11]/75 backdrop-blur-xl border-white/10 hover:border-emerald-500/30 py-2.5 sm:py-3 px-5 sm:px-7 shadow-xl shadow-black/60"
-          }`}
+            }`}
         >
           {/* Left: Brand Logo & Wordmark (Inline inside pill) */}
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">
@@ -155,7 +154,7 @@ export function Navbar({ onOpenDemo }: NavbarProps) {
                 className="w-full mt-1 flex items-center justify-center gap-2 py-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-sans font-bold text-xs shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Mulai Simulasi Demo QC</span>
+                <span>Buka Demo Supervisor</span>
               </button>
             </motion.div>
           )}

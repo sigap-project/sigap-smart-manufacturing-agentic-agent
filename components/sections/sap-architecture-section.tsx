@@ -9,7 +9,7 @@ export function SapArchitectureSection() {
       title: "Quality Management",
       icon: ShieldCheck,
       endpoint: "POST /QualityNotification",
-      desc: "Secara instan menerbitkan tiket notifikasi cacat beserta foto bukti S3, confidence level, dan kelas cacat casting.",
+      desc: "Secara instan menerbitkan tiket notifikasi cacat beserta foto bukti S3, confidence level, dan status verifikasi anomali (Defect).",
       outcome: "Notifikasi terbit dalam hitungan detik, lengkap dengan bukti foto dan level keparahan.",
     },
     {
