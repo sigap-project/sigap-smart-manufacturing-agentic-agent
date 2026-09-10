@@ -7,7 +7,7 @@ frontend:
         - npx prisma generate
     build:
       commands:
-        - env | grep -e DATABASE_URL -e AWS_ -e SAP_ -e INTERNAL_API_KEY >> .env.production
+        - env | grep -e DATABASE_URL -e AWS_ -e SAP_ -e INTERNAL_API_KEY -e EDGE_CAMERA_API_KEY >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next
