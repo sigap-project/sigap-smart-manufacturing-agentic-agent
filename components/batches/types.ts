@@ -3,19 +3,28 @@ export type BatchZone = "all" | "standard" | "quarantine";
 
 export interface BatchItem {
   id: string;
+  lotId?: string;
+  batchId?: string;
   productName: string;
+  productType?: string;
   zone: "standard" | "quarantine";
+  storageZone?: "standard" | "quarantine";
   status: BatchStatus;
   totalPcs: number;
+  inspectionCount?: number;
   defectCount: number;
   defectTypes: string[];
   escalationScore?: number;
   timeAgo: string;
+  createdAt?: string;
   slaSeconds?: number;
   defectSummary?: string;
   supplierName: string;
   line: string;
   inspector: string;
+  pendingApproval?: boolean;
+  inspections?: any[];
+  dispatchRecords?: any[];
 }
 
 export const INITIAL_BATCHES: BatchItem[] = [
