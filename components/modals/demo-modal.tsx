@@ -192,7 +192,7 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
                   {/* Defect Spot */}
                   <div className="absolute top-6 right-8 w-12 h-10 rounded border-2 border-red-500/80 bg-red-500/10 flex items-center justify-center animate-pulse">
                     <span className="absolute -top-5 right-0 bg-red-500 text-white font-mono font-bold text-[8px] px-1.5 py-0.5 rounded shadow">
-                      warna_abnormal 94.2%
+                      defect 94.2%
                     </span>
                   </div>
                 </div>
@@ -204,7 +204,7 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
                     LIVE
                   </span>
                   <span className="text-[10px] font-mono text-zinc-400 bg-black/50 px-2 py-0.5 rounded">
-                    FPS: 30.0 • 78ms
+                    FPS: 30.0 • 5.2ms
                   </span>
                 </div>
 
@@ -243,7 +243,7 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
                     )}
                   </div>
                   <p className="text-[11px] text-zinc-300 leading-snug">
-                    Cacat 'warna_abnormal' terdeteksi (Confidence 94.2%).
+                    Anomali 'defect' terdeteksi (Confidence 94.2%).
                   </p>
                 </div>
 
@@ -262,7 +262,7 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
                     )}
                   </div>
                   <p className="text-[11px] text-zinc-300 leading-snug">
-                    3 cacat sejenis dalam 8 menit → Skor Eskalasi:{" "}
+                    3 anomali defect dalam 8 menit → Skor Eskalasi:{" "}
                     <strong className="text-amber-400 font-mono">0.74</strong>{" "}
                     (Threshold &gt; 0.70). Pola Terkonfirmasi.
                   </p>
