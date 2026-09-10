@@ -32,9 +32,17 @@ export async function POST(request: NextRequest) {
         imageBase64 = `data:${file.type || "image/jpeg"};base64,${buffer.toString("base64")}`;
       }
     } else {
-      const json = await request.json();
+      let json: any = {};
+      try {
+        const rawText = await request.text();
+        if (rawText && rawText.trim().length > 0) {
+          json = JSON.parse(rawText);
+        }
+      } catch (parseErr) {
+        console.warn("[POST /api/inspection/analyze] Payload bukan format JSON valid, menggunakan default:", parseErr);
+      }
       imageBase64 = json.imageBase64;
-      testType = json.testType;
+      testType = json.testType || (!imageBase64 ? "defect" : undefined);
       lotId = json.lotId || lotId;
       productType = json.productType || productType;
       supplierName = json.supplierName || supplierName;

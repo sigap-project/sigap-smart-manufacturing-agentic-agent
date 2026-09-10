@@ -11,6 +11,7 @@ import {
   Factory,
   CheckCircle2,
 } from "lucide-react";
+import { NotificationPopover } from "./notification-popover";
 
 interface DashboardTopbarProps {
   plantName?: string;
@@ -101,17 +102,8 @@ export function DashboardTopbar({
           </span>
         </div>
 
-        {/* Notification Bell with Unread Badge */}
-        <button
-          aria-label="Lihat Notifikasi"
-          className="relative p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-          title="3 Notifikasi Eskalasi Baru"
-        >
-          <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-mono font-bold text-zinc-950 shadow-sm shadow-emerald-500/40">
-            3
-          </span>
-        </button>
+        {/* Interactive Notification Popover with Unread Badge & Live SSE */}
+        <NotificationPopover />
 
         {/* Settings Shortcut */}
         <Link

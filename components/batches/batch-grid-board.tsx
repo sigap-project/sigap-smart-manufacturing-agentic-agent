@@ -23,9 +23,10 @@ export function BatchGridBoard({
   selectedBatch,
   onSelectBatch,
 }: BatchGridBoardProps) {
-  const getStatusConfig = (status: BatchStatus) => {
+  const getStatusConfig = (status: BatchStatus | string) => {
     switch (status) {
       case "pending":
+      case "pending_review":
         return {
           borderColor: "border-amber-500/40 hover:border-amber-400",
           selectedRing: "ring-2 ring-amber-400/80 shadow-amber-500/20",
@@ -36,6 +37,7 @@ export function BatchGridBoard({
           accentDot: "bg-amber-400",
         };
       case "held":
+      case "hold":
         return {
           borderColor: "border-rose-500/45 hover:border-rose-400",
           selectedRing: "ring-2 ring-rose-400/80 shadow-rose-500/20",
@@ -46,6 +48,7 @@ export function BatchGridBoard({
           accentDot: "bg-rose-400 animate-pulse",
         };
       case "released":
+      case "approved":
         return {
           borderColor: "border-emerald-500/30 hover:border-emerald-400/70",
           selectedRing: "ring-2 ring-emerald-400/80 shadow-emerald-500/20",
@@ -56,6 +59,7 @@ export function BatchGridBoard({
           accentDot: "bg-emerald-400",
         };
       case "rejected":
+      case "scrap":
         return {
           borderColor: "border-zinc-800 hover:border-zinc-700",
           selectedRing: "ring-2 ring-zinc-500/60 shadow-black",
@@ -64,6 +68,16 @@ export function BatchGridBoard({
           label: "Rejected",
           icon: XCircle,
           accentDot: "bg-zinc-500",
+        };
+      default:
+        return {
+          borderColor: "border-amber-500/30 hover:border-amber-400/50",
+          selectedRing: "ring-2 ring-amber-400/80 shadow-amber-500/20",
+          bgColor: "bg-amber-500/[0.03]",
+          badgeBg: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+          label: status || "Pending Review",
+          icon: Clock,
+          accentDot: "bg-amber-400",
         };
     }
   };
@@ -86,7 +100,7 @@ export function BatchGridBoard({
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
       {batches.map((batch) => {
         const config = getStatusConfig(batch.status);
-        const StatusIcon = config.icon;
+        const StatusIcon = config?.icon || Clock;
         const isSelected = selectedBatch?.id === batch.id;
 
         return (

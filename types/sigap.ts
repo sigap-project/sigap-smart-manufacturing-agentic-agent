@@ -8,7 +8,7 @@ export type DefectClass =
 
 export type DefectSeverity = "low" | "medium" | "high";
 
-export type BatchStatus = "pending_review" | "held" | "released" | "rejected";
+export type BatchStatus = "pending_review" | "pending" | "held" | "released" | "rejected";
 
 export type DispatchConsumer = "SAP_QM" | "SAP_MM" | "SAP_PP" | "Human_Notification";
 

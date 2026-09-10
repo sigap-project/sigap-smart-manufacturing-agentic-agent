@@ -129,22 +129,22 @@ export function InspectionAgentTrace({ traces: initialTraces }: InspectionAgentT
   return (
     <div className="rounded-3xl p-5 sm:p-6 bg-[#0b0e14]/80 backdrop-blur-md border border-white/[0.08] shadow-xl shadow-black/40 flex flex-col justify-between">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/[0.06]">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-display text-base sm:text-lg font-bold text-white tracking-tight">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 pb-3 border-b border-white/[0.06]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-display text-base font-bold text-white tracking-tight whitespace-nowrap">
               Agent Reasoning Trace
             </h3>
-            <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">
+            <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold shrink-0">
               AWS BEDROCK
             </span>
           </div>
-          <p className="text-[11px] text-zinc-400 mt-0.5">
+          <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
             Jejak deduksi bertahap penalaran agen otonom
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {isUpdating && (
             <span className="font-mono text-[10px] text-emerald-400 animate-pulse">
               [NEW TRACE]
@@ -171,7 +171,7 @@ export function InspectionAgentTrace({ traces: initialTraces }: InspectionAgentT
           </div>
           <span>aws-bedrock-agent-core::reasoning-trace</span>
           <span className={isConnected ? "text-emerald-400" : "text-amber-400"}>
-            {isConnected ? "STREAM-SYNCED" : "OFFLINE"}
+            {isConnected ? "STREAM-SYNCED" : "STANDBY"}
           </span>
         </div>
 

@@ -86,7 +86,17 @@ export function InspectionEventsList({ events: initialEvents }: InspectionEvents
       const isDefect =
         newIns.defectDetected ??
         (newIns.defectClass?.toLowerCase() !== "ok");
-      const eventId = `EV-${String(newIns.id).slice(-4)}`;
+      // Gunakan ID penuh untuk menghindari tabrakan kunci
+      const eventId = `EV-SSE-${String(newIns.id)}`;
+
+      // Normalisasi batchId agar format konsisten (#XXXX bukan batch-xxxx)
+      const rawLot = newIns.batchId || newIns.lotId || "B-2026-0730";
+      const normLot = (() => {
+        const s = String(rawLot).trim();
+        // Hapus prefix "batch-" yang mungkin datang dari DB slug
+        const cleaned = s.replace(/^batch-/i, "");
+        return cleaned.startsWith("#") ? cleaned : `#${cleaned}`;
+      })();
 
       const newItem = {
         id: eventId,
@@ -94,11 +104,7 @@ export function InspectionEventsList({ events: initialEvents }: InspectionEvents
         status: isDefect ? "DEFECT" : "PASSED",
         confidence: Number((newIns.confidence ?? 95).toFixed(1)),
         time: "Baru saja",
-        lot: newIns.batchId
-          ? String(newIns.batchId).startsWith("#")
-            ? newIns.batchId
-            : `#${newIns.batchId}`
-          : "Lot #B-2026-0730",
+        lot: normLot,
         part: newIns.partName || "Bracket A7",
         isDefect,
         badgeColor: isDefect
@@ -112,7 +118,8 @@ export function InspectionEventsList({ events: initialEvents }: InspectionEvents
       };
 
       setNewestId(eventId);
-      setEvents((prev) => [newItem, ...prev.slice(0, 7)]);
+      // Hindari duplikasi: buang item dengan ID yang sama sebelum menambah yang baru
+      setEvents((prev) => [newItem, ...prev.filter((e) => e.id !== eventId).slice(0, 7)]);
 
       // Hapus highlight setelah 3 detik
       setTimeout(() => setNewestId(null), 3000);
@@ -122,23 +129,23 @@ export function InspectionEventsList({ events: initialEvents }: InspectionEvents
   return (
     <div className="rounded-3xl p-5 sm:p-6 bg-[#0b0e14]/80 backdrop-blur-md border border-white/[0.08] shadow-xl shadow-black/40 flex flex-col justify-between">
       {/* Top Header */}
-      <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/[0.06]">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-display text-base sm:text-lg font-bold text-white tracking-tight">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 pb-3 border-b border-white/[0.06]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-display text-base font-bold text-white tracking-tight whitespace-nowrap">
               Kejadian Terbaru
             </h3>
-            <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.10]">
-              Real-Time Frame Feed
+            <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.10] shrink-0">
+              Real-Time Feed
             </span>
           </div>
-          <p className="text-[11px] text-zinc-400 mt-0.5">
+          <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
             Log deteksi kamera optik per frame konveyor
           </p>
         </div>
 
         <div
-          className={`flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+          className={`shrink-0 flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
             isConnected
               ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
               : "text-amber-400 bg-amber-500/10 border-amber-500/20"

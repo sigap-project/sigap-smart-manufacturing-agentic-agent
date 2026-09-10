@@ -37,12 +37,16 @@ export default async function InspectionPage() {
       liveEvents = inspections.map((ins, idx) => {
         const isDefect = ins.defectClass?.toLowerCase() !== "ok";
         return {
-          id: `EV-${ins.id.slice(-4)}`,
+          id: `EV-${idx}-${ins.id.slice(-4)}`,
           label: isDefect ? "defect" : "ok",
           status: isDefect ? "DEFECT" : "PASSED",
           confidence: Number(ins.confidence.toFixed(1)),
           time: `${((idx + 1) * 1.2).toFixed(1)}s lalu`,
-          lot: ins.batchId || activeLot,
+          lot: (() => {
+            const raw = String(ins.batchId || activeLot).trim();
+            const cleaned = raw.replace(/^batch-/i, "");
+            return cleaned.startsWith("#") ? cleaned : `#${cleaned}`;
+          })(),
           part: ins.partName ? ins.partName.replace("Bracket Motor ", "Bracket ") : "Bracket A7",
           isDefect,
           badgeColor: isDefect

@@ -78,6 +78,24 @@ export function formatInspectionRecord(item: any): InspectionRecord & { [key: st
 // 3. BATCH RECORD FORMATTER
 // =============================================================================
 
+export function normalizeBatchStatus(status?: string): "pending" | "held" | "released" | "rejected" {
+  if (!status) return "pending";
+  const s = status.toLowerCase().trim();
+  if (s === "pending" || s === "pending_review" || s.includes("pending") || s === "review" || s === "draft") {
+    return "pending";
+  }
+  if (s === "held" || s === "hold" || s.includes("tahan") || s.includes("quarantine")) {
+    return "held";
+  }
+  if (s === "released" || s === "approved" || s.includes("lolos") || s.includes("pass")) {
+    return "released";
+  }
+  if (s === "rejected" || s === "ditolak" || s.includes("scrap") || s.includes("reject")) {
+    return "rejected";
+  }
+  return "pending";
+}
+
 export function formatBatchRecord(item: any): BatchItem & { [key: string]: any } {
   const createdAt = item.createdAt ? new Date(item.createdAt) : new Date();
 
@@ -89,7 +107,7 @@ export function formatBatchRecord(item: any): BatchItem & { [key: string]: any }
     productType: item.productType || item.productName || "Bracket Motor A7",
     zone: (item.storageZone || "standard") as "standard" | "quarantine",
     storageZone: item.storageZone || "standard",
-    status: item.status || "pending",
+    status: normalizeBatchStatus(item.status),
     totalPcs: item.inspectionCount || 0,
     inspectionCount: item.inspectionCount || 0,
     defectCount: item.defectCount || 0,

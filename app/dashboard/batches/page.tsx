@@ -34,19 +34,23 @@ export default function BatchBoardPage() {
   // Dengarkan pembaruan real-time via SSE
   const { isConnected } = useSigapEvents({
     onBatchStatusChanged: (updatedBatch) => {
+      const normalizedStatus =
+        updatedBatch.status === "pending_review" ? "pending" : updatedBatch.status;
+      const sanitizedBatch = { ...updatedBatch, status: normalizedStatus };
+
       setBatches((prev) => {
         const index = prev.findIndex(
-          (b) => b.id === updatedBatch.id || b.id === updatedBatch.lotId
+          (b) => b.id === sanitizedBatch.id || b.id === sanitizedBatch.lotId
         );
         if (index >= 0) {
           const updated = [...prev];
-          updated[index] = { ...updated[index], ...updatedBatch };
+          updated[index] = { ...updated[index], ...sanitizedBatch };
           return updated;
         } else {
-          return [updatedBatch, ...prev];
+          return [sanitizedBatch, ...prev];
         }
       });
-      showToast(`Status batch ${updatedBatch.lotId || updatedBatch.id} terbarui secara live (${updatedBatch.status}).`);
+      showToast(`Status batch ${sanitizedBatch.lotId || sanitizedBatch.id} terbarui secara live (${sanitizedBatch.status}).`);
     },
   });
 
@@ -57,7 +61,11 @@ export default function BatchBoardPage() {
         const res = await fetch("/api/batches");
         const json = await res.json();
         if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-          setBatches(json.data);
+          const sanitized = json.data.map((b: any) => ({
+            ...b,
+            status: b.status === "pending_review" ? "pending" : b.status || "pending",
+          }));
+          setBatches(sanitized);
         } else {
           setBatches(INITIAL_BATCHES);
         }

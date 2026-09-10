@@ -17,10 +17,10 @@ interface BatchStatCardsProps {
 
 export function BatchStatCards({ batches }: BatchStatCardsProps) {
   const total = batches.length;
-  const pending = batches.filter((b) => b.status === "pending").length;
-  const held = batches.filter((b) => b.status === "held").length;
-  const released = batches.filter((b) => b.status === "released").length;
-  const rejected = batches.filter((b) => b.status === "rejected").length;
+  const pending = batches.filter((b) => b.status === "pending" || (b.status as string) === "pending_review").length;
+  const held = batches.filter((b) => b.status === "held" || (b.status as string) === "hold").length;
+  const released = batches.filter((b) => b.status === "released" || (b.status as string) === "approved").length;
+  const rejected = batches.filter((b) => b.status === "rejected" || (b.status as string) === "scrap").length;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4 mb-6">

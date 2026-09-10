@@ -1,4 +1,4 @@
-export type BatchStatus = "pending" | "held" | "released" | "rejected";
+export type BatchStatus = "pending" | "pending_review" | "held" | "released" | "rejected";
 export type BatchZone = "all" | "standard" | "quarantine";
 
 export interface BatchItem {
