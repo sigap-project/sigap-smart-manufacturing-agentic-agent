@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Send, CheckCircle2 } from "lucide-react";
+import { X, Send, Layers } from "lucide-react";
 import { ConsumerType, DispatchItem } from "./types";
 
 interface DispatchCreateModalProps {
@@ -45,11 +45,11 @@ export function DispatchCreateModal({
       batchId,
       partName,
       escalationScore: 0.76,
-      approvedBy: "Budi Pratama (QC Supervisor)",
+      approvedBy: "Budi Pratama (QC Lead)",
       sapTicketId: `${consumer.replace(" ", "-")}-${randomNum}`,
       defectCode: "DEF-MANUAL-01",
       defectClass: "Manual Supervisor Dispatch",
-      actionSummary: `Tiket diterbitkan secara manual ke modul ${consumer}.`,
+      actionSummary: `Manual dispatch order routed to ${consumer} module.`,
       supplier,
     };
 
@@ -66,38 +66,38 @@ export function DispatchCreateModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/80 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         />
 
         {/* Modal Dialog */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: "spring", damping: 26, stiffness: 300 }}
-          className="relative w-full max-w-lg bg-[#090c12] border border-white/[0.12] rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10"
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="relative w-full max-w-lg bg-white border border-slate-200/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10"
         >
           {/* Header */}
-          <div className="p-5 sm:p-6 border-b border-white/[0.08] bg-[#06080d] flex items-center justify-between">
+          <div className="p-5 sm:p-6 border-b border-slate-100 bg-white flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25">
-                <Plus className="w-5 h-5 text-emerald-400" />
+              <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
+                <Layers className="w-5 h-5 text-slate-700" />
               </div>
               <div>
-                <h3 className="font-display text-base font-bold text-white">
-                  Buat Tiket Dispatch Baru
+                <h3 className="text-base font-semibold text-slate-900">
+                  Create New Dispatch Ticket
                 </h3>
-                <p className="font-sans text-xs text-zinc-400">
-                  Kirim instruksi eskalasi manual ke sistem ERP SAP atau Notifikasi
+                <p className="text-xs text-slate-500">
+                  Route manual escalation instructions to enterprise ERP modules or notification lists
                 </p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -105,8 +105,8 @@ export function DispatchCreateModal({
           <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
             {/* Consumer ERP Module */}
             <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-1.5">
-                Target Consumer ERP
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Target ERP Consumer
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {(["SAP QM", "SAP MM", "SAP PP", "Human Notification"] as ConsumerType[]).map(
@@ -115,10 +115,10 @@ export function DispatchCreateModal({
                       key={c}
                       type="button"
                       onClick={() => setConsumer(c)}
-                      className={`p-2.5 rounded-xl text-xs font-mono font-medium border text-left transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-xl text-xs font-medium border text-left transition-all cursor-pointer ${
                         consumer === c
-                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold"
-                          : "bg-white/[0.03] border-white/[0.08] text-zinc-400 hover:text-white"
+                          ? "bg-slate-900 border-slate-900 text-white font-semibold shadow-sm"
+                          : "bg-slate-50/70 border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                       }`}
                     >
                       {c}
@@ -131,7 +131,7 @@ export function DispatchCreateModal({
             {/* Batch ID & Part Name */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-mono text-zinc-400 mb-1.5">
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
                   Batch Lot ID
                 </label>
                 <input
@@ -139,50 +139,50 @@ export function DispatchCreateModal({
                   value={batchId}
                   onChange={(e) => setBatchId(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/[0.08] text-white focus:outline-none focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-zinc-400 mb-1.5">
-                  Nama Komponen
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Component Name
                 </label>
                 <input
                   type="text"
                   value={partName}
                   onChange={(e) => setPartName(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/[0.08] text-white focus:outline-none focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
                 />
               </div>
             </div>
 
             {/* Supplier */}
             <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-1.5">
-                Supplier Material
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Material Supplier
               </label>
               <input
                 type="text"
                 value={supplier}
                 onChange={(e) => setSupplier(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/[0.08] text-white focus:outline-none focus:border-emerald-500/50"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
               />
             </div>
 
             {/* Trigger Reason */}
             <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-1.5">
-                Alasan Pemicu (Trigger Reason)
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Trigger Reason
               </label>
               <textarea
                 value={triggerReason}
                 onChange={(e) => setTriggerReason(e.target.value)}
-                placeholder="Contoh: Temuan cacat retak mikro pada 5 unit berurutan di Line #01..."
+                placeholder="e.g. Micro-crack defect pattern identified across 5 consecutive parts on Line #01..."
                 rows={3}
                 required
-                className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 resize-none"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 resize-none"
               />
             </div>
 
@@ -191,16 +191,16 @@ export function DispatchCreateModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-mono font-bold bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Kirim Dispatch</span>
+                <span>Submit Dispatch</span>
               </button>
             </div>
           </form>

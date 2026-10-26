@@ -11,7 +11,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SIGAP — Sistem Agen Otonom Deteksi Cacat & Respons Kualitas Real-Time",
+  title: "SIGAP",
   description:
     "Agentic AI Quality Control system untuk SME Manufaktur Pengecoran Logam. Menghubungkan deteksi computer vision langsung ke aksi SAP QM, MM, dan PP secara otonom.",
   keywords: [

@@ -37,6 +37,7 @@ Thumbs.db
 
 # Temporary scratch test files & media storage
 /scratch/
+/docs_me/
 /.tempmediaStorage/
 *.log
 log.txt

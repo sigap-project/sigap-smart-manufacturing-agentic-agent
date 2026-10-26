@@ -1,6 +1,7 @@
 "use client";
 
-import { FileSpreadsheet, HardDrive, Calendar, Database } from "lucide-react";
+import { FileSpreadsheet, HardDrive } from "lucide-react";
+import { AnimatedSelect } from "@/components/ui/animated-select";
 import { SettingsState } from "./types";
 
 interface ExportLogCardProps {
@@ -10,31 +11,31 @@ interface ExportLogCardProps {
 
 export function ExportLogCard({ settings, onChange }: ExportLogCardProps) {
   return (
-    <div className="rounded-3xl bg-[#0b0e14]/80 backdrop-blur-md border border-white/[0.08] shadow-xl p-5 sm:p-6 space-y-5">
+    <div className="rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 sm:p-6 space-y-5">
       {/* Section Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-white/[0.06]">
-        <div className="p-2.5 rounded-2xl bg-teal-500/10 border border-teal-500/25">
-          <FileSpreadsheet className="w-5 h-5 text-teal-400" />
+      <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+        <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
+          <FileSpreadsheet className="w-5 h-5 text-slate-700" />
         </div>
         <div>
-          <h3 className="font-display text-base font-bold text-white">
-            SECTION 4 — Export &amp; Log
+          <h3 className="text-base font-semibold text-slate-900">
+            Data Export &amp; Log Retention
           </h3>
-          <p className="font-sans text-xs text-zinc-400">
-            Otomatisasi pengarsipan data batch, ekspor laporan berkala, dan retensi penyimpanan AWS S3.
+          <p className="text-xs text-slate-500">
+            Batch record archiving schedules, shift report exports, and cloud storage lifecycle policies.
           </p>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {/* Toggle: Auto-export CSV per shift */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/70 border border-slate-200/70">
           <div className="space-y-0.5">
-            <span className="text-xs font-semibold text-white block">
-              Auto-export CSV per shift
+            <span className="text-xs font-semibold text-slate-900 block">
+              Auto-Export CSV per Shift
             </span>
-            <span className="text-[11px] text-zinc-400 font-sans">
-              Otomatis kirim rekap file CSV riwayat inspeksi ke email QC Lead &amp; Plant Manager di setiap akhir shift kerja.
+            <span className="text-[11px] text-slate-500">
+              Automatically deliver summarized CSV reports to the QC Lead and Plant Manager email at each shift handover.
             </span>
           </div>
 
@@ -44,49 +45,43 @@ export function ExportLogCard({ settings, onChange }: ExportLogCardProps) {
             aria-checked={settings.autoExportCsv}
             onClick={() => onChange("autoExportCsv", !settings.autoExportCsv)}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              settings.autoExportCsv ? "bg-emerald-500" : "bg-zinc-700"
+              settings.autoExportCsv ? "bg-slate-900" : "bg-slate-200"
             }`}
           >
             <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-zinc-950 shadow ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                 settings.autoExportCsv ? "translate-x-5" : "translate-x-0"
               }`}
             />
           </button>
         </div>
 
-        {/* Dropdown: Periode Retensi Log */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+        {/* Dropdown: Log Retention Period */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50/70 border border-slate-200/70">
           <div className="space-y-0.5">
             <div className="flex items-center gap-1.5">
-              <HardDrive className="w-4 h-4 text-teal-400" />
-              <span className="text-xs font-semibold text-white">
-                Periode Retensi Log
+              <HardDrive className="w-4 h-4 text-slate-600" />
+              <span className="text-xs font-semibold text-slate-900">
+                Log Retention Period
               </span>
             </div>
-            <span className="text-[11px] text-zinc-400 font-sans block">
-              Lama penyimpanan frame snapshot kamera dan log penalaran AI di AWS S3 sebelum diarsipkan ke cold storage Glacier.
+            <span className="text-[11px] text-slate-500 block">
+              Duration optical frame snapshots and AI inference logs remain in active storage before lifecycle tiering.
             </span>
           </div>
 
-          <select
+          <AnimatedSelect
             value={settings.logRetention}
-            aria-label="Pilih Periode Retensi Log"
-            onChange={(e) =>
-              onChange("logRetention", e.target.value as "7" | "14" | "30")
+            onChange={(val) =>
+              onChange("logRetention", val as "7" | "14" | "30")
             }
-            className="px-4 py-2 text-xs font-mono font-medium rounded-xl bg-black/40 border border-white/[0.1] text-zinc-200 focus:outline-none focus:border-emerald-500/50 cursor-pointer shrink-0"
-          >
-            <option value="7" className="bg-[#0b0e14]">
-              7 Hari (Penyimpanan Cepat)
-            </option>
-            <option value="14" className="bg-[#0b0e14]">
-              14 Hari (Standar Shift)
-            </option>
-            <option value="30" className="bg-[#0b0e14]">
-              30 Hari (Audit ISO 9001:2015)
-            </option>
-          </select>
+            options={[
+              { id: "7", label: "7 Days (Fast Storage)" },
+              { id: "14", label: "14 Days (Standard Shift)" },
+              { id: "30", label: "30 Days (ISO 9001 Compliance)" },
+            ]}
+            ariaLabel="Select Log Retention Period"
+          />
         </div>
       </div>
     </div>

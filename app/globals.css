@@ -20,8 +20,8 @@
   }
 
   body {
-    background-color: #050505;
-    color: #f3f4f6;
+    background-color: #F8F9FB;
+    color: #0f172a;
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
@@ -29,7 +29,12 @@
     overflow-x: clip;
   }
 
-  h1, h2, h3, .font-display {
+  h1, h2, h3 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.02em;
+  }
+
+  .font-display {
     font-family: var(--font-display);
   }
 

@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // 2. Jika tabel AgentLog memiliki data, format dan kembalikan
     if (logs.length > 0) {
-      const formattedLogs = logs.map((log) => {
+      const formattedLogs = logs.map((log: any) => {
         const rawDate = log.timestamp ? new Date(log.timestamp).toISOString() : new Date().toISOString();
         return {
           id: log.id,

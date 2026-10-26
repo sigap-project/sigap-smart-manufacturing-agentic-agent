@@ -6,13 +6,9 @@ import {
   Scan,
   CheckCircle2,
   AlertTriangle,
-  Clock,
   Send,
   ArrowRight,
-  ShieldAlert,
-  Layers,
   Sparkles,
-  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { InspectionRecord } from "./types";
@@ -28,7 +24,7 @@ export function HistoryDetailModal({
 }: HistoryDetailModalProps) {
   if (!record) return null;
 
-  const isOk = record.defectClass === "OK";
+  const isOk = record.defectClass === "OK" || record.defectClass === "ok";
 
   return (
     <AnimatePresence>
@@ -39,45 +35,45 @@ export function HistoryDetailModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/80 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         />
 
         {/* Modal Dialog Content */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: "spring", damping: 26, stiffness: 300 }}
-          className="relative w-full max-w-2xl bg-[#090c12] border border-white/[0.12] rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[92vh]"
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="relative w-full max-w-2xl bg-white border border-slate-200/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[92vh]"
         >
           {/* Header */}
-          <div className="p-5 sm:p-6 border-b border-white/[0.08] bg-[#06080d] flex items-center justify-between">
+          <div className="p-5 sm:p-6 border-b border-slate-100 bg-white flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
-                className={`p-2.5 rounded-2xl border ${
+                className={`p-2 rounded-xl border ${
                   isOk
-                    ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
-                    : "bg-amber-500/10 border-amber-500/25 text-amber-400"
+                    ? "bg-emerald-50 border-emerald-200/80 text-emerald-700"
+                    : "bg-amber-50 border-amber-200/80 text-amber-700"
                 }`}
               >
                 <Scan className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-mono text-base font-bold text-white">
+                  <h3 className="font-mono text-base font-bold text-slate-900">
                     {record.id}
                   </h3>
                   <span
-                    className={`font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
                       isOk
-                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                        : "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                        : "bg-amber-50 text-amber-700 border-amber-200/60"
                     }`}
                   >
                     {record.status}
                   </span>
                 </div>
-                <p className="font-sans text-xs text-zinc-400">
+                <p className="text-xs text-slate-500">
                   {record.partName} • {record.batchId} • {record.supplier}
                 </p>
               </div>
@@ -85,87 +81,86 @@ export function HistoryDetailModal({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
-              title="Tutup Modal"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Close Dialog"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Scrollable Body */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-            {/* 1. Larger Image / High-Tech Camera Snapshot HUD */}
-            <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden bg-[#06080d] border border-white/10 shadow-inner flex items-center justify-center">
-              {/* Background Sensor Grid Texture */}
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:2rem_2rem]" />
+            {/* 1. Camera Snapshot Viewport Frame */}
+            <div className="relative w-full h-52 sm:h-60 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner flex items-center justify-center">
+              {/* Corner Reticle Brackets */}
+              <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-slate-600" />
+              <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-slate-600" />
+              <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-slate-600" />
+              <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-slate-600" />
 
-              {/* Viewport Corner Brackets */}
-              <div className="absolute top-4 left-4 w-5 h-5 border-t-2 border-l-2 border-emerald-400/60" />
-              <div className="absolute top-4 right-4 w-5 h-5 border-t-2 border-r-2 border-emerald-400/60" />
-              <div className="absolute bottom-4 left-4 w-5 h-5 border-b-2 border-l-2 border-emerald-400/60" />
-              <div className="absolute bottom-4 right-4 w-5 h-5 border-b-2 border-r-2 border-emerald-400/60" />
-
-              {/* Center Simulated Part with Bounding Box Overlay */}
+              {/* Center Target Indicator */}
               {isOk ? (
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-24 h-24 rounded-2xl border-2 border-emerald-400/70 bg-emerald-500/10 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.2)] mb-2">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                  <div className="w-20 h-20 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/10 flex items-center justify-center mb-2">
+                    <CheckCircle2 className="w-9 h-9 text-emerald-400" />
                   </div>
-                  <span className="font-mono text-xs font-bold text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30">
-                    PRODUK OK [{record.confidence.toFixed(1)}%]
+                  <span className="font-mono text-xs font-semibold text-emerald-300 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30">
+                    PASSED OK [{record.confidence.toFixed(1)}%]
                   </span>
                 </div>
               ) : (
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-28 h-28 rounded-2xl border-2 border-amber-400 bg-amber-500/15 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.25)] mb-2 animate-pulse">
-                    <AlertTriangle className="w-10 h-10 text-amber-400" />
+                  <div className="w-20 h-20 rounded-2xl border-2 border-amber-400 bg-amber-500/15 flex items-center justify-center mb-2">
+                    <AlertTriangle className="w-9 h-9 text-amber-400" />
                   </div>
-                  <span className="font-mono text-xs font-bold text-amber-300 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
-                    {record.defectClass} [{record.confidence.toFixed(1)}%]
+                  <span className="font-mono text-xs font-semibold text-amber-300 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
+                    {record.defectClass.toUpperCase()} [{record.confidence.toFixed(1)}%]
                   </span>
                 </div>
               )}
 
-              {/* HUD Telemetry Watermark */}
-              <div className="absolute bottom-3 left-4 text-[10px] font-mono text-zinc-500">
-                {record.line} • SENSOR CAM-01 • {record.timestamp}
+              {/* Telemetry Footer */}
+              <div className="absolute bottom-3 left-4 text-[10px] font-mono text-slate-400">
+                {record.line} • OPTICAL SENSOR 01 • {record.timestamp}
               </div>
             </div>
 
-            {/* 2. Full Agent Reasoning Trace (Readable Step List) */}
+            {/* 2. Full Agent Reasoning Trace */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  Full Agent Reasoning Trace
-                </span>
-                <span className="text-[10px] font-mono text-zinc-500">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-slate-700" />
+                  <span className="text-xs font-semibold text-slate-900">
+                    Agent Reasoning Trace
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400">
                   Model: YOLOv8-Nano + AWS Bedrock
                 </span>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {record.reasoningSteps.map((s, idx) => (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-start gap-3 hover:bg-white/[0.04] transition-colors"
+                    className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-start gap-3"
                   >
-                    <div className="px-2 py-1 rounded-lg bg-black/40 border border-white/10 font-mono text-[10px] font-bold text-emerald-400 shrink-0">
-                      [{s.step}. {s.phase}]
+                    <div className="px-2 py-0.5 rounded-md bg-white border border-slate-200 font-mono text-[10px] font-semibold text-slate-700 shrink-0">
+                      {s.step}. {s.phase}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <h5 className="font-mono text-xs font-bold text-zinc-200">
+                        <h5 className="text-xs font-semibold text-slate-900">
                           {s.title}
                         </h5>
                         {s.latency && (
-                          <span className="font-mono text-[9px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.2 rounded border border-cyan-500/20">
+                          <span className="font-mono text-[10px] text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
                             {s.latency}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs font-sans text-zinc-400 leading-relaxed">
+                      <p className="text-xs text-slate-600 leading-relaxed">
                         {s.detail}
                       </p>
                     </div>
@@ -176,26 +171,26 @@ export function HistoryDetailModal({
 
             {/* 3. Link to Related Dispatch Record (If Exists) */}
             {record.dispatchId && (
-              <div className="p-4 rounded-2xl bg-cyan-500/[0.05] border border-cyan-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                  <div className="p-2 rounded-xl bg-white text-slate-700 border border-slate-200 shadow-sm">
                     <Send className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-mono text-xs font-bold text-white block">
-                      Terkait dengan Tiket Dispatch ERP: {record.dispatchId}
+                    <span className="text-xs font-semibold text-slate-900 block font-mono">
+                      Linked ERP Dispatch Ticket: {record.dispatchId}
                     </span>
-                    <span className="text-[11px] text-zinc-400 font-sans">
-                      Data ini telah dieskalasi dan tercatat pada modul SAP ERP
+                    <span className="text-[11px] text-slate-500">
+                      This incident has been synchronized to the enterprise SAP ERP gateway.
                     </span>
                   </div>
                 </div>
 
                 <Link
                   href="/dashboard/dispatch"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-bold bg-cyan-500 hover:bg-cyan-400 text-zinc-950 shadow-md shadow-cyan-500/20 transition-all cursor-pointer whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all whitespace-nowrap self-start sm:self-auto"
                 >
-                  <span>Buka di Export Dispatch</span>
+                  <span>View in Export Dispatch</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -203,12 +198,12 @@ export function HistoryDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="p-4 sm:p-5 border-t border-white/[0.08] bg-[#06080d] flex items-center justify-end">
+          <div className="p-4 sm:p-5 border-t border-slate-100 bg-white flex items-center justify-end">
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl text-xs font-mono font-bold bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 transition-colors cursor-pointer"
             >
-              Tutup Rincian
+              Close Details
             </button>
           </div>
         </motion.div>

@@ -1,5 +1,9 @@
 # SIGAP Smart Manufacturing — AI Engineer Service Integration & Handoff Guide
 
+> [!IMPORTANT]
+> **Dokumen Utama Telah Dipindahkan ke Root Repository:**
+> Versi paling mutakhir, lengkap, dan terperinci kini tersedia di: [`/AI_ENGINEER_HANDOFF.md`](file:///c:/Users/asus/OneDrive/Documents/WebDev_BigProject/sigap-smart-manufacturing-agentic-agent/AI_ENGINEER_HANDOFF.md). Silakan buka file tersebut untuk panduan integrasi produksi, aset model ONNX, dan kontrak API terbaru.
+
 Dokumen ini ditujukan bagi **AI Engineer** yang membangun dan mengoperasikan layanan inferensi visi (*edge camera YOLOv8*) serta layanan orkestrasi penalaran agen (*AWS Bedrock Agent / LangGraph / Python Microservice*).
 
 ---

@@ -28,7 +28,7 @@ export function formatTimestampWIB(date: Date | string | null | undefined): stri
 }
 
 export function formatTimeAgo(date: Date | string | null | undefined): string {
-  if (!date) return "Baru saja";
+  if (!date) return "Just now";
   const now = new Date();
   const past = new Date(date);
   const diffMs = Math.max(0, now.getTime() - past.getTime());
@@ -36,10 +36,10 @@ export function formatTimeAgo(date: Date | string | null | undefined): string {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 2) return "Baru saja";
-  if (diffMins < 60) return `${diffMins} mnt lalu`;
-  if (diffHours < 24) return `${diffHours} jam lalu`;
-  return `${diffDays} hari lalu`;
+  if (diffMins < 2) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
 }
 
 // =============================================================================

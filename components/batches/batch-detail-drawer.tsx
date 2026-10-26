@@ -4,12 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Layers,
-  ShieldCheck,
   AlertTriangle,
-  Send,
   ExternalLink,
-  Factory,
-  Clock,
   Scan,
   CheckCircle2,
   XCircle,
@@ -41,7 +37,7 @@ export function BatchDetailDrawer({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+          className="absolute inset-0 bg-slate-900/30 backdrop-blur-xs"
         />
 
         {/* Drawer Panel */}
@@ -50,19 +46,19 @@ export function BatchDetailDrawer({
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 26, stiffness: 280 }}
-          className="relative w-full max-w-md h-full bg-[#090c12] border-l border-white/[0.1] shadow-2xl flex flex-col z-10 select-none overflow-hidden"
+          className="relative w-full max-w-md h-full bg-white border-l border-slate-200/80 shadow-2xl flex flex-col z-10 select-none overflow-hidden"
         >
           {/* Header */}
-          <div className="p-5 border-b border-white/[0.08] flex items-center justify-between bg-[#06080d]">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
-                <Layers className="w-4 h-4 text-emerald-400" />
+              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-600">
+                <Layers className="w-4 h-4" />
               </div>
               <div>
-                <span className="font-mono text-xs font-bold text-white block">
-                  Detail Batch {batch.id}
+                <span className="text-sm font-semibold text-slate-900 block">
+                  Batch Lot Details {batch.id}
                 </span>
-                <span className="font-sans text-[11px] text-zinc-400">
+                <span className="text-xs text-slate-500 font-medium">
                   {batch.productName}
                 </span>
               </div>
@@ -70,30 +66,30 @@ export function BatchDetailDrawer({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
-              title="Tutup Panel"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Close Panel"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Scrollable Body */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-white">
             {/* Status & Zone Banner */}
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-200/80 flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase font-mono text-zinc-500 block mb-1">
-                  Status Pelepasan
+                <span className="text-xs font-medium text-slate-500 block mb-1">
+                  Release Status
                 </span>
                 <span
-                  className={`font-mono text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border inline-block ${
+                  className={`text-xs font-medium capitalize px-2.5 py-0.5 rounded-full border inline-block ${
                     batch.status === "released"
-                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
                       : batch.status === "held"
-                      ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
+                      ? "bg-rose-50 text-rose-700 border-rose-200/80"
                       : batch.status === "pending"
-                      ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                      : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                      ? "bg-amber-50 text-amber-700 border-amber-200/80"
+                      : "bg-slate-100 text-slate-700 border-slate-200/80"
                   }`}
                 >
                   {batch.status}
@@ -101,50 +97,56 @@ export function BatchDetailDrawer({
               </div>
 
               <div className="text-right">
-                <span className="text-[10px] uppercase font-mono text-zinc-500 block mb-1">
-                  Lokasi Manufaktur
+                <span className="text-xs font-medium text-slate-500 block mb-1">
+                  Manufacturing Zone
                 </span>
-                <span className="font-mono text-xs text-zinc-300 font-semibold">
-                  {batch.zone === "quarantine" ? "Zona Karantina" : "Zona Standar"}
+                <span
+                  className={`text-xs font-semibold ${
+                    batch.zone === "quarantine"
+                      ? "text-rose-700"
+                      : "text-slate-700"
+                  }`}
+                >
+                  {batch.zone === "quarantine" ? "Quarantine Zone" : "Standard Zone"}
                 </span>
               </div>
             </div>
 
             {/* General Specs Grid */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                <span className="text-[10px] text-zinc-500 font-mono block mb-1">
-                  Jumlah Lot
+              <div className="p-3.5 rounded-xl bg-slate-50/50 border border-slate-200/80">
+                <span className="text-xs text-slate-500 font-medium block mb-1">
+                  Lot Quantity
                 </span>
-                <span className="text-sm font-bold text-white font-mono">
+                <span className="text-sm font-semibold text-slate-900 tabular-nums">
                   {batch.totalPcs} Pcs
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                <span className="text-[10px] text-zinc-500 font-mono block mb-1">
-                  Cacat Terdeteksi
+              <div className="p-3.5 rounded-xl bg-slate-50/50 border border-slate-200/80">
+                <span className="text-xs text-slate-500 font-medium block mb-1">
+                  Detected Defects
                 </span>
                 <span
-                  className={`text-sm font-bold font-mono ${
-                    batch.defectCount > 0 ? "text-rose-400" : "text-emerald-400"
+                  className={`text-sm font-semibold tabular-nums ${
+                    batch.defectCount > 0 ? "text-rose-700" : "text-emerald-700"
                   }`}
                 >
-                  {batch.defectCount} Unit
+                  {batch.defectCount} Units
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                <span className="text-[10px] text-zinc-500 font-mono block mb-1">
-                  Supplier Material
+              <div className="p-3.5 rounded-xl bg-slate-50/50 border border-slate-200/80">
+                <span className="text-xs text-slate-500 font-medium block mb-1">
+                  Material Supplier
                 </span>
-                <span className="text-xs font-medium text-zinc-300 truncate block">
+                <span className="text-xs font-semibold text-slate-800 truncate block">
                   {batch.supplierName}
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                <span className="text-[10px] text-zinc-500 font-mono block mb-1">
-                  Inspector
+              <div className="p-3.5 rounded-xl bg-slate-50/50 border border-slate-200/80">
+                <span className="text-xs text-slate-500 font-medium block mb-1">
+                  Quality Inspector
                 </span>
-                <span className="text-xs font-medium text-zinc-300 truncate block">
+                <span className="text-xs font-semibold text-slate-800 truncate block">
                   {batch.inspector}
                 </span>
               </div>
@@ -152,17 +154,17 @@ export function BatchDetailDrawer({
 
             {/* Escalation Score Breakdown */}
             {batch.escalationScore !== undefined && (
-              <div className="p-4 rounded-2xl bg-[#0e121a] border border-white/[0.08]">
+              <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-200/80">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-sans text-xs font-semibold text-white flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                    Skor Formula Eskalasi
+                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    Escalation Risk Score
                   </span>
-                  <span className="font-mono text-xs font-bold text-amber-300">
+                  <span className="text-xs font-semibold text-amber-700 tabular-nums">
                     {batch.escalationScore.toFixed(2)}
                   </span>
                 </div>
-                <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden mb-2">
+                <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mb-2">
                   <div
                     className={`h-full transition-all duration-500 ${
                       batch.escalationScore >= 0.7
@@ -174,58 +176,58 @@ export function BatchDetailDrawer({
                     style={{ width: `${Math.min(batch.escalationScore * 100, 100)}%` }}
                   />
                 </div>
-                <p className="font-mono text-[10px] text-zinc-400">
-                  Formula: (Frekuensi × 0.40) + (Severity × 0.35) + (Supplier × 0.25)
+                <p className="text-xs text-slate-400">
+                  Formula: (Frequency × 0.40) + (Severity × 0.35) + (Supplier × 0.25)
                 </p>
               </div>
             )}
 
             {/* Defect Summary Details */}
             {batch.defectSummary && (
-              <div className="p-4 rounded-2xl bg-amber-500/[0.05] border border-amber-500/20">
-                <span className="text-[10px] uppercase font-mono text-amber-300 font-bold block mb-1">
-                  Catatan Penalaran AI
+              <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200/80">
+                <span className="text-xs text-amber-800 font-semibold block mb-1">
+                  AI Reasoning Summary
                 </span>
-                <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                <p className="text-xs text-amber-900 leading-relaxed">
                   {batch.defectSummary}
                 </p>
               </div>
             )}
 
             {/* Action Link to Inspection Station */}
-            <div className="pt-2">
+            <div className="pt-1">
               <Link
                 href="/dashboard/inspection"
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-xs font-mono font-medium text-white transition-all cursor-pointer group"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-700 transition-all cursor-pointer group shadow-xs"
               >
-                <Scan className="w-4 h-4 text-emerald-400" />
-                <span>Buka di Stasiun Inspeksi Optik</span>
-                <ExternalLink className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
+                <Scan className="w-4 h-4 text-slate-600" />
+                <span>Open in Optical Inspection Station</span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
               </Link>
             </div>
           </div>
 
           {/* Footer Quick Actions */}
-          <div className="p-4 border-t border-white/[0.08] bg-[#06080d] grid grid-cols-2 gap-2.5">
+          <div className="p-4 border-t border-slate-100 bg-white grid grid-cols-2 gap-2.5">
             <button
               onClick={() => {
                 onReject(batch.id);
                 onClose();
               }}
-              className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-mono font-bold text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200/80 hover:bg-rose-100 transition-colors cursor-pointer shadow-xs"
             >
               <XCircle className="w-4 h-4" />
-              <span>Tolak / Tahan</span>
+              <span>Hold Lot (Quarantine)</span>
             </button>
             <button
               onClick={() => {
                 onApprove(batch.id);
                 onClose();
               }}
-              className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-mono font-bold bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-md shadow-emerald-500/25 transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-colors cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Setujui Rilis</span>
+              <span>Approve Release</span>
             </button>
           </div>
         </motion.div>
