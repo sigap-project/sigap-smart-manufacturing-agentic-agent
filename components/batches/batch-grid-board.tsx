@@ -8,7 +8,6 @@ import {
   Clock,
   Layers,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import { BatchItem, BatchStatus } from "./types";
 
@@ -28,69 +27,56 @@ export function BatchGridBoard({
       case "pending":
       case "pending_review":
         return {
-          borderColor: "border-amber-500/40 hover:border-amber-400",
-          selectedRing: "ring-2 ring-amber-400/80 shadow-amber-500/20",
-          bgColor: "bg-amber-500/[0.03]",
-          badgeBg: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+          badgeBg: "bg-amber-50 text-amber-700 border-amber-200/80",
           label: "Pending Review",
           icon: Clock,
-          accentDot: "bg-amber-400",
+          accentDot: "bg-amber-500",
         };
       case "held":
       case "hold":
         return {
-          borderColor: "border-rose-500/45 hover:border-rose-400",
-          selectedRing: "ring-2 ring-rose-400/80 shadow-rose-500/20",
-          bgColor: "bg-rose-500/[0.03]",
-          badgeBg: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-          label: "Held (Karantina)",
+          badgeBg: "bg-rose-50 text-rose-700 border-rose-200/80",
+          label: "Held (Quarantine)",
           icon: ShieldAlert,
-          accentDot: "bg-rose-400 animate-pulse",
+          accentDot: "bg-rose-500",
         };
       case "released":
       case "approved":
         return {
-          borderColor: "border-emerald-500/30 hover:border-emerald-400/70",
-          selectedRing: "ring-2 ring-emerald-400/80 shadow-emerald-500/20",
-          bgColor: "bg-emerald-500/[0.02]",
-          badgeBg: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+          badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
           label: "Released",
           icon: CheckCircle2,
-          accentDot: "bg-emerald-400",
+          accentDot: "bg-emerald-500",
         };
       case "rejected":
       case "scrap":
         return {
-          borderColor: "border-zinc-800 hover:border-zinc-700",
-          selectedRing: "ring-2 ring-zinc-500/60 shadow-black",
-          bgColor: "bg-zinc-900/30",
-          badgeBg: "bg-zinc-800/80 text-zinc-400 border-zinc-700",
+          badgeBg: "bg-slate-100 text-slate-700 border-slate-200/80",
           label: "Rejected",
           icon: XCircle,
-          accentDot: "bg-zinc-500",
+          accentDot: "bg-slate-400",
         };
       default:
         return {
-          borderColor: "border-amber-500/30 hover:border-amber-400/50",
-          selectedRing: "ring-2 ring-amber-400/80 shadow-amber-500/20",
-          bgColor: "bg-amber-500/[0.03]",
-          badgeBg: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+          badgeBg: "bg-amber-50 text-amber-700 border-amber-200/80",
           label: status || "Pending Review",
           icon: Clock,
-          accentDot: "bg-amber-400",
+          accentDot: "bg-amber-500",
         };
     }
   };
 
   if (batches.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 rounded-3xl bg-[#0b0e14]/60 border border-white/[0.06] text-center">
-        <Layers className="w-12 h-12 text-zinc-600 mb-3 stroke-[1.5]" />
-        <h4 className="text-sm font-semibold text-zinc-300 mb-1">
-          Tidak Ada Batch yang Sesuai
+      <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-center">
+        <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-400 mb-3">
+          <Layers className="w-6 h-6 stroke-[1.5]" />
+        </div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-1">
+          No Matching Batches Found
         </h4>
-        <p className="text-xs text-zinc-500 max-w-sm">
-          Coba sesuaikan filter zona manufaktur atau kata kunci pencarian Anda untuk melihat batch lainnya.
+        <p className="text-xs text-slate-500 max-w-sm">
+          Adjust your manufacturing zone filters or search keyword to view other batch lots.
         </p>
       </div>
     );
@@ -107,12 +93,10 @@ export function BatchGridBoard({
           <div
             key={batch.id}
             onClick={() => onSelectBatch(batch)}
-            className={`group relative rounded-2xl p-4 sm:p-4.5 border transition-all duration-200 cursor-pointer flex flex-col justify-between backdrop-blur-md shadow-lg hover:-translate-y-1 hover:shadow-xl ${
-              config.borderColor
-            } ${config.bgColor} ${
+            className={`group relative rounded-2xl p-4 sm:p-5 border transition-all duration-200 cursor-pointer flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-1 active:scale-[0.99] ${
               isSelected
-                ? `${config.selectedRing} bg-white/[0.04]`
-                : "hover:bg-white/[0.03]"
+                ? "border-slate-900 ring-2 ring-slate-900/10 bg-slate-50/50"
+                : "border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/30"
             }`}
           >
             {/* Top Row: Batch ID & Status Tag */}
@@ -120,69 +104,69 @@ export function BatchGridBoard({
               <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${config.accentDot}`}
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${config.accentDot}`}
                   />
-                  <span className="font-mono text-xs font-bold tracking-tight text-white group-hover:text-emerald-300 transition-colors">
+                  <span className="text-xs font-semibold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
                     {batch.id}
                   </span>
                 </div>
 
                 <span
-                  className={`font-mono text-[9px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1 ${config.badgeBg}`}
+                  className={`text-[11px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1 shadow-xs ${config.badgeBg}`}
                 >
-                  <StatusIcon className="w-2.5 h-2.5" />
+                  <StatusIcon className="w-3 h-3" />
                   {config.label}
                 </span>
               </div>
 
               {/* Product Type & Zone */}
-              <h4 className="font-sans text-sm font-semibold text-zinc-200 group-hover:text-white mb-1 leading-snug">
+              <h4 className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 mb-1 leading-snug">
                 {batch.productName}
               </h4>
 
-              <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 mb-3">
-                <span className="text-zinc-500">{batch.line}</span>
-                <span>•</span>
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-3 font-medium">
+                <span>{batch.line}</span>
+                <span className="text-slate-300">•</span>
                 <span
                   className={
                     batch.zone === "quarantine"
-                      ? "text-rose-400 font-semibold"
-                      : "text-zinc-400"
+                      ? "text-rose-700 font-medium"
+                      : "text-slate-500"
                   }
                 >
-                  {batch.zone === "quarantine" ? "Zona Karantina" : "Zona Standar"}
+                  {batch.zone === "quarantine" ? "Quarantine Zone" : "Standard Zone"}
                 </span>
               </div>
             </div>
 
             {/* Middle Section: Defect Count Badge */}
-            <div className="pt-2.5 pb-2 border-t border-white/[0.06] mb-2.5">
+            <div className="pt-3 pb-2.5 border-t border-slate-100 mb-2">
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className="text-[10px] text-zinc-400 font-mono">
+                <span className="text-xs text-slate-500 font-medium">
                   Defect Count:
                 </span>
                 <span
-                  className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
                     batch.defectCount === 0
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
                       : batch.defectCount <= 5
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      : "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                      ? "bg-amber-50 text-amber-700 border-amber-200/80"
+                      : "bg-rose-50 text-rose-700 border-rose-200/80"
                   }`}
                 >
                   {batch.defectCount === 0
-                    ? "0 Cacat (Bersih)"
-                    : `${batch.defectCount} Cacat Terdeteksi`}
+                    ? "0 Defects (Clean)"
+                    : `${batch.defectCount} Defects Detected`}
                 </span>
               </div>
 
               {/* Mini defect chips if any */}
               {batch.defectTypes.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-1 mt-2">
                   {batch.defectTypes.map((dt, idx) => (
                     <span
                       key={idx}
-                      className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/[0.05] border border-white/[0.08] text-zinc-300"
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200/80 text-slate-600"
                     >
                       {dt}
                     </span>
@@ -192,11 +176,11 @@ export function BatchGridBoard({
             </div>
 
             {/* Bottom Row: Total Pcs, Time & Quick Expand Cue */}
-            <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pt-1">
-              <span>{batch.totalPcs} Pcs</span>
-              <div className="flex items-center gap-1 text-zinc-400 group-hover:text-emerald-400 transition-colors">
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+              <span className="font-medium text-slate-700 tabular-nums">{batch.totalPcs} Pcs</span>
+              <div className="flex items-center gap-1 text-slate-500 group-hover:text-blue-600 transition-colors">
                 <span>{batch.timeAgo}</span>
-                <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </div>
           </div>

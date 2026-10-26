@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Download,
   FileText,
   ChevronLeft,
   ChevronRight,
   Scan,
-  CheckCircle2,
-  AlertTriangle,
-  Layers,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -60,49 +58,52 @@ export function HistoryTable({
   const endIndex = startIndex + itemsPerPage;
   const currentRecords = sortedRecords.slice(startIndex, endIndex);
 
-  // Defect Class Badge Styling
+  // Defect Class Badge Styling (FlowDesk calm pill)
   const renderDefectBadge = (defectClass: DefectClass) => {
     if (defectClass === "OK" || defectClass === "ok") {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          ok (Lolos QC)
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Passed (OK)
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-        defect (Cacat)
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200/60">
+        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+        Defect Detected
       </span>
     );
   };
 
-  // Status Badge Styling
+  // Status Badge Styling (FlowDesk calm pill)
   const renderStatusBadge = (status: InspectionStatus) => {
     switch (status) {
+      case "Passed":
       case "Lolos QC":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-            Lolos QC
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+            Passed
           </span>
         );
+      case "Held":
       case "Ditahan":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
-            Ditahan (Held)
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/60">
+            Held
           </span>
         );
       case "Pending Review":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/60">
             Pending Review
           </span>
         );
+      case "Rejected":
       case "Ditolak":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">
-            Ditolak
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200/60">
+            Rejected
           </span>
         );
     }
@@ -110,83 +111,80 @@ export function HistoryTable({
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 text-zinc-600" />;
+      return <ArrowUpDown className="w-3 h-3 text-slate-300" />;
     }
     return sortDirection === "asc" ? (
-      <ArrowUp className="w-3 h-3 text-emerald-400" />
+      <ArrowUp className="w-3 h-3 text-slate-900" />
     ) : (
-      <ArrowDown className="w-3 h-3 text-emerald-400" />
+      <ArrowDown className="w-3 h-3 text-slate-900" />
     );
   };
 
   return (
-    <div className="space-y-4">
-      {/* Top Header Bar Above Table: Count & Right-Aligned "Export CSV" Button */}
+    <div className="space-y-3">
+      {/* Top Header Bar Above Table */}
       <div className="flex items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs uppercase tracking-wider text-zinc-400 font-semibold flex items-center gap-1.5">
-            <Scan className="w-3.5 h-3.5 text-emerald-400" />
-            Riwayat Log Inspeksi
-          </span>
-          <span className="text-[11px] font-mono text-zinc-500">
-            ({inspections.length} Rekaman)
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Inspection Audit Trail
+          </h2>
+          <span className="text-xs text-slate-400 font-normal">
+            ({inspections.length} Records)
           </span>
         </div>
 
-        {/* Right-Aligned Export CSV Button (Outline style, download icon) */}
+        {/* Right-Aligned Export CSV Button */}
         <button
           onClick={onExportCsv}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-semibold text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/10 transition-all duration-200 cursor-pointer shadow-sm"
-          title="Ekspor riwayat terfilter ke format file CSV"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-all cursor-pointer"
+          title="Export filtered records to CSV"
         >
-          <Download className="w-3.5 h-3.5" />
+          <Download className="w-3.5 h-3.5 text-slate-500" />
           <span>Export CSV</span>
         </button>
       </div>
 
       {/* Main Table Container */}
-      <div className="rounded-3xl bg-[#0b0e14]/80 backdrop-blur-md border border-white/[0.08] shadow-2xl overflow-hidden flex flex-col">
+      <div className="rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
         {inspections.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
-            <Scan className="w-12 h-12 text-zinc-600 mb-3 stroke-[1.5]" />
-            <h4 className="text-sm font-semibold text-zinc-300 mb-1">
-              Tidak Ada Rekaman Riwayat Inspeksi
+            <Scan className="w-10 h-10 text-slate-300 mb-2 stroke-[1.5]" />
+            <h4 className="text-sm font-semibold text-slate-800 mb-1">
+              No Inspection Records Found
             </h4>
-            <p className="text-xs text-zinc-500 max-w-sm">
-              Coba atur ulang filter tanggal, status, atau kelas cacat di bagian atas.
+            <p className="text-xs text-slate-500 max-w-sm">
+              Try adjusting your date range, status, or defect class filters above.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/[0.08] bg-[#07090e]/90 text-[11px] font-mono text-zinc-400 uppercase tracking-wider select-none">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider select-none">
                   <th
                     onClick={() => handleSort("id")}
-                    className="py-3.5 px-4 sm:px-6 font-semibold cursor-pointer hover:text-white transition-colors"
+                    className="py-3 px-4 sm:px-6 cursor-pointer hover:text-slate-800 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Inspection ID</span>
                       {renderSortIcon("id")}
                     </div>
                   </th>
-                  <th className="py-3.5 px-3 font-semibold text-center">
-                    Thumbnail
-                  </th>
-                  <th className="py-3.5 px-4 font-semibold">Defect Class</th>
+                  <th className="py-3 px-3 text-center">Frame</th>
+                  <th className="py-3 px-4">Defect Class</th>
                   <th
                     onClick={() => handleSort("confidence")}
-                    className="py-3.5 px-4 font-semibold cursor-pointer hover:text-white transition-colors"
+                    className="py-3 px-4 cursor-pointer hover:text-slate-800 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Confidence</span>
                       {renderSortIcon("confidence")}
                     </div>
                   </th>
-                  <th className="py-3.5 px-4 font-semibold">Batch ID</th>
+                  <th className="py-3 px-4">Batch ID &amp; Component</th>
                   <th
                     onClick={() => handleSort("rawDate")}
-                    className="py-3.5 px-4 font-semibold cursor-pointer hover:text-white transition-colors"
+                    className="py-3 px-4 cursor-pointer hover:text-slate-800 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Timestamp</span>
@@ -195,66 +193,71 @@ export function HistoryTable({
                   </th>
                   <th
                     onClick={() => handleSort("status")}
-                    className="py-3.5 px-4 font-semibold cursor-pointer hover:text-white transition-colors"
+                    className="py-3 px-4 cursor-pointer hover:text-slate-800 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Status</span>
                       {renderSortIcon("status")}
                     </div>
                   </th>
-                  <th className="py-3.5 px-4 sm:px-6 font-semibold text-right">
-                    Aksi
+                  <th className="py-3 px-4 sm:px-6 text-right">
+                    Action
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.06] text-xs font-sans">
-                {currentRecords.map((item) => (
-                  <tr
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {currentRecords.map((item, idx) => (
+                  <motion.tr
                     key={item.id}
-                    className="transition-colors hover:bg-white/[0.035] group even:bg-white/[0.01]"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.35,
+                      delay: 0.42 + idx * 0.05,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    style={{ willChange: "transform, opacity" }}
+                    className="transition-colors hover:bg-slate-50/60 group"
                   >
                     {/* 1. Inspection ID */}
-                    <td className="py-3.5 px-4 sm:px-6 font-mono font-bold text-white group-hover:text-emerald-300 transition-colors whitespace-nowrap">
+                    <td className="py-3 px-4 sm:px-6 font-mono text-xs font-semibold text-slate-900 whitespace-nowrap">
                       {item.id}
                     </td>
 
-                    {/* 2. Thumbnail (Small square image placeholder) */}
-                    <td className="py-3.5 px-3 whitespace-nowrap text-center">
-                      <div className="w-10 h-10 rounded-xl bg-[#121622] border border-white/10 p-1 flex items-center justify-center relative overflow-hidden mx-auto group-hover:border-emerald-500/40 transition-colors">
+                    {/* 2. Thumbnail Frame */}
+                    <td className="py-3 px-3 whitespace-nowrap text-center">
+                      <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 p-0.5 flex items-center justify-center relative overflow-hidden mx-auto">
                         <div
-                          className={`w-full h-full rounded-lg flex items-center justify-center text-[9px] font-mono font-bold ${
+                          className={`w-full h-full rounded-lg flex items-center justify-center text-[10px] font-mono font-bold ${
                             item.defectClass === "OK"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-amber-500/15 text-amber-300"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-amber-50 text-amber-700"
                           }`}
                         >
                           {item.defectClass === "OK" ? "OK" : "DEF"}
                         </div>
-                        {item.defectClass !== "OK" && (
-                          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-400" />
-                        )}
                       </div>
                     </td>
 
                     {/* 3. Defect Class */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-4 whitespace-nowrap">
                       {renderDefectBadge(item.defectClass)}
                     </td>
 
                     {/* 4. Confidence % */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-zinc-200">
+                        <span className="text-xs font-semibold text-slate-900 tabular-nums">
                           {item.confidence.toFixed(1)}%
                         </span>
-                        <div className="w-14 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                        <div className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                           <div
                             className={`h-full ${
                               item.confidence >= 90
-                                ? "bg-emerald-400"
+                                ? "bg-emerald-500"
                                 : item.confidence >= 75
-                                ? "bg-amber-400"
-                                : "bg-rose-400"
+                                ? "bg-amber-500"
+                                : "bg-rose-500"
                             }`}
                             style={{ width: `${item.confidence}%` }}
                           />
@@ -262,62 +265,62 @@ export function HistoryTable({
                       </div>
                     </td>
 
-                    {/* 5. Batch ID & Part */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    {/* 5. Batch ID & Component */}
+                    <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="font-mono text-xs font-semibold text-zinc-200">
+                        <span className="font-mono text-xs font-medium text-slate-900">
                           {item.batchId}
                         </span>
-                        <span className="text-[10px] text-zinc-400 font-sans truncate max-w-[120px]">
+                        <span className="text-[11px] text-slate-500 truncate max-w-[140px]">
                           {item.partName}
                         </span>
                       </div>
                     </td>
 
                     {/* 6. Timestamp */}
-                    <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px] whitespace-nowrap">
+                    <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
                       {item.timestamp}
                     </td>
 
                     {/* 7. Status */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-4 whitespace-nowrap">
                       {renderStatusBadge(item.status)}
                     </td>
 
-                    {/* 8. Aksi ("Detail" link/button) */}
-                    <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                    {/* 8. Action ("Inspect" button) */}
+                    <td className="py-3 px-4 sm:px-6 text-right whitespace-nowrap">
                       <button
                         onClick={() => onViewDetail(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-medium text-zinc-300 hover:text-emerald-300 bg-white/[0.04] hover:bg-emerald-500/10 border border-white/[0.08] hover:border-emerald-500/30 transition-all cursor-pointer shadow-sm"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition-colors cursor-pointer"
                       >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Detail</span>
+                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Inspect</span>
                       </button>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
 
-        {/* Table Pagination at Bottom (Consistent with Export Dispatch) */}
+        {/* Table Pagination at Bottom */}
         {inspections.length > 0 && (
-          <div className="p-4 border-t border-white/[0.06] bg-[#07090e]/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono text-zinc-400">
+          <div className="p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
             <div>
-              Menampilkan <span className="text-white font-bold">{startIndex + 1}</span> -{" "}
-              <span className="text-white font-bold">
+              Showing <span className="text-slate-900 font-semibold">{startIndex + 1}</span> to{" "}
+              <span className="text-slate-900 font-semibold">
                 {Math.min(endIndex, sortedRecords.length)}
               </span>{" "}
-              dari <span className="text-white font-bold">{sortedRecords.length}</span> data
+              of <span className="text-slate-900 font-semibold">{sortedRecords.length}</span> records
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-white/[0.08] text-zinc-300 hover:bg-white/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-                title="Halaman Sebelumnya"
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                title="Previous Page"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -327,10 +330,10 @@ export function HistoryTable({
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`w-7 h-7 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       currentPage === page
-                        ? "bg-emerald-500 text-zinc-950 shadow-md shadow-emerald-500/20"
-                        : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                        ? "bg-slate-900 text-white font-semibold shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                     }`}
                   >
                     {page}
@@ -341,8 +344,8 @@ export function HistoryTable({
               <button
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-white/[0.08] text-zinc-300 hover:bg-white/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-                title="Halaman Selanjutnya"
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                title="Next Page"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

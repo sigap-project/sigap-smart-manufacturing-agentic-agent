@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Send,
   Package,
@@ -9,7 +10,6 @@ import {
   CheckCircle2,
   ArrowUpRight,
   Clock,
-  Radio,
 } from "lucide-react";
 import { useSigapEvents } from "@/hooks/useSigapEvents";
 
@@ -29,61 +29,75 @@ interface ActivityItem {
 
 const INITIAL_ACTIVITIES: ActivityItem[] = [
   {
-    title: "SAP QM Quality Notification Diterbitkan",
-    description: "Tiket #QN-9042 diterbitkan otonom untuk Lot #B-2026-0730 beserta foto S3",
+    id: "act-init-1",
+    title: "SAP QM Quality Notification Issued",
+    description: "Ticket #QN-9042 autonomously dispatched for Lot #B-2026-0730 with S3 imagery",
     source: "Station #01 • YOLOv8",
-    timestamp: "2 mnt lalu",
+    timestamp: "2m ago",
     status: "Dispatched",
-    badgeColor: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
     icon: Send,
-    iconColor: "text-emerald-400",
-    iconBg: "bg-emerald-500/10 border-emerald-500/25",
+    iconColor: "text-emerald-600",
+    iconBg: "bg-emerald-50 border-emerald-200/70",
   },
   {
-    title: "Flag 'UnderReview' pada Vendor Scrap",
-    description: "PATCH /SupplierRecord/{id} ke SAP MM untuk vendor PT Krakatau Scrap",
+    id: "act-init-2",
+    title: "Flag 'UnderReview' on Scrap Supplier",
+    description: "PATCH /SupplierRecord/{id} to SAP MM for supplier PT Krakatau Scrap",
     source: "AWS Bedrock Agent",
-    timestamp: "8 mnt lalu",
+    timestamp: "8m ago",
     status: "Held",
-    badgeColor: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    badgeColor: "bg-amber-50 text-amber-700 border-amber-200/80",
     icon: Package,
-    iconColor: "text-amber-400",
-    iconBg: "bg-amber-500/10 border-amber-500/25",
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-50 border-amber-200/70",
   },
   {
-    title: "Diverter Pneumatik Mengalihkan Batch",
-    description: "45 pcs kubus casting anomali dialihkan ke Bin Karantina Fisik (skor 0.74)",
+    id: "act-init-3",
+    title: "Pneumatic Diverter Reroutes Batch",
+    description: "45 pcs anomalous casting cubes diverted to Physical Quarantine Bin (score 0.74)",
     source: "PLC S7-1200",
-    timestamp: "14 mnt lalu",
+    timestamp: "14m ago",
     status: "Quarantined",
-    badgeColor: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+    badgeColor: "bg-rose-50 text-rose-700 border-rose-200/80",
     icon: AlertTriangle,
-    iconColor: "text-rose-400",
-    iconBg: "bg-rose-500/10 border-rose-500/25",
+    iconColor: "text-rose-600",
+    iconBg: "bg-rose-50 border-rose-200/70",
   },
   {
-    title: "Usulan Reschedule Lini Cetak SAP PP",
-    description: "POST /RescheduleRequest diajukan untuk optimasi furnace peleburan logam",
+    id: "act-init-4",
+    title: "SAP PP Casting Line Reschedule Proposed",
+    description: "POST /RescheduleRequest submitted for metal melting furnace optimization",
     source: "SAP PP Connector",
-    timestamp: "25 mnt lalu",
+    timestamp: "25m ago",
     status: "Pending Approval",
-    badgeColor: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+    badgeColor: "bg-blue-50 text-blue-700 border-blue-200/80",
     icon: CalendarClock,
-    iconColor: "text-cyan-400",
-    iconBg: "bg-cyan-500/10 border-cyan-500/25",
+    iconColor: "text-blue-600",
+    iconBg: "bg-blue-50 border-blue-200/70",
   },
   {
-    title: "Threshold Confidence Vision Dikalibrasi",
-    description: "YOLOv8-Nano auto-tuning threshold ke 94.2% untuk mereduksi false-positive",
+    id: "act-init-5",
+    title: "Vision Confidence Threshold Calibrated",
+    description: "YOLOv8-Nano auto-tuned threshold to 94.2% to reduce false positives",
     source: "Agentic Vision Core",
-    timestamp: "40 mnt lalu",
+    timestamp: "40m ago",
     status: "Completed",
-    badgeColor: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    badgeColor: "bg-slate-100 text-slate-700 border-slate-200/80",
     icon: CheckCircle2,
-    iconColor: "text-emerald-400",
-    iconBg: "bg-emerald-500/10 border-emerald-500/25",
+    iconColor: "text-slate-600",
+    iconBg: "bg-slate-100 border-slate-200/70",
   },
 ];
+
+// Collision-proof ID generator for real-time SSE activities
+let actCounter = 0;
+function generateUniqueActivityId(prefix: string, entityId?: string | number) {
+  actCounter += 1;
+  const rand = Math.random().toString(36).slice(2, 7);
+  const entityClean = entityId ? `-${String(entityId).replace(/[^a-zA-Z0-9_-]/g, "")}` : "";
+  return `${prefix}${entityClean}-${Date.now()}-${actCounter}-${rand}`;
+}
 
 export function DashboardRecentActivity() {
   const [activities, setActivities] = useState<ActivityItem[]>(INITIAL_ACTIVITIES);
@@ -92,117 +106,134 @@ export function DashboardRecentActivity() {
   const { isConnected } = useSigapEvents({
     onInspectionCreated: (newIns) => {
       const isDefect = newIns.defectDetected ?? (newIns.defectClass !== "OK");
+      const uniqueId = generateUniqueActivityId("act-ins", newIns.id);
       const newItem: ActivityItem = {
-        id: `act-${Date.now()}`,
+        id: uniqueId,
         title: isDefect
-          ? `Anomali Terdeteksi: ${newIns.defectClass}`
-          : `Unit Lolos Inspeksi: ${newIns.partName || "Bracket Motor"}`,
-        description: `Frame #${String(newIns.id).slice(-4)} (${newIns.confidence}% confidence) terinspeksi pada ${newIns.batchId || "Lot Aktif"}`,
+          ? `Anomaly Detected: ${newIns.defectClass}`
+          : `Unit Passed Inspection: ${newIns.partName || "Motor Bracket"}`,
+        description: `Frame #${String(newIns.id).slice(-4)} (${newIns.confidence}% confidence) inspected on ${newIns.batchId || "Active Lot"}`,
         source: "Station #01 • YOLOv8-Nano",
-        timestamp: "Baru saja",
+        timestamp: "Just now",
         status: isDefect ? "Held" : "Passed",
         badgeColor: isDefect
-          ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-          : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+          ? "bg-amber-50 text-amber-700 border-amber-200/80"
+          : "bg-emerald-50 text-emerald-700 border-emerald-200/80",
         icon: isDefect ? AlertTriangle : CheckCircle2,
-        iconColor: isDefect ? "text-amber-400" : "text-emerald-400",
+        iconColor: isDefect ? "text-amber-600" : "text-emerald-600",
         iconBg: isDefect
-          ? "bg-amber-500/10 border-amber-500/25"
-          : "bg-emerald-500/10 border-emerald-500/25",
+          ? "bg-amber-50 border-amber-200/70"
+          : "bg-emerald-50 border-emerald-200/70",
         isNew: true,
       };
 
-      setActivities((prev) => [newItem, ...prev.slice(0, 4)]);
+      setActivities((prev) => {
+        if (prev.some((a) => a.id === uniqueId)) return prev;
+        return [newItem, ...prev.slice(0, 4)];
+      });
     },
     onDispatchStatusChanged: (dispatch) => {
+      const uniqueId = generateUniqueActivityId("act-disp", dispatch.id);
+      const isDispatched = dispatch.status === "Dispatched";
       const newItem: ActivityItem = {
-        id: `act-${Date.now()}`,
-        title: `Tiket ${dispatch.consumer} ${dispatch.status}`,
-        description: `${dispatch.id}: ${dispatch.triggerReason || "Sinkronisasi otomatis ke SAP ERP"}`,
+        id: uniqueId,
+        title: `Ticket ${dispatch.consumer} ${dispatch.status}`,
+        description: `${dispatch.id}: ${dispatch.triggerReason || "Automated sync to SAP ERP"}`,
         source: "Agentic Dispatch Gateway",
-        timestamp: "Baru saja",
+        timestamp: "Just now",
         status: dispatch.status,
-        badgeColor:
-          dispatch.status === "Dispatched"
-            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-            : "bg-amber-500/15 text-amber-400 border-amber-500/30",
+        badgeColor: isDispatched
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
+          : "bg-amber-50 text-amber-700 border-amber-200/80",
         icon: Send,
-        iconColor: dispatch.status === "Dispatched" ? "text-emerald-400" : "text-amber-400",
-        iconBg:
-          dispatch.status === "Dispatched"
-            ? "bg-emerald-500/10 border-emerald-500/25"
-            : "bg-amber-500/10 border-amber-500/25",
+        iconColor: isDispatched ? "text-emerald-600" : "text-amber-600",
+        iconBg: isDispatched
+          ? "bg-emerald-50 border-emerald-200/70"
+          : "bg-amber-50 border-amber-200/70",
         isNew: true,
       };
 
-      setActivities((prev) => [newItem, ...prev.slice(0, 4)]);
+      setActivities((prev) => {
+        if (prev.some((a) => a.id === uniqueId)) return prev;
+        return [newItem, ...prev.slice(0, 4)];
+      });
     },
     onBatchStatusChanged: (batch) => {
       const isReleased = batch.status === "released";
       const isRejected = batch.status === "rejected";
+      const uniqueId = generateUniqueActivityId("act-batch", batch.lotId || batch.id);
       const newItem: ActivityItem = {
-        id: `act-${Date.now()}`,
+        id: uniqueId,
         title: `Batch ${batch.lotId} Status: ${String(batch.status).toUpperCase()}`,
-        description: `Pembaruan siklus lot manufaktur (${batch.defectCount || 0} anomali terhitung)`,
+        description: `Manufacturing lot lifecycle update (${batch.defectCount || 0} anomalies recorded)`,
         source: "Batch Lifecycle Engine",
-        timestamp: "Baru saja",
+        timestamp: "Just now",
         status: isReleased ? "Released" : isRejected ? "Quarantined" : "Held",
         badgeColor: isReleased
-          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
           : isRejected
-          ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-          : "bg-amber-500/15 text-amber-400 border-amber-500/30",
+          ? "bg-rose-50 text-rose-700 border-rose-200/80"
+          : "bg-amber-50 text-amber-700 border-amber-200/80",
         icon: Package,
         iconColor: isReleased
-          ? "text-emerald-400"
+          ? "text-emerald-600"
           : isRejected
-          ? "text-rose-400"
-          : "text-amber-400",
+          ? "text-rose-600"
+          : "text-amber-600",
         iconBg: isReleased
-          ? "bg-emerald-500/10 border-emerald-500/25"
+          ? "bg-emerald-50 border-emerald-200/70"
           : isRejected
-          ? "bg-rose-500/10 border-rose-500/25"
-          : "bg-amber-500/10 border-amber-500/25",
+          ? "bg-rose-50 border-rose-200/70"
+          : "bg-amber-50 border-amber-200/70",
         isNew: true,
       };
 
-      setActivities((prev) => [newItem, ...prev.slice(0, 4)]);
+      setActivities((prev) => {
+        if (prev.some((a) => a.id === uniqueId)) return prev;
+        return [newItem, ...prev.slice(0, 4)];
+      });
     },
   });
 
   return (
-    <div className="rounded-3xl p-6 sm:p-7 bg-[#0b0e14]/80 backdrop-blur-md border border-white/[0.08] shadow-xl shadow-black/40 flex flex-col justify-between">
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.65, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+      style={{ willChange: "transform, opacity" }}
+      className="rounded-2xl p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between select-none hover:-translate-y-1 hover:shadow-md transition-all duration-200"
+    >
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-display text-lg sm:text-xl font-bold text-white tracking-tight">
-              Aktivitas Agent Terbaru
+            <h3 className="font-sans text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              Recent Agent Activities
             </h3>
             <span
-              className={`font-mono text-[9px] px-2 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${
+              className={`text-[11px] px-2.5 py-0.5 rounded-full border font-medium flex items-center gap-1.5 ${
                 isConnected
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                  : "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/70"
+                  : "bg-amber-50 text-amber-700 border-amber-200/70"
               }`}
             >
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  isConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                  isConnected ? "bg-emerald-500" : "bg-amber-500"
                 }`}
               />
-              {isConnected ? "LIVE STREAM" : "CONNECTING..."}
+              <span>{isConnected ? "Live Stream" : "Connecting..."}</span>
             </span>
           </div>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Log tindakan otonom AWS Bedrock ke lini fisik &amp; SAP ERP
+          <p className="text-xs text-slate-500 mt-1">
+            Autonomous AWS Bedrock action logs dispatched to physical line &amp; SAP ERP
           </p>
         </div>
 
         <button
-          aria-label="Lihat Semua Log"
-          className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          title="Buka Log Lengkap"
+          aria-label="View All Logs"
+          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200/70 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+          title="Open Complete Logs"
         >
           <ArrowUpRight className="w-4 h-4" />
         </button>
@@ -213,12 +244,20 @@ export function DashboardRecentActivity() {
         {activities.map((item, idx) => {
           const Icon = item.icon;
           return (
-            <div
-              key={item.id || idx}
-              className={`p-3.5 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
+            <motion.div
+              key={item.id || `act-${idx}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.45,
+                delay: 0.60 + idx * 0.05,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              style={{ willChange: "transform, opacity" }}
+              className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
                 item.isNew
-                  ? "bg-emerald-500/10 border-emerald-500/40 shadow-lg shadow-emerald-950/20"
-                  : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] hover:border-white/[0.10]"
+                  ? "bg-emerald-50/40 border-emerald-200/80 shadow-2xs"
+                  : "bg-white hover:bg-slate-50/80 border-slate-200/70"
               }`}
             >
               <div className="flex items-start gap-3 min-w-0">
@@ -228,17 +267,17 @@ export function DashboardRecentActivity() {
                   <Icon className={`w-4 h-4 ${item.iconColor}`} />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs sm:text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors truncate">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
                     {item.title}
                   </span>
-                  <p className="text-[11px] text-zinc-400 line-clamp-1 mt-0.5">
+                  <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
                     {item.description}
                   </p>
-                  <div className="flex items-center gap-2 mt-1.5 text-[10px] font-mono text-zinc-500">
+                  <div className="flex items-center gap-2 mt-1.5 text-[11px] font-sans text-slate-400">
                     <span>{item.source}</span>
                     <span>•</span>
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="w-3 h-3 text-slate-400" />
                       {item.timestamp}
                     </span>
                   </div>
@@ -247,16 +286,16 @@ export function DashboardRecentActivity() {
 
               <div className="shrink-0 flex sm:justify-end">
                 <span
-                  className={`font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full border ${item.badgeColor}`}
+                  className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${item.badgeColor}`}
                 >
                   {item.status}
                 </span>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Filter, ShieldCheck, ChevronDown, Check, SlidersHorizontal } from "lucide-react";
+import { Search, Filter, ShieldCheck, Check, SlidersHorizontal } from "lucide-react";
+import { AnimatedSelect } from "@/components/ui/animated-select";
 import { BatchZone, BatchStatus } from "./types";
 
 interface BatchFilterBarProps {
@@ -27,33 +28,33 @@ export function BatchFilterBar({
   totalFiltered,
 }: BatchFilterBarProps) {
   const zones: { id: BatchZone; label: string }[] = [
-    { id: "all", label: "Semua Zona" },
-    { id: "standard", label: "Zona Standar" },
-    { id: "quarantine", label: "Zona Karantina" },
+    { id: "all", label: "All Zones" },
+    { id: "standard", label: "Standard Zone" },
+    { id: "quarantine", label: "Quarantine Zone" },
   ];
 
   const statuses: { id: BatchStatus | "all"; label: string; color: string }[] = [
-    { id: "all", label: "Semua Status", color: "text-zinc-400" },
-    { id: "pending", label: "Pending Review", color: "text-amber-400" },
-    { id: "held", label: "Held (Karantina)", color: "text-rose-400" },
-    { id: "released", label: "Released", color: "text-emerald-400" },
-    { id: "rejected", label: "Rejected", color: "text-zinc-400" },
+    { id: "all", label: "All Statuses", color: "text-slate-500" },
+    { id: "pending", label: "Pending Review", color: "text-amber-600" },
+    { id: "held", label: "Held (Quarantine)", color: "text-rose-600" },
+    { id: "released", label: "Released", color: "text-emerald-600" },
+    { id: "rejected", label: "Rejected", color: "text-slate-500" },
   ];
 
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl bg-[#0b0e14]/80 backdrop-blur-md border border-white/[0.08] shadow-lg mb-6">
+    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] mb-6">
       {/* Left: Zone Filter (Segmented Control) */}
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/[0.06] overflow-x-auto">
+      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200/80 overflow-x-auto">
         {zones.map((z) => {
           const isActive = activeZone === z.id;
           return (
             <button
               key={z.id}
               onClick={() => onZoneChange(z.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                 isActive
-                  ? "bg-emerald-500 text-zinc-950 font-bold shadow-md shadow-emerald-500/20"
-                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
               }`}
             >
               {z.label}
@@ -65,56 +66,47 @@ export function BatchFilterBar({
       {/* Right Controls: Search, Status Dropdown, Approval Mode Toggle */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         {/* Search Bar */}
-        <div className="relative flex-1 sm:w-56 min-w-[160px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+        <div className="relative flex-1 sm:w-60 min-w-[160px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Cari Batch ID / Produk..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-black/40 border border-white/[0.08] focus:border-emerald-500/50 focus:outline-none text-zinc-200 placeholder:text-zinc-500 transition-colors"
+            placeholder="Search lot, product, supplier..."
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-slate-400 focus:outline-none text-slate-800 placeholder:text-slate-400 transition-colors"
           />
         </div>
 
-        {/* Status Dropdown Selector */}
-        <div className="relative">
-          <select
-            value={activeStatus}
-            aria-label="Filter Berdasarkan Status Batch"
-            onChange={(e) => onStatusChange(e.target.value as BatchStatus | "all")}
-            className="appearance-none pl-8 pr-8 py-1.5 text-xs rounded-xl bg-black/40 border border-white/[0.08] text-zinc-300 font-medium hover:border-white/20 focus:outline-none focus:border-emerald-500/50 transition-colors cursor-pointer"
-          >
-            {statuses.map((s) => (
-              <option key={s.id} value={s.id} className="bg-[#0b0e14] text-zinc-200">
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
+        {/* Status Dropdown Selector with Staggered Open Animation */}
+        <AnimatedSelect
+          value={activeStatus}
+          onChange={(val) => onStatusChange(val as BatchStatus | "all")}
+          options={statuses.map((s) => ({ id: s.id, label: s.label }))}
+          icon={<Filter className="w-3.5 h-3.5" />}
+          ariaLabel="Filter By Batch Status"
+        />
 
         {/* Approval Mode Toggle */}
         <button
           onClick={onToggleApprovalMode}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-mono font-medium transition-all duration-200 border cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 border cursor-pointer ${
             approvalModeOnly
-              ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/10"
-              : "bg-black/30 border-white/[0.08] text-zinc-400 hover:text-white hover:border-white/20"
+              ? "bg-amber-50 border-amber-300/80 text-amber-700 shadow-xs"
+              : "bg-slate-50 border-slate-200/80 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
-          title="Filter hanya batch yang membutuhkan persetujuan human-in-the-loop"
+          title="Filter batches requiring human-in-the-loop review"
         >
           <span
-            className={`w-2 h-2 rounded-full transition-colors ${
-              approvalModeOnly ? "bg-amber-400 animate-ping" : "bg-zinc-600"
+            className={`w-1.5 h-1.5 rounded-full transition-colors ${
+              approvalModeOnly ? "bg-amber-500" : "bg-slate-400"
             }`}
           />
-          <span>Mode Approval</span>
+          <span>Approval Mode</span>
         </button>
 
         {/* Filtered Counter Badge */}
-        <span className="text-[11px] font-mono text-zinc-500 hidden xl:inline">
-          Menampilkan <span className="text-white font-bold">{totalFiltered}</span> batch
+        <span className="text-xs text-slate-500 hidden xl:inline">
+          Showing <span className="text-slate-900 font-semibold tabular-nums">{totalFiltered}</span> batches
         </span>
       </div>
     </div>

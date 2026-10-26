@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Layers, Sparkles, CheckCircle2, ShieldAlert, Loader2 } from "lucide-react";
 import { BatchStatCards } from "@/components/batches/batch-stat-cards";
 import { BatchFilterBar } from "@/components/batches/batch-filter-bar";
@@ -15,16 +16,24 @@ import {
   INITIAL_BATCHES,
 } from "@/components/batches/types";
 import { useSigapEvents } from "@/hooks/useSigapEvents";
+import { useSigapGlobal } from "@/context/sigap-global-context";
 
 export default function BatchBoardPage() {
-  const [batches, setBatches] = useState<BatchItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { batches: globalBatches, approveBatch: globalApprove, rejectBatch: globalReject } = useSigapGlobal();
+  const [batches, setBatches] = useState<BatchItem[]>(globalBatches);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeZone, setActiveZone] = useState<BatchZone>("all");
   const [activeStatus, setActiveStatus] = useState<BatchStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [approvalModeOnly, setApprovalModeOnly] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<BatchItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (globalBatches && globalBatches.length > 0) {
+      setBatches(globalBatches);
+    }
+  }, [globalBatches]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -50,11 +59,11 @@ export default function BatchBoardPage() {
           return [sanitizedBatch, ...prev];
         }
       });
-      showToast(`Status batch ${sanitizedBatch.lotId || sanitizedBatch.id} terbarui secara live (${sanitizedBatch.status}).`);
+      showToast(`Batch ${sanitizedBatch.lotId || sanitizedBatch.id} status updated live (${sanitizedBatch.status}).`);
     },
   });
 
-  // Ambil data batch nyata dari API PostgreSQL
+  // Fetch batches from PostgreSQL API
   useEffect(() => {
     async function fetchBatches() {
       try {
@@ -70,7 +79,7 @@ export default function BatchBoardPage() {
           setBatches(INITIAL_BATCHES);
         }
       } catch (err) {
-        console.warn("Gagal mengambil data batch live dari server:", err);
+        console.warn("Failed to fetch live batches from server:", err);
         setBatches(INITIAL_BATCHES);
       } finally {
         setIsLoading(false);
@@ -79,8 +88,9 @@ export default function BatchBoardPage() {
     fetchBatches();
   }, []);
 
-  // Handlers for Human Approval Actions (Sinkronisasi ke Database via API)
+  // Handlers for Human Approval Actions
   const handleApprove = async (batchId: string) => {
+    globalApprove(batchId);
     try {
       const res = await fetch(`/api/batches/${encodeURIComponent(batchId)}/approve`, {
         method: "PATCH",
@@ -90,30 +100,17 @@ export default function BatchBoardPage() {
         setBatches((prev) =>
           prev.map((b) => (b.id === batchId ? json.data : b))
         );
-        showToast(json.message || `Batch ${batchId} berhasil DISETUJUI & DILEPASKAN untuk perakitan.`);
+        showToast(json.message || `Batch ${batchId} successfully APPROVED & RELEASED for assembly.`);
         return;
       }
     } catch (err) {
-      console.warn("Gagal sinkronisasi approve ke database:", err);
+      console.warn("Failed to sync approval to database:", err);
     }
-
-    // Fallback optimistik lokal
-    setBatches((prev) =>
-      prev.map((b) =>
-        b.id === batchId
-          ? {
-              ...b,
-              status: "released",
-              defectCount: Math.min(b.defectCount, 1),
-              timeAgo: "Baru saja",
-            }
-          : b
-      )
-    );
-    showToast(`Batch ${batchId} berhasil DISETUJUI & DILEPASKAN untuk perakitan.`);
+    showToast(`Batch ${batchId} successfully APPROVED & RELEASED for assembly.`);
   };
 
   const handleReject = async (batchId: string) => {
+    globalReject(batchId);
     try {
       const res = await fetch(`/api/batches/${encodeURIComponent(batchId)}/reject`, {
         method: "PATCH",
@@ -123,27 +120,13 @@ export default function BatchBoardPage() {
         setBatches((prev) =>
           prev.map((b) => (b.id === batchId ? json.data : b))
         );
-        showToast(json.message || `Batch ${batchId} DITAHAN ke Zona Karantina.`);
+        showToast(json.message || `Batch ${batchId} HELD in Quarantine Zone.`);
         return;
       }
     } catch (err) {
-      console.warn("Gagal sinkronisasi reject ke database:", err);
+      console.warn("Failed to sync rejection to database:", err);
     }
-
-    // Fallback optimistik lokal
-    setBatches((prev) =>
-      prev.map((b) =>
-        b.id === batchId
-          ? {
-              ...b,
-              status: "held",
-              zone: "quarantine",
-              timeAgo: "Baru saja",
-            }
-          : b
-      )
-    );
-    showToast(`Batch ${batchId} DITAHAN ke Zona Karantina. Tiket notifikasi terbit ke SAP QM.`);
+    showToast(`Batch ${batchId} HELD in Quarantine Zone. Quality notification ticket dispatched to SAP QM.`);
   };
 
   // Filtered batches calculation
@@ -190,80 +173,100 @@ export default function BatchBoardPage() {
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12 animate-in fade-in duration-200">
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 px-4 py-3 rounded-2xl bg-zinc-950/95 border border-emerald-500/40 text-emerald-300 text-xs font-mono shadow-2xl backdrop-blur-xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="fixed top-20 right-6 z-50 px-4 py-3 rounded-xl bg-white border border-slate-200/80 text-slate-800 text-xs shadow-lg flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Page Title & Context Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-white/[0.06]">
+      {/* Tahap 1: Page Title & Context Header (0ms - 150ms) */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+        style={{ willChange: "transform, opacity" }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80"
+      >
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Batch Board &amp; Kontrol Pelepasan
+            <h1 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Batch Board &amp; Release Control
             </h1>
-            <span className="font-mono text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              ERP DISPATCH SYNC
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 font-medium flex items-center gap-1.5 shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              ERP Dispatch Sync
             </span>
           </div>
-          <p className="font-sans text-xs sm:text-sm text-zinc-400">
-            Visualisasi status seluruh batch lot manufaktur, isolasi zona karantina, dan keputusan persetujuan Human-in-the-Loop.
+          <p className="font-sans text-xs sm:text-sm text-slate-500">
+            Real-time lot status tracking, quarantine zone isolation, and Human-in-the-Loop release governance.
           </p>
         </div>
 
         {/* Action Status Pills */}
-        <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono text-zinc-400">
+        <div className="flex items-center gap-2.5 shrink-0 text-xs text-slate-600">
           {isLoading && (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono">
+            <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Sinkronisasi DB...</span>
+              <span>Syncing DB...</span>
             </div>
           )}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-            <span className="text-zinc-500">Antrean SLA:</span>
-            <span className="text-amber-400 font-bold">
-              {pendingApprovalBatches.length} Lot Aktif
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-xs font-medium">
+            <span className="text-slate-400">SLA Queue:</span>
+            <span className="text-amber-700 font-semibold">
+              {pendingApprovalBatches.length} Active Lots
             </span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-            <span className="text-zinc-500">Telemetry:</span>
-            <span className={`font-bold flex items-center gap-1.5 ${isConnected ? "text-emerald-400" : "text-amber-400"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-xs font-medium">
+            <span className="text-slate-400">Telemetry:</span>
+            <span className={`font-semibold flex items-center gap-1.5 ${isConnected ? "text-emerald-700" : "text-amber-700"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-amber-400"}`} />
               {isConnected ? "SSE Live" : "Connecting..."}
             </span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* TOP: Stat Row (5 compact cards matching Dashboard style) */}
+      {/* Tahap 2: TOP: Stat Row (5 compact cards matching Dashboard style, 150ms - 350ms) */}
       <BatchStatCards batches={batches} />
 
-      {/* FILTER BAR: Zone Filter, Status Dropdown, Search, Approval Mode */}
-      <BatchFilterBar
-        activeZone={activeZone}
-        onZoneChange={setActiveZone}
-        activeStatus={activeStatus}
-        onStatusChange={setActiveStatus}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        approvalModeOnly={approvalModeOnly}
-        onToggleApprovalMode={() => setApprovalModeOnly((prev) => !prev)}
-        totalFiltered={filteredBatches.length}
-      />
+      {/* Tahap 3A: FILTER BAR: Zone Filter, Status Dropdown, Search, Approval Mode (350ms - 450ms) */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
+        style={{ willChange: "transform, opacity" }}
+        className="relative z-20"
+      >
+        <BatchFilterBar
+          activeZone={activeZone}
+          onZoneChange={setActiveZone}
+          activeStatus={activeStatus}
+          onStatusChange={setActiveStatus}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          approvalModeOnly={approvalModeOnly}
+          onToggleApprovalMode={() => setApprovalModeOnly((prev) => !prev)}
+          totalFiltered={filteredBatches.length}
+        />
+      </motion.div>
 
-      {/* MAIN AREA: Two-column layout (Left wider: Grid Board, Right narrower: Pending Approval Panel) */}
+      {/* MAIN AREA: Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT COLUMN (65-70% on XL): Visual Grid Board */}
-        <div className="lg:col-span-7 xl:col-span-8">
+        {/* Tahap 3B: LEFT COLUMN: Visual Grid Board (450ms - 550ms) */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, delay: 0.48, ease: [0.16, 1, 0.3, 1] }}
+          style={{ willChange: "transform, opacity" }}
+          className="lg:col-span-7 xl:col-span-8 relative z-10"
+        >
           <div className="flex items-center justify-between gap-3 mb-3 px-1">
-            <span className="font-mono text-xs uppercase tracking-wider text-zinc-400 font-semibold flex items-center gap-2">
-              <Layers className="w-3.5 h-3.5 text-emerald-400" />
-              Visual Board Batch ({filteredBatches.length})
+            <span className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-slate-600" />
+              Batch Lot Grid ({filteredBatches.length})
             </span>
-            <span className="text-[11px] font-mono text-zinc-500">
-              Klik kartu untuk inspeksi rincian
+            <span className="text-xs text-slate-400">
+              Click card to inspect lot details
             </span>
           </div>
 
@@ -272,17 +275,23 @@ export default function BatchBoardPage() {
             selectedBatch={selectedBatch}
             onSelectBatch={(batch) => setSelectedBatch(batch)}
           />
-        </div>
+        </motion.div>
 
-        {/* RIGHT COLUMN (30-35% on XL): "Menunggu Persetujuan" Panel */}
-        <div className="lg:col-span-5 xl:col-span-4 sticky top-24">
+        {/* Tahap 4: RIGHT COLUMN (30-35% on XL): "Menunggu Persetujuan" Panel (550ms - 750ms) */}
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.65, delay: 0.58, ease: [0.16, 1, 0.3, 1] }}
+          style={{ willChange: "transform, opacity" }}
+          className="lg:col-span-5 xl:col-span-4 sticky top-24"
+        >
           <BatchApprovalPanel
             pendingBatches={pendingApprovalBatches}
             onApprove={handleApprove}
             onReject={handleReject}
             onInspectBatch={(batch) => setSelectedBatch(batch)}
           />
-        </div>
+        </motion.div>
       </div>
 
       {/* Slide-over Drawer for Selected Batch Detail */}
