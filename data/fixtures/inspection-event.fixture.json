@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "eventId": "e9b48c21-72ef-4573-9821-b3b3cb5f4401",
+  "deviceId": "pi-01",
+  "batchId": "cm11223344556677889900aa",
+  "bindingVersion": 1,
+  "itemId": "IMP-2026-001",
+  "capturedAt": "2026-10-27T08:30:00.000Z",
+  "captureSource": "pi-webcam",
+  "inferenceLocation": "pi",
+  "modelVersion": "a4b7744f63ed2bfd18e399b055d6bece6efc16d4a0dcd777fe3bccce3121732b",
+  "inferenceMs": 142,
+  "classificationMs": 48,
+  "localizationMs": 94,
+  "localizationStatus": "completed",
+  "localAlertMs": 52,
+  "outcome": "defect",
+  "probabilities": {
+    "ok": 0.0421,
+    "defect": 0.9579
+  },
+  "confidence": 95.79,
+  "frame": {
+    "jpegBase64": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
+    "sha256": "472288de0ba92e62be4938bc9e96f1d6b0544f885be9d09f3e4e9f3b5550ad36",
+    "width": 640,
+    "height": 480
+  },
+  "coordinateSpace": "source-percent",
+  "boundingBoxes": [
+    {
+      "id": "box-01",
+      "label": "defect",
+      "x": 34.5,
+      "y": 28.2,
+      "width": 18.6,
+      "height": 22.4,
+      "confidence": 88.5
+    }
+  ]
+}

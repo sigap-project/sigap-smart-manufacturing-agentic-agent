@@ -1,0 +1,38 @@
+{
+  "runId": "run-2026-e9b48c21",
+  "inspectionId": "INS-2026-8842",
+  "batchId": "cm11223344556677889900aa",
+  "caseEpoch": 1,
+  "stageGroups": [
+    {
+      "stage": "DETECT",
+      "status": "completed",
+      "latencyMs": 142,
+      "detail": "On-device inference: defect detected (confidence 95.8%, 1 localized bounding box)"
+    },
+    {
+      "stage": "MEMORY",
+      "status": "completed",
+      "latencyMs": 85,
+      "detail": "Retrieved batch history: 3 defects in 8-minute sliding window; supplier PT Mitra Logam Presisi"
+    },
+    {
+      "stage": "FORMULA",
+      "status": "completed",
+      "latencyMs": 12,
+      "detail": "Evaluated policy sigap-demo-quality-v1: threshold breached (>= 3 distinct defects in 8 min)"
+    },
+    {
+      "stage": "DECISION",
+      "status": "completed",
+      "latencyMs": 1120,
+      "detail": "Proposing CREATE_QUALITY_NOTIFICATION and HOLD_MATERIAL_LOT with human supervisor approval required"
+    },
+    {
+      "stage": "DISPATCH",
+      "status": "pending_approval",
+      "latencyMs": 0,
+      "detail": "Awaiting supervisor authorization before simulator execution"
+    }
+  ]
+}
