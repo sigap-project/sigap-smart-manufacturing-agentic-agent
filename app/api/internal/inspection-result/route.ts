@@ -1,67 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateInternalApiKey, unauthorizedResponse } from "@/lib/auth";
-import { sigapStore } from "@/lib/store";
+import { resolveActor, unauthorizedResponse } from "@/lib/auth";
+import {
+  IngestError,
+  ingestInspection,
+  validateInspectionEvent,
+} from "@/lib/inspection-service";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/internal/inspection-result
- * Dipanggil oleh Edge Camera / Vision Inference Service (YOLOv8) setelah memproses frame optik.
- * Terproteksi header x-api-key: INTERNAL_API_KEY
+ * Authenticated ingestion endpoint for Raspberry Pi Edge Vision Worker & Labeled Replay.
+ * Protected by Device Bearer Token or Server Internal API Key.
+ * Implements Schema Version 1 Shared Inspection Contract.
  */
 export async function POST(request: NextRequest) {
-  // 1. Verifikasi API Key Internal
-  const auth = validateInternalApiKey(request);
-  if (!auth.authorized) {
-    return unauthorizedResponse(auth.error);
+  // 1. Authenticate Actor (Device Token or Internal API Key)
+  const actor = await resolveActor(request);
+  if (!actor) {
+    return unauthorizedResponse("Missing or invalid Device Token or Internal Key");
   }
 
   try {
-    const body = await request.json();
-    const {
-      batchId,
-      imageUrl,
-      defectDetected,
-      defectClass,
-      confidence,
-      severity,
-      id,
-    } = body;
-
-    if (!batchId || !defectClass) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Field 'batchId' dan 'defectClass' wajib disertakan.",
-        },
+        { success: false, error: "Malformed JSON payload in request body" },
         { status: 400 }
       );
     }
 
-    const created = await sigapStore.createInspection({
-      id,
-      batchId,
-      imageUrl,
-      defectDetected,
-      defectClass,
-      confidence,
-      severity,
-    });
+    // 2. Validate Event Schema
+    const validatedEvent = validateInspectionEvent(body);
 
+    // 3. Ingest with Idempotency and Transactional Persistence
+    const result = await ingestInspection(validatedEvent, actor);
+
+    const statusCode = result.duplicate ? 200 : 201;
     return NextResponse.json(
       {
         success: true,
-        message: `Hasil inspeksi frame ${created.id} berhasil dicatat.`,
-        data: created,
+        data: result,
       },
-      { status: 201 }
+      { status: statusCode }
     );
   } catch (error) {
-    console.error("[POST /api/internal/inspection-result Error]:", error);
+    if (error instanceof IngestError) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: error.code,
+          error: error.message,
+          ...(error.details ? { details: error.details } : {}),
+        },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[POST /api/internal/inspection-result Unexpected Error]:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Gagal menyimpan hasil inspeksi internal",
+        code: "INTERNAL_ERROR",
+        error: error instanceof Error ? error.message : "Internal server error during inspection ingestion",
       },
       { status: 500 }
     );

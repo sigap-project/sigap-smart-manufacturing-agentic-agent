@@ -14,26 +14,34 @@ datasource db {
 // MODEL 1: BATCH (Manufacturing Lot & Escalation Status)
 // -----------------------------------------------------------------------------
 model Batch {
-  id              String           @id @default(cuid())
-  lotId           String           @unique // e.g. "#B-2026-0730"
-  productType     String           // e.g. "Bracket Motor A7"
+  id              String   @id @default(cuid())
+  lotId           String   @unique // e.g. "#B-2026-0730"
+  productType     String   // e.g. "Bracket Motor A7"
   supplierId      String?
-  supplierName    String?          // e.g. "PT Krakatau Scrap Ind."
-  line            String?          // e.g. "Line #01 (Conveyor Cam-01)"
-  createdAt       DateTime         @default(now())
-  inspectionCount Int              @default(0)
-  defectCount     Int              @default(0)
-  defectTypes     String[]         @default([]) // e.g. ["defect"]
-  escalationScore Float?           @default(0.0) // 0.0 - 1.0 (Formula score)
-  status          String           @default("pending") // "pending", "held", "released", "rejected"
-  storageZone     String           @default("standard") // "standard", "quarantine"
-  pendingApproval Boolean          @default(false)
-  slaSeconds      Int?             // Sisa detik SLA sebelum auto-escalate
-  defectSummary   String?          @db.Text
+  supplierName    String?  // e.g. "PT Krakatau Scrap Ind."
+  line            String?  // e.g. "Line #01 (Conveyor Cam-01)"
+  createdAt       DateTime @default(now())
+  inspectionCount Int      @default(0)
+  defectCount     Int      @default(0)
+  defectTypes     String[] @default([]) // e.g. ["defect"]
+  escalationScore Float?   @default(0.0) // 0.0 - 1.0 (Formula score)
+  status          String   @default("pending") // "pending", "held", "released", "rejected"
+  storageZone     String   @default("standard") // "standard", "quarantine"
+  pendingApproval Boolean  @default(false)
+  slaSeconds      Int?     // Sisa detik SLA sebelum auto-escalate
+  defectSummary   String?  @db.Text
 
-  // Relasi: 1 Batch memiliki banyak Inspeksi & Catatan Dispatch
+  // Versioning and Governed ERP Integration (SIGAP_INTEGRATION_PLAN.md)
+  version         Int      @default(0)
+  caseEpoch       Int      @default(1)
+  materialNumber  String?  // Real SAP material target ID e.g. "MAT-IMP-9842"
+  workOrderId     String?  // Real SAP work order target ID e.g. "WO-2026-771"
+  dataOrigin      String   @default("synthetic") // "synthetic" | "operational" | "legacy-unverified"
+
+  // Relasi: 1 Batch memiliki banyak Inspeksi, WorkflowRuns, & Catatan Dispatch
   inspections     Inspection[]
   dispatchRecords DispatchRecord[]
+  workflowRuns    WorkflowRun[]
 
   @@index([status])
   @@index([storageZone])
@@ -41,55 +49,174 @@ model Batch {
 }
 
 // -----------------------------------------------------------------------------
-// MODEL 2: INSPECTION (Conveyor Optical Camera Inspection Frame)
+// MODEL 2: INSPECTION (Optical Camera Inspection Frame & Evidence Record)
 // -----------------------------------------------------------------------------
 model Inspection {
-  id                  String     @id @default(cuid()) // e.g. "INS-2026-8842"
+  id                  String       @id @default(cuid()) // e.g. "INS-2026-8842"
   batchId             String
-  timestamp           DateTime   @default(now())
+  timestamp           DateTime     @default(now())
   imageUrl            String?
-  defectDetected      Boolean    @default(false)
-  defectClass         String     @default("OK") // "OK", "defect", "def_front", "ok_front"
-  confidence          Float      @default(99.0) // e.g. 94.2
-  severity            String?    // "Low", "Medium", "High", "Critical"
-  agentReasoningTrace Json       // JSON Array of reasoning deduction steps
-  status              String     @default("Lolos QC") // "Lolos QC", "Ditahan", "Pending Review", "Ditolak"
+  defectDetected      Boolean      @default(false)
+  defectClass         String       @default("OK") // "OK", "defect", "def_front", "ok_front"
+  confidence          Float        @default(99.0) // e.g. 94.2
+  severity            String?      // "Low", "Medium", "High", "Critical"
+  agentReasoningTrace Json?        // JSON Array of reasoning deduction steps (legacy snapshot)
+  status              String       @default("Lolos QC") // "Lolos QC", "Ditahan", "Pending Review", "Ditolak"
 
-  // Relasi: Belongs to Batch, Has many AgentLogs
-  batch               Batch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  // Canonical Hardware & Ingress Fields (SIGAP_INTEGRATION_PLAN.md)
+  eventId             String?      @unique
+  deviceId            String?
+  bindingVersion      Int          @default(1)
+  itemId              String?
+  capturedAt          DateTime?
+  receivedAt          DateTime     @default(now())
+  captureSource       String       @default("pi-webcam") // "pi-webcam" | "pi-file-replay"
+  inferenceLocation   String       @default("pi")
+  modelVersion        String?
+  inferenceMs         Int?
+  classificationMs    Int?
+  localizationMs      Int?
+  localizationStatus  String?      // "completed" | "skipped" | "failed"
+  localAlertMs        Int?
+  outcome             String?      // "ok" | "defect" | "unknown"
+  probabilities       Json?        // { ok: number, defect: number }
+  imageKey            String?      // Private S3 or local key
+  imageSha256         String?
+  imageWidth          Int?
+  imageHeight         Int?
+  coordinateSpace     String?      @default("source-percent")
+  boundingBoxes       Json?        // [{ id, label, x, y, width, height, confidence }]
+  errorCode           String?
+  reviewOutcome       String?      // "confirmed_ok" | "confirmed_defect" | "unresolved"
+  reviewReason        String?
+  reviewedAt          DateTime?
+  reviewedBy          String?
+  caseEpoch           Int          @default(1)
+  dataOrigin          String       @default("operational") // "operational" | "legacy-unverified" | "synthetic"
+  legacySnapshot      Json?
+
+  // Relasi: Belongs to Batch, Has many AgentLogs, 1 WorkflowRun
+  batch               Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
   agentLogs           AgentLog[]
+  workflowRun         WorkflowRun?
 
+  @@unique([batchId, itemId])
   @@index([batchId])
   @@index([defectClass])
   @@index([status])
+  @@index([outcome])
+  @@index([receivedAt])
 }
 
 // -----------------------------------------------------------------------------
-// MODEL 3: DISPATCH RECORD (SAP QM / MM / PP ERP & Notification Outbound)
+// MODEL 3: DEVICE (Station Authenticated Hardware Identity)
+// -----------------------------------------------------------------------------
+model Device {
+  id             String    @id // e.g. "pi-01"
+  tokenHash      String    // SHA-256 hash of device bearer token
+  enabled        Boolean   @default(true)
+  batchId        String?
+  bindingVersion Int       @default(1)
+  stateVersion   Int       @default(1)
+  lastSeenAt     DateTime?
+  lastHeartbeat  Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+
+  @@index([enabled])
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 4: WORKFLOW RUN (Durable Background Orchestration Job)
+// -----------------------------------------------------------------------------
+model WorkflowRun {
+  id              String      @id @default(cuid())
+  inspectionId    String      @unique
+  batchId         String
+  caseEpoch       Int         @default(1)
+  contextSnapshot Json
+  policySnapshot  Json
+  status          String      @default("queued") // "queued" | "running" | "awaiting_approval" | "completed" | "needs_review" | "failed"
+  provider        String?     // "bedrock" | "sap-ai-core"
+  modelId         String?
+  promptVersion   String?
+  attempts        Int         @default(0)
+  nextAttemptAt   DateTime?
+  leaseUntil      DateTime?
+  lastError       String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @default(now()) @updatedAt
+
+  // Relasi
+  inspection      Inspection  @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  batch           Batch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([batchId])
+  @@index([leaseUntil])
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 5: DISPATCH RECORD (SAP QM / MM / PP ERP & Notification Outbound)
 // -----------------------------------------------------------------------------
 model DispatchRecord {
-  id            String    @id @default(cuid()) // e.g. "DSP-2026-0419"
-  batchId       String
-  triggerReason String    @db.Text // e.g. "3 anomali cacat (defect) berulang dalam 8 menit"
-  consumer      String    // "SAP QM", "SAP MM", "SAP PP", "Human Notification"
-  payload       Json      // Structured OData JSON payload
-  status        String    @default("Dispatched") // "Dispatched", "Pending Approval", "Rejected"
-  approvedBy    String?   // e.g. "Autonomous Vision Agent" / "Budi Pratama"
-  dispatchedAt  DateTime? @default(now())
-  sapResponse   Json?     // Response body from ERP API
-  sapTicketId   String?   // e.g. "QM-NOTIF-98214"
-  defectCode    String?   // e.g. "DEF-CAST-04"
+  id                    String    @id @default(cuid()) // e.g. "DSP-2026-0419"
+  batchId               String
+  triggerReason         String    @db.Text // e.g. "3 anomali cacat (defect) berulang dalam 8 menit"
+  consumer              String    // "SAP QM", "SAP MM", "SAP PP", "Human Notification"
+  payload               Json      // Structured OData JSON payload
+  status                String    @default("Dispatched") // "proposed" | "pending_approval" | "queued" | "executing" | "verifying" | "verified" | "rejected" | "failed"
+  approvedBy            String?   // e.g. "Autonomous Vision Agent" / "Budi Pratama"
+  dispatchedAt          DateTime? @default(now())
+  sapResponse           Json?     // Response body from ERP API
+  sapTicketId           String?   // e.g. "QM-NOTIF-98214"
+  defectCode            String?   // e.g. "DEF-CAST-04"
+
+  // Governed Action Execution Fields (SIGAP_INTEGRATION_PLAN.md)
+  runId                 String?
+  caseEpoch             Int       @default(1)
+  actionType            String?   // "CREATE_QUALITY_NOTIFICATION" | "HOLD_MATERIAL_LOT" | "HOLD_WORK_ORDER"
+  actionKey             String?   @unique // batchId + ":" + caseEpoch + ":" + actionType
+  payloadHash           String?
+  revision              Int       @default(1)
+  expectedBatchVersion  Int?
+  attempts              Int       @default(0)
+  nextAttemptAt         DateTime?
+  leaseUntil            DateTime?
+  errorCode             String?
+  verifiedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
 
   // Relasi: Belongs to Batch
-  batch         Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch                 Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
   @@index([batchId])
   @@index([consumer])
   @@index([status])
+  @@index([actionType])
 }
 
 // -----------------------------------------------------------------------------
-// MODEL 4: AGENT LOG (Detailed Step-by-Step Autonomous Reasoning Log)
+// MODEL 6: SIMULATOR RECORD (Persistent ERP Verification Storage)
+// -----------------------------------------------------------------------------
+model SimulatorRecord {
+  id             String   @id @default(cuid())
+  actionKey      String   @unique
+  payloadHash    String
+  targetId       String
+  externalId     String
+  actionType     String
+  resultingState String   // "OPEN" | "QUALITY_HOLD" | "HELD"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([actionKey])
+  @@index([targetId])
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 7: AGENT LOG (Detailed Step-by-Step Autonomous Reasoning Log)
 // -----------------------------------------------------------------------------
 model AgentLog {
   id           String     @id @default(cuid())
@@ -102,15 +229,26 @@ model AgentLog {
   latencyMs    Int?       // Execution latency in ms
   timestamp    DateTime   @default(now())
 
+  // Structured Pipeline Trace
+  runId        String?
+  sequence     Int        @default(1)
+  toolCallId   String?
+  stage        String?    // "DETECT" | "MEMORY" | "FORMULA" | "DECISION" | "DISPATCH"
+  kind         String     @default("tool_call") // "tool_call" | "tool_result" | "decision" | "approval" | "error"
+  status       String     @default("completed") // "completed" | "failed" | "skipped" | "pending"
+  startedAt    DateTime   @default(now())
+  completedAt  DateTime?
+
   // Relasi: Belongs to Inspection
   inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
 
   @@index([inspectionId])
   @@index([stepName])
+  @@index([runId, sequence])
 }
 
 // -----------------------------------------------------------------------------
-// MODEL 5: SETTING (Global System Runtime & Agentic Calibration Config)
+// MODEL 8: SETTING (Global System Runtime & Agentic Calibration Config)
 // -----------------------------------------------------------------------------
 model Setting {
   id                           String   @id @default("default") // Single row per deployment
@@ -126,5 +264,5 @@ model Setting {
   autoExportCsv                Boolean  @default(true) // Auto-export CSV per shift
   logRetentionDays             Int      @default(30)   // 7, 14, 30 days
   monitoredProducts            String[] @default(["Bracket Motor A7", "Gearbox Housing C2", "Flange Pinion X1", "Rotor Casing D4", "Piston Base Ring 55"])
-  updatedAt                    DateTime @updatedAt
+  updatedAt                    DateTime @default(now()) @updatedAt
 }
