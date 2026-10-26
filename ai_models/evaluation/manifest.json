@@ -1,0 +1,19 @@
+{
+  "datasetVersion": 1,
+  "description": "SIGAP On-Device Runtime Evaluation Dataset for Casting Impellers",
+  "samples": [
+    {
+      "id": "eval-ok-01",
+      "imagePath": "public/sample-frames/ok.jpeg",
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.85
+    },
+    {
+      "id": "eval-defect-01",
+      "imagePath": "public/sample-frames/defect.jpeg",
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.80,
+      "requiresLocalization": true
+    }
+  ]
+}

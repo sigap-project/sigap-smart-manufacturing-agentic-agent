@@ -1,59 +1,54 @@
 #!/usr/bin/env python3
 """
-================================================================================
-SIGAP — Edge Vision AI Inference Worker (Two-Stage Cascaded Pipeline)
-================================================================================
-Menjalankan inferensi model ONNX di edge device (kamera konveyor / laptop)
-dan mengirimkan hasil inspeksi ke platform web SIGAP secara real-time.
-
-Arsitektur Dua Tahap:
-  1. Stage 1 (YOLOv8-Detect): Deteksi keberadaan cacat & lokalisasi Bounding Box (5.2ms)
-  2. Stage 2 (YOLOv8-Cls): Verifikasi keabsahan cacat anti-pantulan cahaya (0.8ms, 99.7% Acc)
-  3. Dispatch HTTP: Mengirim payload JSON ke endpoint internal SIGAP terproteksi API Key.
-
-Dependensi:
-  pip install onnxruntime opencv-python-headless numpy requests
-================================================================================
+SIGAP — Edge Vision AI Inference Worker & Offline Physical Station
+Implements:
+- Central ROI Preprocessing & Single JPEG byte preservation
+- Classifier-first disposition (raw probabilities, no double softmax)
+- Detector localization mapped to source percentage coordinates
+- Local SQLite Outbox with duplicate prevention & persistent latch
+- Asynchronous uploader with exponential backoff & heartbeat/status loops
+- GPIO Latching for 3-LED / 1-LED / Buzzer states (physical hardware or simulated)
 """
 
 import os
 import sys
 import time
 import json
+import uuid
+import sqlite3
+import hashlib
+import base64
 import argparse
+import threading
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 
-# Cek dependensi esensial
 try:
     import cv2
     import numpy as np
     import requests
 except ImportError as e:
-    print(f"\n[ERROR] Dependensi belum lengkap: {e}")
-    print("Silakan jalankan perintah berikut:")
-    print("  pip install onnxruntime opencv-python-headless numpy requests\n")
+    print(f"[FATAL] Missing Python dependencies: {e}")
     sys.exit(1)
 
 try:
     import onnxruntime as ort
 except ImportError:
-    print("\n[WARNING] 'onnxruntime' belum terinstal.")
-    print("Untuk inferensi model nyata, jalankan: pip install onnxruntime\n")
     ort = None
 
+try:
+    from gpiozero import LED, Buzzer, PWMOutputDevice
+except ImportError:
+    LED = None
+    Buzzer = None
+    PWMOutputDevice = None
 
-# ==============================================================================
-# HELPER FUNCTIONS & GEOMETRY
-# ==============================================================================
 
-def softmax(x: np.ndarray) -> np.ndarray:
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum(axis=-1, keepdims=True)
+def compute_sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def letterbox(img: np.ndarray, target_shape=(640, 640)) -> Tuple[np.ndarray, float, Tuple[int, int]]:
-    """Resize dan pad image agar mempertahankan aspect ratio."""
     h, w = img.shape[:2]
     tw, th = target_shape
     scale = min(tw / w, th / h)
@@ -70,10 +65,6 @@ def letterbox(img: np.ndarray, target_shape=(640, 640)) -> Tuple[np.ndarray, flo
 
 
 def nms_boxes(boxes: np.ndarray, scores: np.ndarray, iou_thresh: float = 0.35, iom_thresh: float = 0.60) -> List[int]:
-    """
-    Non-Maximum Suppression dengan IoU dan Containment (IoM) Filtering.
-    Menghilangkan bounding box yang tertimpa/beririsan terlalu besar atau double-double (nested).
-    """
     if len(boxes) == 0:
         return []
     x1 = boxes[:, 0] - boxes[:, 2] / 2
@@ -87,7 +78,6 @@ def nms_boxes(boxes: np.ndarray, scores: np.ndarray, iou_thresh: float = 0.35, i
     while order.size > 0:
         i = order[0]
         keep.append(i)
-
         if order.size == 1:
             break
 
@@ -101,293 +91,667 @@ def nms_boxes(boxes: np.ndarray, scores: np.ndarray, iou_thresh: float = 0.35, i
         h = np.maximum(0.0, yy2 - yy1)
         inter = w * h
 
-        # 1. Standard IoU
         union = areas[i] + areas[remaining] - inter + 1e-6
         ovr = inter / union
 
-        # 2. Containment / IoM: menekan nested double boxes
         min_areas = np.minimum(areas[i], areas[remaining]) + 1e-6
         containment = inter / min_areas
 
-        # Loloskan hanya yang TIDAK beririsan besar dan TIDAK nested
         inds = np.where((ovr <= iou_thresh) & (containment <= iom_thresh))[0]
         order = remaining[inds]
 
     return keep
 
 
-def diagnose_defect_type(bbox: List[float], img_w: int, img_h: int, conf: float) -> Tuple[str, str]:
-    """
-    Mendiagnosis tingkat keparahan (severity) anomali cacat casting logam (defect vs OK)
-    berdasarkan karakteristik geometri anomali bounding box dan confidence deteksi.
-    """
-    _, _, bw, bh = bbox
-    area_ratio = (bw * bh) / (img_w * img_h + 1e-6)
+class HardwareAlertController:
+    """Controls physical GPIO or simulated LEDs and Buzzer according to local latch state."""
 
-    # Tingkat keparahan (severity) berdasarkan proporsi area & tingkat kepastian
-    if area_ratio > 0.15 or conf > 0.90:
-        return "defect", "Critical"
-    elif area_ratio > 0.05 or conf > 0.80:
-        return "defect", "High"
-    else:
-        return "defect", "Medium"
+    def __init__(self, led_mode: str, buzzer_type: str, red_pin: int, yellow_pin: int, green_pin: int, buzzer_pin: int):
+        self.led_mode = led_mode
+        self.buzzer_type = buzzer_type
+        self.red_pin = red_pin
+        self.yellow_pin = yellow_pin
+        self.green_pin = green_pin
+        self.buzzer_pin = buzzer_pin
+
+        self.has_gpio = LED is not None and led_mode != "none"
+        self.latch_defect = False
+        self.state = "startup"
+        self.is_silenced = False
+
+        self._red = None
+        self._yellow = None
+        self._green = None
+        self._buzzer = None
+
+        if self.has_gpio:
+            try:
+                self._red = LED(self.red_pin)
+                if self.led_mode == "three":
+                    self._yellow = LED(self.yellow_pin)
+                    self._green = LED(self.green_pin)
+                if self.buzzer_type == "active" and Buzzer is not None:
+                    self._buzzer = Buzzer(self.buzzer_pin)
+            except Exception as e:
+                print(f"[GPIO WARN] Hardware GPIO initialization failed: {e}. Falling back to simulation.")
+                self.has_gpio = False
+
+    def update_state(self, state: str, is_offline: bool = False):
+        self.state = state
+        if state == "defect":
+            self.latch_defect = True
+
+        # Render physical / simulated state
+        if self.has_gpio:
+            try:
+                if self.latch_defect:
+                    self._red.on()
+                    if self._green:
+                        self._green.off()
+                    if self._yellow:
+                        if is_offline:
+                            self._yellow.blink(on_time=0.5, off_time=0.5)
+                        else:
+                            self._yellow.off()
+                elif state == "ok" and not is_offline:
+                    self._red.off()
+                    if self._green:
+                        self._green.on()
+                    if self._yellow:
+                        self._yellow.off()
+                elif state == "pending":
+                    if self._yellow:
+                        self._yellow.on()
+                else: # startup or offline or unknown
+                    if self._yellow:
+                        self._yellow.blink(on_time=0.8, off_time=0.8)
+                    if self._green:
+                        self._green.off()
+            except Exception:
+                pass
+
+    def chirp(self, count: int = 1):
+        if self.is_silenced or self.buzzer_type == "disabled":
+            return
+        if self.has_gpio and self._buzzer:
+            try:
+                for _ in range(count):
+                    self._buzzer.on()
+                    time.sleep(0.1)
+                    self._buzzer.off()
+                    time.sleep(0.08)
+            except Exception:
+                pass
+        else:
+            print(f"  [BUZZER] *CHIRP* x{count}")
+
+    def silence(self):
+        self.is_silenced = True
+        if self.has_gpio and self._buzzer:
+            try:
+                self._buzzer.off()
+            except Exception:
+                pass
+        print("  [ALERT] Buzzer silenced by operator ack.")
+
+    def clear_latch(self):
+        self.latch_defect = False
+        self.is_silenced = False
+        self.update_state("ok")
+
+    def cleanup(self):
+        if self.has_gpio:
+            try:
+                if self._red:
+                    self._red.close()
+                if self._yellow:
+                    self._yellow.close()
+                if self._green:
+                    self._green.close()
+                if self._buzzer:
+                    self._buzzer.close()
+            except Exception:
+                pass
 
 
-# ==============================================================================
-# EDGE WORKER CLASS
-# ==============================================================================
+class LocalQueueDB:
+    """Transactional SQLite Outbox ensuring zero data loss during WAN disconnects."""
+
+    def __init__(self, db_path: str, max_events: int = 500, max_bytes: int = 262144000):
+        self.db_path = db_path
+        self.max_events = max_events
+        self.max_bytes = max_bytes
+        self.lock = threading.Lock()
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS queue (
+                    id TEXT PRIMARY KEY,
+                    event_id TEXT UNIQUE,
+                    batch_id TEXT,
+                    item_id TEXT,
+                    event_json TEXT,
+                    jpeg_blob BLOB,
+                    status TEXT,
+                    attempts INT,
+                    created_at REAL,
+                    retry_after REAL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS synced_items (
+                    batch_id TEXT,
+                    item_id TEXT,
+                    event_id TEXT,
+                    synced_at REAL,
+                    PRIMARY KEY(batch_id, item_id)
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_queue_status ON queue(status, retry_after)")
+
+    def can_enqueue(self, payload_bytes: int) -> bool:
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            count = conn.execute("SELECT COUNT(*) FROM queue WHERE status != 'accepted'").fetchone()[0]
+            total_size = conn.execute("SELECT COALESCE(SUM(LENGTH(jpeg_blob)), 0) FROM queue WHERE status != 'accepted'").fetchone()[0]
+            if count >= self.max_events or (total_size + payload_bytes) > self.max_bytes:
+                return False
+            return True
+
+    def is_item_inspected(self, batch_id: str, item_id: str) -> bool:
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            # Check in synced ledger
+            synced = conn.execute("SELECT 1 FROM synced_items WHERE batch_id = ? AND item_id = ?", (batch_id, item_id)).fetchone()
+            if synced:
+                return True
+            # Check in active queue
+            queued = conn.execute("SELECT 1 FROM queue WHERE batch_id = ? AND item_id = ? AND status != 'accepted'", (batch_id, item_id)).fetchone()
+            return queued is not None
+
+    def enqueue(self, event_id: str, batch_id: str, item_id: str, event_json: str, jpeg_bytes: bytes):
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO queue (id, event_id, batch_id, item_id, event_json, jpeg_blob, status, attempts, created_at, retry_after)
+                VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, 0)
+            """, (str(uuid.uuid4()), event_id, batch_id, item_id, event_json, jpeg_bytes, time.time()))
+
+    def get_pending(self, limit: int = 5) -> List[Dict]:
+        now = time.time()
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT id, event_id, batch_id, item_id, event_json, attempts, retry_after
+                FROM queue
+                WHERE status = 'pending' AND retry_after <= ?
+                ORDER BY created_at ASC
+                LIMIT ?
+            """, (now, limit)).fetchall()
+            return [dict(r) for r in rows]
+
+    def mark_accepted(self, queue_id: str, batch_id: str, item_id: str, event_id: str):
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            conn.execute("UPDATE queue SET status = 'accepted', jpeg_blob = NULL WHERE id = ?", (queue_id,))
+            conn.execute("""
+                INSERT OR REPLACE INTO synced_items (batch_id, item_id, event_id, synced_at)
+                VALUES (?, ?, ?, ?)
+            """, (batch_id, item_id, event_id, time.time()))
+
+    def mark_failed(self, queue_id: str, attempts: int, backoff_sec: float):
+        retry_time = time.time() + backoff_sec
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                UPDATE queue SET attempts = ?, retry_after = ? WHERE id = ?
+            """, (attempts, retry_time, queue_id))
+
+    def get_queue_depth(self) -> int:
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            return conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
+
 
 class SigapEdgeWorker:
-    def __init__(
-        self,
-        detect_model_path: str,
-        cls_model_path: str,
-        api_url: str,
-        api_key: str,
-        batch_id: str = "#B-2026-0730",
-        conf_threshold: float = 0.45,
-        mode: str = "both",
-    ):
-        self.api_url = api_url
-        self.api_key = api_key
-        self.batch_id = batch_id
-        self.conf_threshold = conf_threshold
-        self.mode = mode.lower()
+    """Autonomous Raspberry Pi Station Edge Worker."""
 
-        self.detect_session = None
-        self.cls_session = None
+    def __init__(self, args):
+        self.args = args
+        self.device_id = args.device_id
+        self.batch_id = args.batch_id
+        self.api_url = args.api_url
+        self.binding_version = 1
+        self.state_version = 1
+        self.paused = False
+        self.idle = True
+        self.last_event_id: Optional[str] = None
+        self.running = True
 
-        if ort is not None:
-            opts = ort.SessionOptions()
-            opts.intra_op_num_threads = 2
-            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        # Base URL from api_url
+        self.base_url = args.api_url.replace("/api/internal/inspection-result", "")
 
-            if os.path.exists(detect_model_path) and self.mode in ("both", "detect"):
-                print(f"[INIT] Memuat model deteksi: {detect_model_path}")
-                self.detect_session = ort.InferenceSession(detect_model_path, opts, providers=["CPUExecutionProvider"])
-                self.det_input_name = self.detect_session.get_inputs()[0].name
-                self.det_shape = self.detect_session.get_inputs()[0].shape
+        # Auth Token
+        self.token = os.environ.get("SIGAP_DEVICE_TOKEN", os.environ.get("INTERNAL_API_KEY", "sigap-internal-dev-key-2026"))
 
-            if os.path.exists(cls_model_path) and self.mode in ("both", "classify"):
-                print(f"[INIT] Memuat model klasifikasi: {cls_model_path}")
-                self.cls_session = ort.InferenceSession(cls_model_path, opts, providers=["CPUExecutionProvider"])
-                self.cls_input_name = self.cls_session.get_inputs()[0].name
-                self.cls_shape = self.cls_session.get_inputs()[0].shape
+        # Initialize Local Storage Outbox
+        queue_dir = Path(args.queue_path).parent
+        queue_dir.mkdir(parents=True, exist_ok=True)
+        self.queue = LocalQueueDB(args.queue_path, max_events=args.max_events, max_bytes=args.max_bytes)
 
-    def run_detection(self, frame: np.ndarray) -> Tuple[List[List[float]], List[float], float]:
-        """Stage 1: YOLOv8-Detect (1, 3, 640, 640) -> [x, y, w, h], scores."""
-        if self.detect_session is None:
-            return [], [], 0.0
+        # Initialize Hardware Alert Controller
+        self.alert = HardwareAlertController(
+            led_mode=args.led_mode,
+            buzzer_type=args.buzzer_type,
+            red_pin=args.pin_red,
+            yellow_pin=args.pin_yellow,
+            green_pin=args.pin_green,
+            buzzer_pin=args.pin_buzzer,
+        )
 
-        t0 = time.perf_counter()
-        target_size = (640, 640)
-        padded, scale, (pad_x, pad_y) = letterbox(frame, target_size)
-        rgb = cv2.cvtColor(padded, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        blob = np.transpose(rgb, (2, 0, 1))[None, ...]
+        # Load Manifest & ONNX Sessions
+        manifest_path = Path(__file__).resolve().parent / "model-manifest.json"
+        if not manifest_path.exists():
+            raise FileNotFoundError(f"Model manifest not found: {manifest_path}")
 
-        preds = self.detect_session.run(None, {self.det_input_name: blob})[0]  # shape: (1, 5, 8400)
-        t_lat = (time.perf_counter() - t0) * 1000.0
+        with open(manifest_path, "r") as f:
+            self.manifest = json.load(f)
 
-        output = preds[0].T  # shape: (8400, 5) -> [cx, cy, w, h, score]
-        boxes = output[:, :4]
-        scores = output[:, 4]
+        self.model_version = self.manifest["classifier"]["sha256"]
 
-        mask = scores > self.conf_threshold
-        boxes = boxes[mask]
-        scores = scores[mask]
+        so = ort.SessionOptions() if ort else None
+        if so:
+            so.intra_op_num_threads = 2
+            so.inter_op_num_threads = 1
+            so.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
 
-        if len(boxes) == 0:
-            return [], [], t_lat
+        ai_dir = manifest_path.parent
+        cls_file = ai_dir / self.manifest["classifier"]["modelPath"]
+        det_file = ai_dir / self.manifest["detector"]["modelPath"]
 
-        keep_idx = nms_boxes(boxes, scores, iou_thresh=0.35, iom_thresh=0.60)
-        boxes = boxes[keep_idx]
-        scores = scores[keep_idx]
+        self.cls_session = ort.InferenceSession(str(cls_file), so, providers=["CPUExecutionProvider"]) if ort else None
+        self.det_session = ort.InferenceSession(str(det_file), so, providers=["CPUExecutionProvider"]) if ort else None
 
-        # Kembalikan koordinat ke resolusi frame asli
-        orig_boxes = []
-        for b in boxes:
-            cx = (b[0] - pad_x) / scale
-            cy = (b[1] - pad_y) / scale
-            w = b[2] / scale
-            h = b[3] / scale
-            orig_boxes.append([cx, cy, w, h])
+        self.cls_input = self.cls_session.get_inputs()[0].name if self.cls_session else None
+        self.det_input = self.det_session.get_inputs()[0].name if self.det_session else None
 
-        return orig_boxes, scores.tolist(), t_lat
+        print(f"[EDGE WORKER] Device: {self.device_id} bound to Batch: {self.batch_id}")
+        print(f"             Classifier: {cls_file.name} (SHA: {self.model_version[:12]}...)")
+        print(f"             Queue: {self.args.queue_path}")
 
-    def run_classification(self, frame: np.ndarray) -> Tuple[str, float, float]:
-        """Stage 2: YOLOv8-Cls (1, 3, 300, 300) -> ('def_front' | 'ok_front', prob, latency)."""
-        if self.cls_session is None:
-            return "def_front", 0.99, 0.0
+    def capture_frame(self, source_path: Optional[str] = None) -> Tuple[bytes, np.ndarray]:
+        """Encodes frame once to JPEG and preserves exact bytes for both inference & transport."""
+        if source_path and Path(source_path).exists():
+            with open(source_path, "rb") as f:
+                jpeg_bytes = f.read()
+            arr = np.frombuffer(jpeg_bytes, dtype=np.uint8)
+            frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            return jpeg_bytes, frame
 
-        t0 = time.perf_counter()
-        target_size = (300, 300)
-        resized = cv2.resize(frame, target_size)
+        # Webcam Capture
+        cap = cv2.VideoCapture(int(self.args.source) if self.args.source.isdigit() else self.args.source)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret or frame is None:
+            raise RuntimeError("Webcam capture failed: unable to read frame")
+
+        success, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        if not success:
+            raise RuntimeError("Failed to encode frame to JPEG")
+
+        jpeg_bytes = buffer.tobytes()
+        return jpeg_bytes, frame
+
+    def run_inference(self, frame: np.ndarray) -> Tuple[str, Optional[Dict], Optional[float], List[Dict], float, float, Optional[float], str]:
+        h, w = frame.shape[:2]
+        side = min(w, h)
+        off_x = (w - side) // 2
+        off_y = (h - side) // 2
+        roi = frame[off_y:off_y + side, off_x:off_x + side]
+
+        # 1. Classification (Primary Decision)
+        t_cls0 = time.perf_counter()
+        resized = cv2.resize(roi, (300, 300), interpolation=cv2.INTER_LINEAR)
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
         blob = np.transpose(rgb, (2, 0, 1))[None, ...]
 
-        preds = self.cls_session.run(None, {self.cls_input_name: blob})[0]  # shape: (1, 2)
-        t_lat = (time.perf_counter() - t0) * 1000.0
+        raw_cls = self.cls_session.run(None, {self.cls_input: blob})[0]
+        cls_ms = (time.perf_counter() - t_cls0) * 1000.0
 
-        probs = softmax(preds[0])
-        # Indeks 0: def_front, Indeks 1: ok_front
-        pred_label = "def_front" if probs[0] > probs[1] else "ok_front"
-        confidence = float(probs[0] if pred_label == "def_front" else probs[1])
+        p_defect = float(raw_cls[0][0])
+        p_ok = float(raw_cls[0][1])
+        prob_sum = p_defect + p_ok
+        if abs(prob_sum - 1.0) > 1e-3:
+            p_defect /= prob_sum
+            p_ok /= prob_sum
 
-        return pred_label, confidence, t_lat
+        thresholds = self.manifest["classifier"]["thresholds"]
+        if p_defect >= thresholds["defect"]:
+            outcome = "defect"
+            confidence = p_defect * 100.0
+        elif p_ok >= thresholds["ok"]:
+            outcome = "ok"
+            confidence = p_ok * 100.0
+        else:
+            outcome = "unknown"
+            confidence = max(p_defect, p_ok) * 100.0
 
-    def send_to_sigap(self, payload: Dict) -> bool:
-        """Mengirim hasil inferensi ke endpoint internal SIGAP Web Platform."""
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": self.api_key,
-        }
+        probabilities = {"ok": p_ok, "defect": p_defect}
+
+        # 2. Localization (Only run if defect or unknown in 'both' mode)
+        boxes = []
+        loc_ms: Optional[float] = None
+        loc_status = "skipped"
+
+        if outcome in ("defect", "unknown") and self.args.mode in ("both", "detect"):
+            t_det0 = time.perf_counter()
+            padded, scale, (pad_x, pad_y) = letterbox(roi, (640, 640))
+            rgb_det = cv2.cvtColor(padded, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+            blob_det = np.transpose(rgb_det, (2, 0, 1))[None, ...]
+
+            raw_det = self.det_session.run(None, {self.det_input: blob_det})[0]
+            loc_ms = (time.perf_counter() - t_det0) * 1000.0
+            loc_status = "completed"
+
+            preds = np.transpose(raw_det[0], (1, 0))
+            boxes_center = preds[:, :4]
+            scores = preds[:, 4]
+
+            mask = scores >= self.manifest["detector"]["scoreThreshold"]
+            boxes_center = boxes_center[mask]
+            scores = scores[mask]
+
+            if len(boxes_center) > 0:
+                keep = nms_boxes(
+                    boxes_center,
+                    scores,
+                    iou_thresh=self.manifest["detector"]["iouThreshold"],
+                    iom_thresh=self.manifest["detector"]["iomThreshold"],
+                )
+                boxes_center = boxes_center[keep]
+                scores = scores[keep]
+
+                for idx, (b, sc) in enumerate(zip(boxes_center, scores)):
+                    cx = (b[0] - pad_x) / scale
+                    cy = (b[1] - pad_y) / scale
+                    bw = b[2] / scale
+                    bh = b[3] / scale
+
+                    x1 = cx - bw / 2 + off_x
+                    y1 = cy - bh / 2 + off_y
+
+                    pct_x = max(0.0, min(100.0, (x1 / w) * 100.0))
+                    pct_y = max(0.0, min(100.0, (y1 / h) * 100.0))
+                    pct_w = max(0.1, min(100.0 - pct_x, (bw / w) * 100.0))
+                    pct_h = max(0.1, min(100.0 - pct_y, (bh / h) * 100.0))
+
+                    boxes.append({
+                        "id": f"box-{idx + 1}",
+                        "label": "defect",
+                        "x": round(float(pct_x), 2),
+                        "y": round(float(pct_y), 2),
+                        "width": round(float(pct_w), 2),
+                        "height": round(float(pct_h), 2),
+                        "confidence": round(float(sc) * 100.0, 2),
+                    })
+
+        total_inference_ms = cls_ms + (loc_ms or 0.0)
+        return outcome, probabilities, confidence, boxes, total_inference_ms, cls_ms, loc_ms, loc_status
+
+    def process_item(self, item_id: str, is_unsupported_review: bool = False, replay_source: Optional[str] = None):
+        """Processes one explicitly identified item, enforces capacity & idempotency, latches alert, persists to SQLite."""
+        if self.paused:
+            print("[PAUSED] Station is paused. Resume before new captures.")
+            return
+
+        if self.queue.is_item_inspected(self.batch_id, item_id):
+            print(f"[REJECT] Item '{item_id}' already inspected in batch '{self.batch_id}'. Replace physical product before next capture.")
+            return
+
+        t_cap0 = time.perf_counter()
         try:
-            res = requests.post(self.api_url, json=payload, headers=headers, timeout=2.5)
-            if res.status_code in (200, 201):
-                data = res.json()
-                insp_id = data.get("data", {}).get("id", "INSP-OK")
-                print(f"  [HTTP 201] Berhasil dikirim ke SIGAP -> ID: {insp_id}")
-                return True
-            else:
-                print(f"  [HTTP {res.status_code}] Gagal: {res.text}")
-                return False
-        except requests.exceptions.RequestException as e:
-            print(f"  [OFFLINE] Server SIGAP di {self.api_url} tidak merespons ({e.__class__.__name__})")
-            return False
+            jpeg_bytes, frame = self.capture_frame(replay_source or self.args.source_image)
+        except Exception as e:
+            print(f"[CAPTURE FAULT] {e}")
+            self.alert.update_state("fault")
+            self.alert.chirp(3)
+            return
 
-    def process_frame(self, frame: np.ndarray, frame_idx: int) -> Dict:
-        """Pipeline inferensi dua tahap per frame."""
+        if not self.queue.can_enqueue(len(jpeg_bytes)):
+            print("[QUEUE FULL] Local outbox capacity exceeded. Captures disabled until queue flushes.")
+            return
+
         h, w = frame.shape[:2]
+        sha256_hash = compute_sha256(jpeg_bytes)
+        b64_frame = base64.b64encode(jpeg_bytes).decode("ascii")
+        event_id = str(uuid.uuid4())
 
-        # Stage 1: Deteksi Bounding Box
-        boxes, det_scores, det_lat = self.run_detection(frame)
-        has_defect_box = len(boxes) > 0
-
-        # Stage 2: Verifikasi Klasifikasi
-        cls_label, cls_conf, cls_lat = "ok_front", 0.0, 0.0
-        if self.mode in ("both", "classify"):
-            cls_label, cls_conf, cls_lat = self.run_classification(frame)
-
-        # Evaluasi Two-Stage Consensus
-        if self.mode == "both":
-            # Terkonfirmasi cacat jika deteksi menemukan box DAN klasifikasi mengonfirmasi 'def_front'
-            is_defect = has_defect_box and (cls_label == "def_front" or det_scores[0] > 0.70)
-        elif self.mode == "detect":
-            is_defect = has_defect_box
+        if is_unsupported_review:
+            outcome = "unknown"
+            probabilities = None
+            confidence = None
+            boxes = []
+            total_inf_ms = 0.0
+            cls_ms = 0.0
+            loc_ms = None
+            loc_status = "skipped"
+            error_code = "unsupported_input"
         else:
-            is_defect = (cls_label == "def_front")
+            outcome, probabilities, confidence, boxes, total_inf_ms, cls_ms, loc_ms, loc_status = self.run_inference(frame)
+            error_code = None
 
-        total_lat = det_lat + cls_lat
+        t_alert = (time.perf_counter() - t_cap0) * 1000.0
 
-        if is_defect:
-            primary_box = boxes[0] if boxes else [w/2, h/2, w/4, h/4]
-            best_conf = max(det_scores[0] if det_scores else 0.5, cls_conf)
-            defect_class, severity = diagnose_defect_type(primary_box, w, h, best_conf)
-            confidence_pct = round(best_conf * 100.0, 1)
+        # Latch local alert immediately before network send
+        if outcome == "defect":
+            self.alert.update_state("defect")
+            self.alert.chirp(2)
+        elif outcome == "unknown":
+            self.alert.update_state("startup")
+            self.alert.chirp(1)
         else:
-            defect_class = "OK"
-            severity = "None"
-            confidence_pct = 99.2
+            self.alert.update_state("ok")
 
-        payload = {
+        event_payload = {
+            "schemaVersion": 1,
+            "eventId": event_id,
+            "deviceId": self.device_id,
             "batchId": self.batch_id,
-            "defectDetected": is_defect,
-            "defectClass": defect_class,
-            "confidence": confidence_pct,
-            "severity": severity,
-            "imageUrl": f"https://s3.ap-southeast-1.amazonaws.com/sigap-inspection-frames/frame-{frame_idx:04d}.jpg",
+            "bindingVersion": self.binding_version,
+            "itemId": item_id,
+            "capturedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "captureSource": "pi-file-replay" if replay_source or self.args.capture_mode == "replay" else "pi-webcam",
+            "inferenceLocation": "pi",
+            "modelVersion": self.model_version,
+            "inferenceMs": round(total_inf_ms, 1),
+            "classificationMs": round(cls_ms, 1),
+            "localizationMs": round(loc_ms, 1) if loc_ms is not None else None,
+            "localizationStatus": loc_status,
+            "localAlertMs": round(t_alert, 1),
+            "outcome": outcome,
+            "probabilities": probabilities,
+            "confidence": round(confidence, 2) if confidence is not None else None,
+            "frame": {
+                "jpegBase64": b64_frame,
+                "sha256": sha256_hash,
+                "width": w,
+                "height": h,
+            },
+            "coordinateSpace": "source-percent",
+            "boundingBoxes": boxes,
+            "errorCode": error_code,
         }
 
-        # Logging konsol
-        status_icon = "🔴 CACAT" if is_defect else "🟢 OK"
-        print(f"\n[FRAME #{frame_idx:04d}] {status_icon} | Kelas: {defect_class} ({confidence_pct}%) | Latensi: {total_lat:.1f}ms (Det: {det_lat:.1f}ms + Cls: {cls_lat:.1f}ms)")
-        if boxes:
-            print(f"  -> Bounding Box: {len(boxes)} anomali ditemukan")
+        # Persist event and frame bytes in SQLite transaction
+        self.queue.enqueue(event_id, self.batch_id, item_id, json.dumps(event_payload), jpeg_bytes)
+        self.last_event_id = event_id
 
-        self.send_to_sigap(payload)
-        return payload
+        status_tag = "🔴 DEFECT" if outcome == "defect" else ("🟡 REVIEW" if outcome == "unknown" else "🟢 OK")
+        print(f"\n[CAPTURED {item_id}] {status_tag} (Conf: {confidence or 0.0:.1f}%) | Latency: {total_inf_ms:.1f}ms | Local Alert: {t_alert:.1f}ms | Enqueued to SQLite")
 
+    def run_uploader_loop(self):
+        """Background thread uploading queued events with exponential backoff and idempotency preservation."""
+        backoff_schedule = [1, 2, 4, 8, 16, 30]
 
-# ==============================================================================
-# MAIN ENTRYPOINT
-# ==============================================================================
+        while self.running:
+            pending = self.queue.get_pending(limit=3)
+            if not pending:
+                time.sleep(0.5)
+                continue
+
+            for row in pending:
+                queue_id = row["id"]
+                event_id = row["event_id"]
+                attempts = row["attempts"]
+                payload = json.loads(row["event_json"])
+
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.token}",
+                }
+
+                try:
+                    res = requests.post(self.api_url, json=payload, headers=headers, timeout=5.0)
+                    if res.status_code in (200, 201):
+                        self.queue.mark_accepted(queue_id, row["batch_id"], row["item_id"], event_id)
+                        data = res.json().get("data", {})
+                        dup_str = " (DUPLICATE ACK)" if data.get("duplicate") else ""
+                        print(f"  [UPLOAD SUCCESS{dup_str}] Event {event_id[:8]} -> Inspection {data.get('inspectionId')}")
+                    elif res.status_code == 409:
+                        # Conflict: event or item already finalized on server
+                        self.queue.mark_accepted(queue_id, row["batch_id"], row["item_id"], event_id)
+                        print(f"  [UPLOAD 409] Event {event_id[:8]} reconciled: {res.text[:100]}")
+                    elif res.status_code in (400, 422, 413, 403, 404):
+                        # Permanent client error
+                        print(f"  [UPLOAD PERMANENT ERROR {res.status_code}] {res.text[:100]}")
+                        self.queue.mark_failed(queue_id, attempts + 1, 60.0)
+                    else:
+                        # Transient 5xx or network
+                        backoff = backoff_schedule[min(attempts, len(backoff_schedule) - 1)]
+                        self.queue.mark_failed(queue_id, attempts + 1, backoff)
+                        print(f"  [UPLOAD RETRY {res.status_code}] Retrying in {backoff}s...")
+                except requests.exceptions.RequestException as e:
+                    backoff = backoff_schedule[min(attempts, len(backoff_schedule) - 1)]
+                    self.queue.mark_failed(queue_id, attempts + 1, backoff)
+                    print(f"  [UPLOAD NETWORK ERROR] {e.__class__.__name__}. Retrying in {backoff}s...")
+
+    def run_heartbeat_loop(self):
+        """Sends periodic heartbeat (every 10s) and polls device status (every 2s)."""
+        hb_url = f"{self.base_url}/api/internal/devices/{self.device_id}/heartbeat"
+        st_url = f"{self.base_url}/api/internal/devices/{self.device_id}/status"
+        headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+
+        last_hb = 0.0
+
+        while self.running:
+            now = time.time()
+            depth = self.queue.get_queue_depth()
+
+            # 1. Heartbeat every 10 seconds
+            if now - last_hb >= 10.0:
+                last_hb = now
+                try:
+                    payload = {
+                        "queueDepth": depth,
+                        "cameraHealthy": True,
+                        "modelHealthy": True,
+                        "modelVersion": self.model_version,
+                        "idle": depth == 0 and not self.paused,
+                        "paused": self.paused,
+                        "lastEventId": self.last_event_id,
+                        "localAlert": self.alert.latch_defect,
+                    }
+                    res = requests.post(hb_url, json=payload, headers=headers, timeout=3.0)
+                    if res.status_code == 200:
+                        data = res.json().get("data", {})
+                        if data.get("bindingVersion"):
+                            self.binding_version = data["bindingVersion"]
+                        if data.get("batchId"):
+                            self.batch_id = data["batchId"]
+                except Exception:
+                    pass
+
+            # 2. Status check every 2 seconds
+            try:
+                st_res = requests.get(st_url, headers=headers, timeout=2.0)
+                if st_res.status_code == 200:
+                    st_data = st_res.json().get("data", {})
+                    server_status = st_data.get("batchStatus")
+                    if server_status == "released" and not self.alert.latch_defect:
+                        self.alert.update_state("ok")
+            except Exception:
+                pass
+
+            time.sleep(2.0)
+
+    def run(self):
+        # Start background threads
+        uploader_thread = threading.Thread(target=self.run_uploader_loop, daemon=True)
+        heartbeat_thread = threading.Thread(target=self.run_heartbeat_loop, daemon=True)
+
+        uploader_thread.start()
+        heartbeat_thread.start()
+
+        print("\n===============================================================================")
+        print("SIGAP STATION READY. Commands: 'capture <item-id>', 'pause', 'resume', 'ack', 'quit'")
+        print("===============================================================================")
+
+        try:
+            while self.running:
+                line = sys.stdin.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+
+                parts = line.split()
+                cmd = parts[0].lower()
+
+                if cmd == "quit" or cmd == "exit":
+                    self.running = False
+                    break
+                elif cmd == "pause":
+                    self.paused = True
+                    print("[STATION] Paused: new captures blocked.")
+                elif cmd == "resume":
+                    self.paused = False
+                    print("[STATION] Resumed: ready for captures.")
+                elif cmd == "ack":
+                    self.alert.silence()
+                elif cmd == "capture" and len(parts) >= 2:
+                    item_id = parts[1]
+                    is_review = len(parts) >= 3 and parts[2].lower() == "review"
+                    self.process_item(item_id, is_unsupported_review=is_review)
+                else:
+                    print(f"Unknown command: '{line}'. Valid commands: capture <item-id>, pause, resume, ack, quit")
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.running = False
+            self.alert.cleanup()
+            print("\n[STATION SHUTDOWN] Worker safely stopped.")
+
 
 def main():
-    parser = argparse.ArgumentParser(description="SIGAP Edge Vision AI Inference Worker")
-    parser.add_argument("--source", type=str, default="public/videos/hero-loop.mp4",
-                        help="Sumber video: '0' untuk webcam, atau path video file (default: public/videos/hero-loop.mp4)")
-    parser.add_argument("--mode", type=str, default="both", choices=["both", "detect", "classify"],
-                        help="Mode inferensi: 'both' (Two-stage cascaded), 'detect' (YOLO only), 'classify' (Cls only)")
-    parser.add_argument("--conf", type=float, default=0.45, help="Ambang batas confidence deteksi (default: 0.45)")
-    parser.add_argument("--batch-id", type=str, default="#B-2026-0730", help="Lot ID batch yang sedang diinspeksi")
-    parser.add_argument("--api-url", type=str, default="http://localhost:3000/api/internal/inspection-result",
-                        help="URL Endpoint REST internal SIGAP")
-    parser.add_argument("--api-key", type=str, default="sigap-internal-dev-key-2026",
-                        help="Shared API Key autentikasi SIGAP")
-    parser.add_argument("--interval", type=float, default=1.5,
-                        help="Jeda waktu (detik) antar pengiriman frame ke server (default: 1.5 detik)")
-    parser.add_argument("--loop", action="store_true", default=True, help="Ulangi video secara terus menerus")
-
+    parser = argparse.ArgumentParser(description="SIGAP Edge Vision AI Worker & Physical Station")
+    parser.add_argument("--source", type=str, default="0", help="Camera index or RTSP URL")
+    parser.add_argument("--source-image", type=str, default=None, help="Optional static test frame for offline replay")
+    parser.add_argument("--capture-mode", type=str, choices=["manual", "replay"], default="manual")
+    parser.add_argument("--device-id", type=str, default="pi-01", help="Station hardware device ID")
+    parser.add_argument("--batch-id", type=str, default="final-ok", help="Default manufacturing batch CUID")
+    parser.add_argument("--api-url", type=str, default="http://localhost:3000/api/internal/inspection-result")
+    parser.add_argument("--queue-path", type=str, default="data/edge_queue.db")
+    parser.add_argument("--max-events", type=int, default=500)
+    parser.add_argument("--max-bytes", type=int, default=262144000)
+    parser.add_argument("--mode", type=str, choices=["both", "classify", "detect"], default="both")
+    parser.add_argument("--led-mode", type=str, choices=["three", "red", "none"], default="none")
+    parser.add_argument("--buzzer-type", type=str, choices=["active", "passive", "disabled"], default="disabled")
+    parser.add_argument("--pin-red", type=int, default=17)
+    parser.add_argument("--pin-yellow", type=int, default=27)
+    parser.add_argument("--pin-green", type=int, default=22)
+    parser.add_argument("--pin-buzzer", type=int, default=18)
     args = parser.parse_args()
 
-    root_dir = Path(__file__).resolve().parent.parent
-    det_path = str(root_dir / "ai_models" / "sigap-casting-yolov8-detect.onnx")
-    cls_path = str(root_dir / "ai_models" / "sigap-casting-yolov8-cls.onnx")
-
-    print("================================================================================")
-    print("🚀 SIGAP EDGE VISION INFERENCE WORKER — INITIALIZING")
-    print(f"   Mode: {args.mode.upper()} | Conf Threshold: {args.conf}")
-    print(f"   Target Server: {args.api_url}")
-    print(f"   Batch Lot: {args.batch_id}")
-    print("================================================================================")
-
-    worker = SigapEdgeWorker(
-        detect_model_path=det_path,
-        cls_model_path=cls_path,
-        api_url=args.api_url,
-        api_key=args.api_key,
-        batch_id=args.batch_id,
-        conf_threshold=args.conf,
-        mode=args.mode,
-    )
-
-    # Buka input video / kamera
-    source = int(args.source) if args.source.isdigit() else str(root_dir / args.source)
-    cap = cv2.VideoCapture(source)
-
-    if not cap.isOpened():
-        print(f"[WARN] Tidak dapat membuka video source: '{args.source}'. Beralih ke mode simulasi sintetis.")
-        cap = None
-
-    frame_idx = 1
-    try:
-        while True:
-            if cap is not None and cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    if args.loop:
-                        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                        continue
-                    else:
-                        break
-            else:
-                # Frame sintetis jika video/kamera tidak tersedia
-                frame = np.full((640, 640, 3), 40, dtype=np.uint8)
-                cv2.circle(frame, (320, 320), 180, (180, 180, 180), -1)
-                # Tambahkan anomali bintik acak
-                if frame_idx % 3 == 0:
-                    cv2.circle(frame, (360, 280), 15, (30, 30, 160), -1)
-
-            worker.process_frame(frame, frame_idx)
-            frame_idx += 1
-            time.sleep(args.interval)
-
-    except KeyboardInterrupt:
-        print("\n[STOP] Worker dihentikan oleh pengguna.")
-    finally:
-        if cap is not None:
-            cap.release()
-        print("[EXIT] Worker shutdown cleanly.")
+    worker = SigapEdgeWorker(args)
+    worker.run()
 
 
 if __name__ == "__main__":

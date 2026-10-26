@@ -1,0 +1,41 @@
+{
+  "manifestVersion": 1,
+  "preprocessingVersion": "impeller-center-roi-v1",
+  "productFamily": "submersible-impeller-casting",
+  "classifier": {
+    "modelPath": "sigap-casting-yolov8-cls.onnx",
+    "sha256": "a4b7744f63ed2bfd18e399b055d6bece6efc16d4a0dcd777fe3bccce3121732b",
+    "byteSize": 5779358,
+    "inputName": "images",
+    "inputShape": [1, 3, 300, 300],
+    "outputName": "output0",
+    "outputShape": [1, 2],
+    "classes": ["def_front", "ok_front"],
+    "classIndices": {
+      "defect": 0,
+      "ok": 1
+    },
+    "thresholds": {
+      "defect": 0.80,
+      "ok": 0.95
+    },
+    "doubleSoftmaxFixed": true
+  },
+  "detector": {
+    "modelPath": "sigap-casting-yolov8-detect.onnx",
+    "sha256": "d6df005a754267612183a61f3cd04f1913030f9ca9b5f736ab680a9d04d694d4",
+    "byteSize": 12265717,
+    "inputName": "images",
+    "inputShape": [1, 3, 640, 640],
+    "outputName": "output0",
+    "outputShape": [1, 5, 8400],
+    "classes": ["defect"],
+    "scoreThreshold": 0.45,
+    "iouThreshold": 0.35,
+    "iomThreshold": 0.60
+  },
+  "runtime": {
+    "preferredProvider": "CPUExecutionProvider",
+    "threads": 2
+  }
+}
