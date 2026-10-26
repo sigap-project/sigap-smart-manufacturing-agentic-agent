@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 
 // Dynamic import with ssr: false to prevent hydration mismatches with WebGL canvas
-const Spline = dynamic(() => import("@splinetool/react-spline"), {
+const Spline = dynamic<{ scene: string; onLoad?: (app: unknown) => void; onError?: () => void }>(() => import("@splinetool/react-spline"), {
   ssr: false,
   loading: () => <TwinLoadingSkeleton />,
 });

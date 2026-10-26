@@ -639,59 +639,53 @@ export function InspectionCameraPanel({
                 className="relative max-w-full max-h-[440px] rounded-xl overflow-hidden shadow-2xl border border-white/10 hover:border-blue-400/50 flex items-center justify-center bg-black/40 cursor-pointer transition-colors"
                 title="Click to select another image file"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={selectedImage}
-                  alt="Casting Inspection Frame"
-                  className="max-h-[420px] w-auto object-contain select-none"
-                />
-
-                {/* Bounding Box Overlay */}
-                {showBoundingBoxes &&
-                  lastResult.boundingBoxes.map((box, idx) => {
-                    const isDef = lastResult.status === "defect";
-                    return (
-                      <div
-                        key={idx}
-                        className={`absolute rounded-lg flex flex-col justify-between p-1.5 transition-all duration-300 ${
-                          isDef
-                            ? "border-2 border-rose-500 bg-rose-500/15 shadow-[0_0_15px_rgba(244,63,94,0.35)]"
-                            : "border-2 border-emerald-400 bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
-                        }`}
-                        style={{
-                          left: `${box.x}%`,
-                          top: `${box.y}%`,
-                          width: `${box.width}%`,
-                          height: `${box.height}%`,
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`font-mono text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow-md ${
-                              isDef
-                                ? "bg-rose-500 text-white"
-                                : "bg-emerald-500 text-white"
-                            }`}
+                <svg
+                  viewBox="0 0 640 480"
+                  preserveAspectRatio="xMidYMid meet"
+                  className="max-h-[420px] w-auto select-none"
+                >
+                  <image href={selectedImage} width="640" height="480" />
+                  {showBoundingBoxes &&
+                    lastResult.boundingBoxes.map((box, idx) => {
+                      const bx = (box.x * 640) / 100;
+                      const by = (box.y * 480) / 100;
+                      const bw = (box.width * 640) / 100;
+                      const bh = (box.height * 480) / 100;
+                      const isDef = lastResult.status === "defect";
+                      return (
+                        <g key={idx}>
+                          <rect
+                            x={bx}
+                            y={by}
+                            width={bw}
+                            height={bh}
+                            fill={isDef ? "rgba(244,63,94,0.18)" : "rgba(16,185,129,0.18)"}
+                            stroke={isDef ? "#f43f5e" : "#10b981"}
+                            strokeWidth="3"
+                            rx="4"
+                          />
+                          <rect
+                            x={bx}
+                            y={Math.max(0, by - 20)}
+                            width={Math.min(180, bw + 20)}
+                            height="18"
+                            fill={isDef ? "#f43f5e" : "#10b981"}
+                            rx="3"
+                          />
+                          <text
+                            x={bx + 4}
+                            y={Math.max(14, by - 6)}
+                            fill="#ffffff"
+                            fontSize="11"
+                            fontFamily="monospace"
+                            fontWeight="bold"
                           >
-                            {isDef ? (
-                              <AlertTriangle className="w-2.5 h-2.5" />
-                            ) : (
-                              <CheckCircle2 className="w-2.5 h-2.5" />
-                            )}
-                            {box.label} [{box.confidence}%]
-                          </span>
-                        </div>
-                        <div
-                          className={`flex items-center justify-between text-[8px] font-mono ${
-                            isDef ? "text-rose-300" : "text-emerald-300"
-                          }`}
-                        >
-                          <span>X: {Math.round(box.x * 6.4)}</span>
-                          <span>Y: {Math.round(box.y * 4.8)}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                            {box.label} [{box.confidence}%] ({Math.round(bx)}, {Math.round(by)})
+                          </text>
+                        </g>
+                      );
+                    })}
+                </svg>
               </div>
             )}
           </div>
@@ -814,12 +808,53 @@ export function InspectionCameraPanel({
                 {/* SUB-MODE B: ANALYZED SNAPSHOT VIEW */}
                 {cameraViewMode === "snapshot" && capturedSnapshot && (
                   <div className="relative w-full h-full flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={capturedSnapshot}
-                      alt="Captured Frame Snapshot"
-                      className="w-full max-h-[420px] object-contain select-none"
-                    />
+                    <svg
+                      viewBox="0 0 640 480"
+                      preserveAspectRatio="xMidYMid meet"
+                      className="w-full max-h-[420px] select-none"
+                    >
+                      <image href={capturedSnapshot} width="640" height="480" />
+                      {showBoundingBoxes &&
+                        lastResult.boundingBoxes.map((box, idx) => {
+                          const bx = (box.x * 640) / 100;
+                          const by = (box.y * 480) / 100;
+                          const bw = (box.width * 640) / 100;
+                          const bh = (box.height * 480) / 100;
+                          const isDef = lastResult.status === "defect";
+                          return (
+                            <g key={idx}>
+                              <rect
+                                x={bx}
+                                y={by}
+                                width={bw}
+                                height={bh}
+                                fill={isDef ? "rgba(244,63,94,0.18)" : "rgba(16,185,129,0.18)"}
+                                stroke={isDef ? "#f43f5e" : "#10b981"}
+                                strokeWidth="3"
+                                rx="4"
+                              />
+                              <rect
+                                x={bx}
+                                y={Math.max(0, by - 20)}
+                                width={Math.min(180, bw + 20)}
+                                height="18"
+                                fill={isDef ? "#f43f5e" : "#10b981"}
+                                rx="3"
+                              />
+                              <text
+                                x={bx + 4}
+                                y={Math.max(14, by - 6)}
+                                fill="#ffffff"
+                                fontSize="11"
+                                fontFamily="monospace"
+                                fontWeight="bold"
+                              >
+                                {box.label} [{box.confidence}%] ({Math.round(bx)}, {Math.round(by)})
+                              </text>
+                            </g>
+                          );
+                        })}
+                    </svg>
 
                     {/* Top Snapshot Info Bar */}
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
@@ -843,36 +878,6 @@ export function InspectionCameraPanel({
                         <span>Back to Live Feed</span>
                       </button>
                     </div>
-
-                    {/* Bounding Box Overlay on Frozen Snapshot */}
-                    {showBoundingBoxes &&
-                      lastResult.boundingBoxes.map((box, idx) => {
-                        const isDef = lastResult.status === "defect";
-                        return (
-                          <div
-                            key={idx}
-                            className={`absolute rounded-lg flex flex-col justify-between p-1.5 transition-all duration-300 ${
-                              isDef
-                                ? "border-2 border-rose-500 bg-rose-500/15 shadow-[0_0_15px_rgba(244,63,94,0.35)]"
-                                : "border-2 border-emerald-400 bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
-                            }`}
-                            style={{
-                              left: `${box.x}%`,
-                              top: `${box.y}%`,
-                              width: `${box.width}%`,
-                              height: `${box.height}%`,
-                            }}
-                          >
-                            <span
-                              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded self-start flex items-center gap-1 shadow-xs ${
-                                isDef ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"
-                              }`}
-                            >
-                              {box.label} [{box.confidence}%]
-                            </span>
-                          </div>
-                        );
-                      })}
 
                     {/* Floating Re-Capture / Return Action Bar */}
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">

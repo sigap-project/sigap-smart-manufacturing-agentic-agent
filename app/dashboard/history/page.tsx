@@ -68,15 +68,17 @@ export default function LotHistoryPage() {
       if (defectFilter !== "all" && item.defectClass !== defectFilter) {
         return false;
       }
-      // Date range filter (supports today's real timestamp and sample mock data)
+      // Date range filter (Jakarta timezone day and 7-day bounds)
       if (dateRange === "today") {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        if (!item.rawDate.startsWith(todayStr) && !item.rawDate.startsWith("2026-09-08")) return false;
+        const jakartaNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
+        const todayJakarta = jakartaNow.toISOString().slice(0, 10);
+        const itemJakarta = new Date(new Date(item.rawDate).getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        if (itemJakarta !== todayJakarta) return false;
       } else if (dateRange === "7d") {
         const now = Date.now();
         const itemTime = new Date(item.rawDate).getTime();
-        const isRecent = !isNaN(itemTime) && now - itemTime <= 7 * 24 * 60 * 60 * 1000;
-        if (!isRecent && !item.rawDate.startsWith("2026-09")) return false;
+        const isWithin7d = !isNaN(itemTime) && itemTime <= now && now - itemTime <= 7 * 24 * 60 * 60 * 1000;
+        if (!isWithin7d) return false;
       }
       // Search query (batch ID, part name, inspection ID, supplier)
       if (searchQuery.trim()) {
