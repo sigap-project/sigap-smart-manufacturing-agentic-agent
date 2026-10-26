@@ -1,54 +1,100 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sigapStore } from "@/lib/store";
+import { resolveActor, unauthorizedResponse, forbiddenResponse } from "@/lib/auth";
+import { emitSigapEvent } from "@/lib/events";
+import { formatDispatchRecord } from "@/lib/formatters";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// -----------------------------------------------------------------------------
-// PATCH /api/dispatch/[id]/approve
-// Menyetujui tiket dispatch yang berstatus Pending Approval menjadi Dispatched
-// -----------------------------------------------------------------------------
+/**
+ * PATCH /api/dispatch/[id]/approve
+ * Supervisor authorization endpoint for proposed quality actions.
+ * Transitions status atomically from 'pending_approval' to 'queued' for worker execution.
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const actor = await resolveActor(request);
+  if (!actor) {
+    return unauthorizedResponse("Authentication required to approve dispatch");
+  }
+  if (actor.role !== "supervisor") {
+    return forbiddenResponse("Only supervisors can authorize enterprise ERP dispatches");
+  }
+
+  const { id } = await params;
+  let body: Record<string, unknown> = {};
   try {
-    const { id } = await params;
+    body = await request.json();
+  } catch {
+    // Body optional
+  }
 
-    let approvedBy = "Budi Pratama (QC Supervisor)";
-    try {
-      const body = await request.json();
-      if (body && body.approvedBy) {
-        approvedBy = body.approvedBy;
-      }
-    } catch {
-      // Body opsional jika hanya panggilan PATCH kosong
-    }
+  const { expectedRevision, expectedBatchVersion, reason } = body;
 
-    const updated = await sigapStore.approveDispatch(id, approvedBy);
+  const existing = await prisma.dispatchRecord.findUnique({
+    where: { id },
+    include: { batch: true },
+  });
 
-    if (!updated) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Tiket dispatch dengan ID '${id}' tidak ditemukan.`,
-        },
-        { status: 404 }
-      );
-    }
+  if (!existing) {
+    return NextResponse.json({ success: false, error: "Dispatch record not found" }, { status: 404 });
+  }
 
+  // Idempotent return if already approved/queued/verified
+  if (["queued", "executing", "verifying", "verified"].includes(existing.status)) {
     return NextResponse.json({
       success: true,
-      message: `Tiket ${updated.id} (${updated.consumer}) disetujui & berstatus Dispatched.`,
-      data: updated,
+      data: formatDispatchRecord(existing),
+      message: "Action already approved and queued for execution",
     });
-  } catch (error) {
-    console.error("[PATCH /api/dispatch/[id]/approve Error]:", error);
+  }
+
+  if (existing.status !== "pending_approval") {
+    return NextResponse.json(
+      { success: false, error: `Cannot approve action in status '${existing.status}'` },
+      { status: 409 }
+    );
+  }
+
+  // Check expected revision & batch version
+  if (typeof expectedRevision === "number" && existing.revision !== expectedRevision) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Gagal menyetujui tiket dispatch",
+        error: `Stale revision conflict: expected ${expectedRevision}, current ${existing.revision}`,
       },
-      { status: 500 }
+      { status: 409 }
     );
   }
+
+  if (typeof expectedBatchVersion === "number" && existing.batch.version !== expectedBatchVersion) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Stale batch version conflict: expected ${expectedBatchVersion}, current ${existing.batch.version}`,
+      },
+      { status: 409 }
+    );
+  }
+
+  const updated = await prisma.dispatchRecord.update({
+    where: { id },
+    data: {
+      status: "queued",
+      approvedBy: `${actor.id} (Supervisor)`,
+      revision: { increment: 1 },
+    },
+    include: { batch: true },
+  });
+
+  const formatted = formatDispatchRecord(updated);
+  emitSigapEvent("dispatch:status_changed", formatted);
+
+  return NextResponse.json({
+    success: true,
+    message: `Tiket ${updated.id} (${updated.consumer}) berhasil disetujui & diantrikan ke ERP.`,
+    data: formatted,
+  });
 }

@@ -14,6 +14,9 @@ export async function PATCH(
   try {
     const { id } = await params;
     const updated = await sigapStore.rejectBatch(id);
+    if (!updated) {
+      return NextResponse.json({ success: false, error: "Batch tidak ditemukan" }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,

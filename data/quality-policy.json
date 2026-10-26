@@ -1,0 +1,43 @@
+{
+  "policyId": "sigap-demo-quality-v1",
+  "version": 1,
+  "productFamily": "submersible-impeller-casting",
+  "slidingWindowMinutes": 8,
+  "escalationDefectTrigger": 3,
+  "defaultAutoDispatchMode": "human_approval",
+  "allowedActions": [
+    {
+      "actionType": "CREATE_QUALITY_NOTIFICATION",
+      "requiredDefectCount": 1,
+      "requiresSupervisorApproval": true,
+      "erpConsumer": "SAP_QM",
+      "description": "Log an official quality notification against supplier material lot"
+    },
+    {
+      "actionType": "HOLD_MATERIAL_LOT",
+      "requiredDefectCount": 3,
+      "requiresSupervisorApproval": true,
+      "erpConsumer": "SAP_MM",
+      "description": "Place warehouse inventory lot on quality hold"
+    },
+    {
+      "actionType": "HOLD_WORK_ORDER",
+      "requiredDefectCount": 3,
+      "requiresSupervisorApproval": true,
+      "erpConsumer": "SAP_PP",
+      "description": "Halt active manufacturing production order on conveyor assembly line"
+    }
+  ],
+  "supplierHistory": {
+    "PT Krakatau Scrap Ind.": {
+      "rating": "B+",
+      "priorIncidents30d": 2,
+      "recurrentDefectRatePct": 4.1
+    },
+    "PT Mitra Logam Presisi": {
+      "rating": "A",
+      "priorIncidents30d": 0,
+      "recurrentDefectRatePct": 0.8
+    }
+  }
+}
