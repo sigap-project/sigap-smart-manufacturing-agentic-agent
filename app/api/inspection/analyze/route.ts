@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { emitSigapEvent } from "@/lib/events";
 import { deduceDefectReasoning } from "@/lib/aws-bedrock";
@@ -176,20 +177,26 @@ export async function POST(request: NextRequest) {
     if (isDefect && bedrockResult.sapActions.length > 0) {
       for (const consumer of bedrockResult.sapActions) {
         try {
+          const actionType = consumer === "SAP_QM" ? "CREATE_QUALITY_NOTIFICATION" : (consumer === "SAP_MM" ? "HOLD_MATERIAL_LOT" : "HOLD_WORK_ORDER");
+          const actionKey = `${formattedLotId}:1:${actionType}`;
+          const targetId = consumer === "SAP_PP" ? "WO-2026-8819" : "MAT-IMP-9842";
+          const payloadHash = crypto.createHash("sha256").update(`${actionKey}:${targetId}`).digest("hex");
           const dispatchRes = await dispatchToSap({
+            actionKey,
+            actionType: actionType as any,
             consumer,
+            targetId,
+            payloadHash,
             batchId: formattedLotId,
-            defectCode: isDefect ? "DEF-CASTING-01" : "OK-CLEAN",
-            notes: bedrockResult.rootCause,
-            escalationScore,
-            supplierId: "SUPP-KRAKATAU-09",
-            workOrderId: "WO-2026-8819",
+            details: { notes: bedrockResult.rootCause, escalationScore },
           });
-          sapDispatches.push({
-            consumer,
-            ticketId: dispatchRes.ticketId,
-            mode: dispatchRes.mode,
-          });
+          if (dispatchRes.ok) {
+            sapDispatches.push({
+              consumer,
+              ticketId: dispatchRes.externalId,
+              mode: dispatchRes.mode,
+            });
+          }
         } catch (dispatchErr) {
           console.error(`[SAP Dispatch Fail] ${consumer}:`, dispatchErr);
         }

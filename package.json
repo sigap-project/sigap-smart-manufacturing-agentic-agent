@@ -12,7 +12,9 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "qa:audit": "tsx scripts/qa-full-e2e.ts"
+    "qa:audit": "tsx scripts/qa-full-e2e.ts",
+    "preflight": "tsx scripts/preflight.ts",
+    "worker": "tsx scripts/workflow-worker.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

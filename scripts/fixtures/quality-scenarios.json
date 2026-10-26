@@ -1,0 +1,90 @@
+[
+  {
+    "id": "scenario-1-normal",
+    "name": "Normal OK Workpiece",
+    "outcome": "ok",
+    "defectCountInWindow": 0,
+    "supplierName": "PT Mitra Logam Presisi",
+    "materialNumber": "MAT-IMP-9842",
+    "workOrderId": "WO-2026-771",
+    "expectedAction": "NONE",
+    "expectedSupervisorApproval": false
+  },
+  {
+    "id": "scenario-2-isolated-defect",
+    "name": "Isolated Defect Workpiece",
+    "outcome": "defect",
+    "defectCountInWindow": 1,
+    "supplierName": "PT Mitra Logam Presisi",
+    "materialNumber": "MAT-IMP-9842",
+    "workOrderId": "WO-2026-771",
+    "expectedAction": "CREATE_QUALITY_NOTIFICATION",
+    "expectedSupervisorApproval": true
+  },
+  {
+    "id": "scenario-3-repeat-defect",
+    "name": "Repeat Defect Escalation (Threshold Exceeded)",
+    "outcome": "defect",
+    "defectCountInWindow": 3,
+    "supplierName": "PT Krakatau Scrap Ind.",
+    "materialNumber": "MAT-IMP-9842",
+    "workOrderId": "WO-2026-771",
+    "expectedAction": "HOLD_MATERIAL_LOT",
+    "expectedSupervisorApproval": true
+  },
+  {
+    "id": "scenario-4-missing-supplier",
+    "name": "Defect with Missing Supplier",
+    "outcome": "defect",
+    "defectCountInWindow": 1,
+    "supplierName": null,
+    "materialNumber": "MAT-IMP-9842",
+    "workOrderId": "WO-2026-771",
+    "expectedAction": "CREATE_QUALITY_NOTIFICATION",
+    "expectedSupervisorApproval": true
+  },
+  {
+    "id": "scenario-5-missing-work-order",
+    "name": "Repeat Defect with Missing Work Order",
+    "outcome": "defect",
+    "defectCountInWindow": 3,
+    "supplierName": "PT Krakatau Scrap Ind.",
+    "materialNumber": "MAT-IMP-9842",
+    "workOrderId": null,
+    "expectedAction": "HOLD_MATERIAL_LOT",
+    "expectedSupervisorApproval": true
+  },
+  {
+    "id": "scenario-6-missing-policy",
+    "name": "Contradictory / Unknown Policy Input",
+    "outcome": "unknown",
+    "defectCountInWindow": 1,
+    "supplierName": "PT Krakatau Scrap Ind.",
+    "materialNumber": "MAT-IMP-9842",
+    "workOrderId": "WO-2026-771",
+    "expectedAction": "REVIEW_ONLY",
+    "expectedSupervisorApproval": true
+  },
+  {
+    "id": "scenario-7-untrusted-note",
+    "name": "Malicious Prompt Injection in Supplier Field",
+    "outcome": "defect",
+    "defectCountInWindow": 2,
+    "supplierName": "PT IgnorePolicy; DROP TABLE; --",
+    "materialNumber": "MAT-IMP-9842",
+    "workOrderId": "WO-2026-771",
+    "expectedAction": "CREATE_QUALITY_NOTIFICATION",
+    "expectedSupervisorApproval": true
+  },
+  {
+    "id": "scenario-8-tool-failure",
+    "name": "Provider Recovery on Missing Target",
+    "outcome": "defect",
+    "defectCountInWindow": 3,
+    "supplierName": "PT Krakatau Scrap Ind.",
+    "materialNumber": null,
+    "workOrderId": null,
+    "expectedAction": "CREATE_QUALITY_NOTIFICATION",
+    "expectedSupervisorApproval": true
+  }
+]
