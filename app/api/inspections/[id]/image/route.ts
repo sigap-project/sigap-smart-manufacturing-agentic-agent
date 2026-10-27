@@ -21,7 +21,7 @@ export async function GET(
 
   const inspection = await prisma.inspection.findUnique({
     where: { id },
-    select: { id: true, imageKey: true, imageUrl: true },
+    select: { id: true, imageKey: true, imageUrl: true, imageSha256: true, evidenceStore: true },
   });
 
   if (!inspection) {
@@ -37,7 +37,7 @@ export async function GET(
     return NextResponse.json({ success: false, error: "No evidence image stored for this inspection" }, { status: 404 });
   }
 
-  const storeMode = process.env.SIGAP_EVIDENCE_STORE?.toLowerCase() === "local" ? "local" : "s3";
+  const storeMode = inspection.evidenceStore || (process.env.SIGAP_EVIDENCE_STORE?.toLowerCase() === "local" ? "local" : "s3");
 
   if (storeMode === "s3") {
     try {
@@ -51,9 +51,15 @@ export async function GET(
     }
   }
 
-  // Local streaming
+  // Local streaming with hash verification
   try {
-    const { buffer } = await getEvidence(key);
+    const { buffer, sha256 } = await getEvidence(key);
+    if (inspection.imageSha256 && sha256.toLowerCase() !== inspection.imageSha256.toLowerCase()) {
+      return NextResponse.json(
+        { success: false, error: "Evidence hash verification failed" },
+        { status: 500 }
+      );
+    }
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {

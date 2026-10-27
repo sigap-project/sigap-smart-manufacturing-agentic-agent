@@ -1,13 +1,22 @@
+import crypto from "crypto";
 import { runQualityWorkflow } from "../lib/quality-agent";
 import { dispatchToSap, readBackFromSap } from "../lib/sap-client";
 import { emitSigapEvent } from "../lib/events";
 import { prisma } from "../lib/prisma";
 
+function sleep(ms: number): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  setTimeout(resolve, ms);
+  return promise;
+}
+
+const workerId = `worker-${process.pid}-${crypto.randomBytes(2).toString("hex")}`;
+
 export async function processNextWorkflowRun(): Promise<boolean> {
   const now = new Date();
   const leaseExpiration = new Date(now.getTime() + 120 * 1000); // 120-second lease
 
-  // Find a queued run or a crashed run whose lease has expired
+  // Find a queued run or an executing run whose lease has expired
   const candidate = await prisma.workflowRun.findFirst({
     where: {
       OR: [
@@ -23,7 +32,19 @@ export async function processNextWorkflowRun(): Promise<boolean> {
 
   if (!candidate) return false;
 
-  // Claim lease atomically
+  // Max 5 attempts
+  if (candidate.attempts >= 5) {
+    await prisma.workflowRun.update({
+      where: { id: candidate.id },
+      data: {
+        status: "needs_review",
+        lastError: "Max workflow retry attempts (5) exhausted",
+      },
+    });
+    return true;
+  }
+
+  // Claim lease atomically with leaseOwner
   const claimed = await prisma.workflowRun.updateMany({
     where: {
       id: candidate.id,
@@ -34,6 +55,7 @@ export async function processNextWorkflowRun(): Promise<boolean> {
     },
     data: {
       status: "running",
+      leaseOwner: workerId,
       leaseUntil: leaseExpiration,
       attempts: { increment: 1 },
     },
@@ -41,7 +63,7 @@ export async function processNextWorkflowRun(): Promise<boolean> {
 
   if (claimed.count === 0) return false;
 
-  console.log(`[WORKER] Claimed WorkflowRun ${candidate.id} for inspection ${candidate.inspectionId}`);
+  console.log(`[WORKER ${workerId}] Claimed WorkflowRun ${candidate.id} for inspection ${candidate.inspectionId}`);
 
   try {
     await runQualityWorkflow(candidate.id);
@@ -64,12 +86,13 @@ export async function processNextDispatch(): Promise<boolean> {
   const now = new Date();
   const leaseExpiration = new Date(now.getTime() + 120 * 1000);
 
-  // Find an approved queued dispatch
+  // Find an approved queued dispatch or an expired executing/verifying job
   const candidate = await prisma.dispatchRecord.findFirst({
     where: {
       OR: [
         { status: "queued" },
         { status: "executing", leaseUntil: { lt: now } },
+        { status: "verifying", leaseUntil: { lt: now } }, // Reclaim crashed/abandoned verifying jobs
       ],
     },
     orderBy: { createdAt: "asc" },
@@ -80,16 +103,33 @@ export async function processNextDispatch(): Promise<boolean> {
     return false;
   }
 
+  // Max 5 attempts
+  if (candidate.attempts >= 5) {
+    await prisma.dispatchRecord.update({
+      where: { id: candidate.id },
+      data: {
+        status: "failed",
+        errorCode: "MAX_DISPATCH_ATTEMPTS_EXCEEDED",
+      },
+    });
+    return true;
+  }
+
+  const isReclaimedVerifying = candidate.status === "verifying";
+
+  // Atomically claim dispatch record with leaseOwner
   const claimed = await prisma.dispatchRecord.updateMany({
     where: {
       id: candidate.id,
       OR: [
         { status: "queued" },
         { status: "executing", leaseUntil: { lt: now } },
+        { status: "verifying", leaseUntil: { lt: now } },
       ],
     },
     data: {
-      status: "executing",
+      status: isReclaimedVerifying ? "verifying" : "executing",
+      leaseOwner: workerId,
       leaseUntil: leaseExpiration,
       attempts: { increment: 1 },
     },
@@ -97,19 +137,52 @@ export async function processNextDispatch(): Promise<boolean> {
 
   if (claimed.count === 0) return false;
 
-  console.log(`[WORKER] Executing dispatch ${candidate.id} (Action: ${candidate.actionType})`);
+  console.log(
+    `[WORKER ${workerId}] Claimed dispatch ${candidate.id} (${candidate.actionType}, mode=${isReclaimedVerifying ? "reclaim-verifying" : "execute"})`
+  );
 
   const consumerMap: Record<string, "SAP_QM" | "SAP_MM" | "SAP_PP"> = {
     CREATE_QUALITY_NOTIFICATION: "SAP_QM",
     HOLD_MATERIAL_LOT: "SAP_MM",
     HOLD_WORK_ORDER: "SAP_PP",
   };
-
   const consumer = consumerMap[candidate.actionType] || "SAP_QM";
-  const targetId =
-    candidate.actionType === "HOLD_WORK_ORDER"
-      ? candidate.batch.workOrderId || "WO-2026-771"
-      : candidate.batch.materialNumber || "MAT-IMP-9842";
+
+  // Extract frozen target from immutable payload (no invented fallbacks!)
+  const payloadObj = (candidate.payload as Record<string, unknown>) || {};
+  const targetId = typeof payloadObj.targetId === "string" ? payloadObj.targetId : "";
+
+  if (!targetId || targetId.trim() === "") {
+    console.error(`[WORKER] Blocked dispatch ${candidate.id}: missing frozen target ID in approved payload`);
+    await prisma.dispatchRecord.update({
+      where: { id: candidate.id },
+      data: {
+        status: "failed",
+        errorCode: "MISSING_FROZEN_TARGET",
+      },
+    });
+    return true;
+  }
+
+  // If reclaimed while verifying: read back directly without re-invoking mutating POST
+  if (isReclaimedVerifying) {
+    console.log(`[WORKER] Re-verifying previously dispatched ${candidate.id} (External ID: ${candidate.sapTicketId})...`);
+    const readBack = await readBackFromSap(candidate.actionKey, candidate.actionType as any);
+    if (readBack.ok && readBack.resultingState) {
+      const verified = await prisma.dispatchRecord.update({
+        where: { id: candidate.id },
+        data: {
+          status: "verified",
+          sapTicketId: readBack.externalId || candidate.sapTicketId,
+          verifiedAt: new Date(),
+        },
+        include: { batch: true },
+      });
+      console.log(`[WORKER] Dispatch ${candidate.id} RE-VERIFIED successfully in state '${readBack.resultingState}'`);
+      emitSigapEvent("dispatch:status_changed", verified);
+      return true;
+    }
+  }
 
   // 1. Dispatch to SAP simulator
   const dispatchRes = await dispatchToSap({
@@ -133,6 +206,15 @@ export async function processNextDispatch(): Promise<boolean> {
     });
     return true;
   }
+
+  // Persist external ID and transition to 'verifying' BEFORE read-back
+  await prisma.dispatchRecord.update({
+    where: { id: candidate.id },
+    data: {
+      status: "verifying",
+      sapTicketId: dispatchRes.externalId,
+    },
+  });
 
   // 2. Read back from simulator to verify state transition
   console.log(`[WORKER] Dispatched ${candidate.id} -> External ID: ${dispatchRes.externalId}. Verifying state...`);
@@ -168,7 +250,7 @@ export async function processNextDispatch(): Promise<boolean> {
 
 async function main() {
   console.log("===============================================================================");
-  console.log("SIGAP DURABLE WORKFLOW WORKER INITIALIZING");
+  console.log(`SIGAP DURABLE WORKFLOW WORKER INITIALIZING (${workerId})`);
   console.log("===============================================================================");
 
   let running = true;
@@ -183,11 +265,11 @@ async function main() {
       const didDispatch = await processNextDispatch();
 
       if (!didWorkRun && !didDispatch) {
-        await new Promise((r) => setTimeout(r, 1000));
+        await sleep(1000);
       }
     } catch (err) {
       console.error("[WORKER LOOP ERROR]:", err);
-      await new Promise((r) => setTimeout(r, 2000));
+      await sleep(2000);
     }
   }
 

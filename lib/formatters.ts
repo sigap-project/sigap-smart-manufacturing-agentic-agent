@@ -4,7 +4,7 @@
  */
 
 import { BatchItem } from "@/components/batches/types";
-import { InspectionRecord } from "@/components/history/types";
+import { InspectionRecord, InspectionStatus } from "@/components/history/types";
 import { DispatchItem } from "@/components/dispatch/types";
 import { DEFAULT_SETTINGS, SettingsState } from "@/components/settings/types";
 
@@ -46,31 +46,66 @@ export function formatTimeAgo(date: Date | string | null | undefined): string {
 // 2. INSPECTION RECORD FORMATTER
 // =============================================================================
 
-export function formatInspectionRecord(item: any): InspectionRecord & { [key: string]: any } {
-  const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
+export function formatInspectionRecord(raw: unknown): InspectionRecord {
+  const item = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const batch = (item.batch && typeof item.batch === "object" ? item.batch : {}) as Record<string, unknown>;
+  const dateObj = item.timestamp
+    ? new Date(item.timestamp as string | number | Date)
+    : item.capturedAt
+    ? new Date(item.capturedAt as string | number | Date)
+    : new Date();
   const formattedDate = formatTimestampWIB(dateObj);
+  const id = String(item.id || item.inspectionId || `INS-${Date.now()}`);
+  const imageUrl = item.imageKey || item.id
+    ? `/api/inspections/${encodeURIComponent(id)}/image`
+    : typeof item.imageUrl === "string" ? item.imageUrl : null;
 
   return {
-    id: item.id,
-    batchId: item.batchId || item.batch?.lotId || item.batch?.id || "#B-2026-0730",
-    lotId: item.batch?.lotId || item.lotId || item.batchId || "#B-2026-0730",
-    partName: item.batch?.productType || item.partName || "Bracket Motor A7",
-    supplier: item.batch?.supplierName || item.supplier || "PT Krakatau Scrap Ind.",
-    line: item.batch?.line || item.line || "Line #01 (Conveyor Cam-01)",
-    lotCount: item.batch?.inspectionCount || item.lotCount || 500,
+    id,
+    inspectionId: id,
+    eventId: typeof item.eventId === "string" ? item.eventId : null,
+    batchId: String(item.batchId || batch.lotId || batch.id || "#B-2026-0730"),
+    lotId: String(batch.lotId || item.lotId || item.batchId || "#B-2026-0730"),
+    itemId: typeof item.itemId === "string" ? item.itemId : null,
+    deviceId: typeof item.deviceId === "string" ? item.deviceId : null,
+    bindingVersion: typeof item.bindingVersion === "number" ? item.bindingVersion : 1,
+    caseEpoch: typeof item.caseEpoch === "number" ? item.caseEpoch : 1,
+    partName: String(batch.productType || item.partName || "Bracket Motor A7"),
+    supplier: String(batch.supplierName || item.supplier || "PT Krakatau Scrap Ind."),
+    line: String(batch.line || item.line || "Line #01 (Conveyor Cam-01)"),
+    lotCount: typeof batch.inspectionCount === "number" ? batch.inspectionCount : (typeof item.lotCount === "number" ? item.lotCount : 0),
     timestamp: formattedDate,
     rawDate: dateObj.toISOString(),
-    imageUrl: item.imageUrl || null,
-    defectDetected: item.defectDetected ?? false,
-    defectClass: item.defectClass || (item.defectDetected ? "defect" : "OK"),
-    confidence: typeof item.confidence === "number" ? item.confidence : 95.0,
-    severity: item.severity || "None",
-    status: item.status || (item.defectDetected ? "Ditahan" : "Lolos QC"),
+    capturedAt: item.capturedAt ? new Date(item.capturedAt as string | number | Date).toISOString() : dateObj.toISOString(),
+    receivedAt: item.receivedAt ? new Date(item.receivedAt as string | number | Date).toISOString() : dateObj.toISOString(),
+    outcome: (item.outcome as "ok" | "defect" | "unknown") || (item.defectDetected ? "defect" : "ok"),
+    probabilities: (item.probabilities as { ok: number; defect: number } | null) || null,
+    confidence: typeof item.confidence === "number" ? item.confidence : null,
+    inferenceMs: typeof item.inferenceMs === "number" ? item.inferenceMs : null,
+    classificationMs: typeof item.classificationMs === "number" ? item.classificationMs : null,
+    localizationMs: typeof item.localizationMs === "number" ? item.localizationMs : null,
+    localizationStatus: (item.localizationStatus as "completed" | "skipped" | "failed" | null) || null,
+    localAlertMs: typeof item.localAlertMs === "number" ? item.localAlertMs : null,
+    imageUrl,
+    imageWidth: typeof item.imageWidth === "number" ? item.imageWidth : 640,
+    imageHeight: typeof item.imageHeight === "number" ? item.imageHeight : 480,
+    imageSha256: typeof item.imageSha256 === "string" ? item.imageSha256 : null,
+    coordinateSpace: typeof item.coordinateSpace === "string" ? item.coordinateSpace : "source-percent",
+    boundingBoxes: Array.isArray(item.boundingBoxes) ? (item.boundingBoxes as any) : [],
+    defectDetected: typeof item.defectDetected === "boolean" ? item.defectDetected : item.outcome === "defect",
+    defectClass: String(item.defectClass || (item.outcome === "defect" ? "defect" : "OK")),
+    severity: String(item.severity || (item.outcome === "defect" ? "High" : "None")),
+    status: (item.status as InspectionStatus) || (item.outcome === "defect" ? "Ditahan" : item.outcome === "unknown" ? "Pending Review" : "Lolos QC"),
+    reviewOutcome: (item.reviewOutcome as "confirmed_ok" | "confirmed_defect" | "unresolved" | null) || null,
+    reviewReason: typeof item.reviewReason === "string" ? item.reviewReason : null,
+    reviewedAt: item.reviewedAt ? new Date(item.reviewedAt as string | number | Date).toISOString() : null,
+    reviewedBy: typeof item.reviewedBy === "string" ? item.reviewedBy : null,
+    payloadHash: typeof item.payloadHash === "string" ? item.payloadHash : null,
+    evidenceStore: (item.evidenceStore as "local" | "s3" | null) || null,
     agentReasoningTrace: Array.isArray(item.agentReasoningTrace) ? item.agentReasoningTrace : [],
-    reasoningSteps: Array.isArray(item.agentReasoningTrace) ? item.agentReasoningTrace : [],
-    dispatchId: item.batch?.dispatchRecords?.[0]?.id || item.dispatchId || null,
-    batch: item.batch,
-    agentLogs: item.agentLogs || [],
+    reasoningSteps: Array.isArray(item.reasoningSteps) ? (item.reasoningSteps as any) : [],
+    dispatchId: (batch.dispatchRecords as Array<{ id: string }>)?.[0]?.id || (typeof item.dispatchId === "string" ? item.dispatchId : null),
+    agentLogs: Array.isArray(item.agentLogs) ? item.agentLogs : [],
   };
 }
 
@@ -96,33 +131,34 @@ export function normalizeBatchStatus(status?: string): "pending" | "held" | "rel
   return "pending";
 }
 
-export function formatBatchRecord(item: any): BatchItem & { [key: string]: any } {
-  const createdAt = item.createdAt ? new Date(item.createdAt) : new Date();
+export function formatBatchRecord(raw: unknown): BatchItem {
+  const item = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const createdAt = item.createdAt ? new Date(item.createdAt as string | number | Date) : new Date();
 
   return {
-    id: item.lotId || item.id, // '#B-2026-0730' (kompatibel langsung dengan UI BatchItem)
-    batchId: item.id, // CUID internal database
-    lotId: item.lotId || item.id,
-    productName: item.productType || item.productName || "Bracket Motor A7",
-    productType: item.productType || item.productName || "Bracket Motor A7",
-    zone: (item.storageZone || "standard") as "standard" | "quarantine",
-    storageZone: item.storageZone || "standard",
-    status: normalizeBatchStatus(item.status),
-    totalPcs: item.inspectionCount || 0,
-    inspectionCount: item.inspectionCount || 0,
-    defectCount: item.defectCount || 0,
-    defectTypes: Array.isArray(item.defectTypes) ? item.defectTypes : [],
-    escalationScore: item.escalationScore ?? 0,
+    id: String(item.lotId || item.id || "#B-2026-0730"),
+    batchId: String(item.id || item.lotId || "#B-2026-0730"),
+    lotId: String(item.lotId || item.id || "#B-2026-0730"),
+    productName: String(item.productType || item.productName || "Bracket Motor A7"),
+    productType: String(item.productType || item.productName || "Bracket Motor A7"),
+    zone: (item.storageZone === "quarantine" ? "quarantine" : "standard") as "standard" | "quarantine",
+    storageZone: (item.storageZone === "quarantine" ? "quarantine" : "standard") as "standard" | "quarantine",
+    status: normalizeBatchStatus(typeof item.status === "string" ? item.status : undefined),
+    totalPcs: typeof item.inspectionCount === "number" ? item.inspectionCount : 0,
+    inspectionCount: typeof item.inspectionCount === "number" ? item.inspectionCount : 0,
+    defectCount: typeof item.defectCount === "number" ? item.defectCount : 0,
+    defectTypes: Array.isArray(item.defectTypes) ? (item.defectTypes as string[]) : [],
+    escalationScore: typeof item.escalationScore === "number" ? item.escalationScore : 0,
     timeAgo: formatTimeAgo(createdAt),
     createdAt: createdAt.toISOString(),
-    slaSeconds: item.slaSeconds ?? (item.pendingApproval ? 780 : undefined),
-    defectSummary: item.defectSummary || undefined,
-    supplierName: item.supplierName || "PT Krakatau Scrap Ind.",
-    line: item.line || "Line #01 (Conveyor Cam-01)",
+    slaSeconds: typeof item.slaSeconds === "number" ? item.slaSeconds : (item.pendingApproval ? 780 : undefined),
+    defectSummary: typeof item.defectSummary === "string" ? item.defectSummary : undefined,
+    supplierName: String(item.supplierName || "PT Krakatau Scrap Ind."),
+    line: String(item.line || "Line #01 (Conveyor Cam-01)"),
     inspector: "Agent Vision Bedrock",
-    pendingApproval: item.pendingApproval ?? false,
-    inspections: item.inspections || [],
-    dispatchRecords: item.dispatchRecords || [],
+    pendingApproval: Boolean(item.pendingApproval),
+    inspections: Array.isArray(item.inspections) ? (item.inspections as any) : [],
+    dispatchRecords: Array.isArray(item.dispatchRecords) ? (item.dispatchRecords as any) : [],
   };
 }
 
@@ -130,7 +166,7 @@ export function formatBatchRecord(item: any): BatchItem & { [key: string]: any }
 // 4. DISPATCH RECORD FORMATTER
 // =============================================================================
 
-export function formatDispatchRecord(item: any): DispatchItem & { [key: string]: any } {
+export function formatDispatchRecord(item: any): DispatchItem {
   const dateObj = item.dispatchedAt
     ? new Date(item.dispatchedAt)
     : item.timestamp
@@ -142,8 +178,7 @@ export function formatDispatchRecord(item: any): DispatchItem & { [key: string]:
     id: item.id,
     consumer: item.consumer || "SAP QM",
     batchId: item.batch?.lotId || item.batchId || item.lotId || "#B-2026-0730",
-    lotId: item.batch?.lotId || item.batchId || item.lotId || "#B-2026-0730",
-    productName: item.batch?.productType || item.partName || item.productName || "Bracket Motor A7",
+
     partName: item.partName || item.batch?.productType || item.productName || "Bracket Motor A7",
     triggerReason: item.triggerReason || "Anomali terdeteksi",
     status: item.status || "Dispatched",
@@ -155,10 +190,9 @@ export function formatDispatchRecord(item: any): DispatchItem & { [key: string]:
     escalationScore: typeof item.escalationScore === "number" ? item.escalationScore : 0.74,
     approvedBy: item.approvedBy || "Autonomous Vision Agent",
     timestamp: formattedDate,
-    dispatchedAt: formattedDate,
+
     rawDate: dateObj.toISOString(),
-    payload: item.payload || {},
-    sapResponse: item.sapResponse || null,
+
   };
 }
 

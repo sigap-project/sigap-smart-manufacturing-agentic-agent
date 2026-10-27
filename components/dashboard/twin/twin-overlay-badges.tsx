@@ -22,20 +22,20 @@ export function TwinOverlayBadges({
 }: TwinOverlayBadgesProps) {
   if (!showBadges) return null;
 
-  const totalInspectionsText = `${(stats?.totalInspections ?? 1428).toLocaleString("en-US")} Pcs`;
-  const heldLotsText = `${stats?.batchesHeldCount ?? 3} Lots`;
-  const anomalyPcsText = `${stats?.heldDefectPcs ?? 36} pcs anomalies`;
+  const totalInspectionsText = `${(stats?.totalInspections ?? 0).toLocaleString("en-US")} Pcs`;
+  const heldLotsText = `${stats?.batchesHeldCount ?? 0} Lots`;
+  const anomalyPcsText = `${stats?.heldDefectPcs ?? 0} pcs anomalies`;
 
   const badges = [
     {
       id: "badge-optical-scanner",
       position: "top-[20%] left-[28%]",
       icon: Camera,
-      title: "YOLOv8-Nano",
-      tagText: "6.0ms",
+      title: "Pi Vision Station",
+      tagText: "Measured",
       tagVariant: "accent" as const,
-      valueText: "99.72%",
-      subtitle: "Detection Accuracy",
+      valueText: "ONNX CPU",
+      subtitle: "Raspberry Pi 4",
       isActive: systemState === "scanning",
       activeTone: "accent" as const,
       delay: 0,
@@ -44,11 +44,11 @@ export function TwinOverlayBadges({
       id: "badge-ai-sap-station",
       position: "bottom-[42%] left-[12%]",
       icon: Cpu,
-      title: "AWS Bedrock AI",
-      tagText: "SAP QM",
+      title: "Reasoning Agent",
+      tagText: "ERP Simulator",
       tagVariant: "neutral" as const,
-      valueText: "Autonomous",
-      subtitle: "ERP Mutation Active",
+      valueText: "Governed",
+      subtitle: "Supervisor Authorization",
       isActive: systemState === "idle",
       activeTone: "accent" as const,
       delay: 0.05,

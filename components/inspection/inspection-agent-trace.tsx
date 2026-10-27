@@ -64,16 +64,16 @@ export function InspectionAgentTrace({
       const metric =
         typeof t.latencyMs === "number"
           ? `${t.latencyMs}ms`
-          : t.latency || (t.status ? `Status: ${t.status}` : "Verified");
+          : t.latency || (t.status === "skipped" ? "Skipped" : t.status ? `Status: ${t.status}` : undefined);
 
       return {
         step: t.step ? `${t.step}. ${stage}` : stage,
         stage,
         tag,
         tagColor,
-        content: t.detail || t.content || (t.decision ? `Decision: ${t.decision}` : "Reasoning verified."),
+        content: t.detail || t.content || (t.decision ? `Decision: ${t.decision}` : "Evidence recorded."),
         metric,
-        status: t.status || "completed",
+        status: t.status || "pending",
         timestamp: t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : undefined,
         runId: t.runId,
         sequence: t.sequence,
@@ -95,6 +95,27 @@ export function InspectionAgentTrace({
       }
     },
   });
+  useEffect(() => {
+    if (!inspectionId) return;
+
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch(`/api/agent/logs?inspectionId=${encodeURIComponent(inspectionId)}&limit=100`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            updateTracesFromData(json.data);
+          }
+        }
+      } catch {
+        // polling error ignored
+      }
+    };
+
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 2000);
+    return () => clearInterval(interval);
+  }, [inspectionId]);
 
   return (
     <div className="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between select-none hover:-translate-y-1 hover:shadow-md transition-all duration-200">

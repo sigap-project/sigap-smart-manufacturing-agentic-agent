@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { validateInternalApiKey, unauthorizedResponse } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -7,11 +8,17 @@ export const dynamic = "force-dynamic";
  * POST & GET /api/mock/sap/mm
  * Persistent SAP MM Simulator: Material Lot Hold
  * Resulting State: "QUALITY_HOLD"
+ * Protected by server-only internal authentication.
  */
 export async function POST(req: NextRequest) {
+  const auth = validateInternalApiKey(req);
+  if (!auth.authorized) {
+    return unauthorizedResponse("Simulator requires valid internal authentication");
+  }
+
   try {
     const body = await req.json();
-    const { actionKey, payloadHash, targetId = "MAT-IMP-9842" } = body;
+    const { actionKey, payloadHash, targetId } = body;
 
     if (!actionKey || !payloadHash) {
       return NextResponse.json(
@@ -20,6 +27,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!targetId || typeof targetId !== "string" || !targetId.trim()) {
+      return NextResponse.json(
+        { success: false, error: "targetId is required and cannot be empty" },
+        { status: 422 }
+      );
+    }
+
+    // Require matching authorized DispatchRecord
+    const dispatch = await prisma.dispatchRecord.findUnique({
+      where: { actionKey },
+    });
+
+    if (!dispatch) {
+      return NextResponse.json(
+        { success: false, error: "No matching DispatchRecord found for actionKey" },
+        { status: 403 }
+      );
+    }
+
+    if (
+      dispatch.status !== "queued" &&
+      dispatch.status !== "executing" &&
+      dispatch.status !== "verifying" &&
+      dispatch.status !== "verified"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `DispatchRecord is in '${dispatch.status}' state; must be approved/queued/executing to write to simulator`,
+        },
+        { status: 403 }
+      );
+    }
+
+    if (dispatch.payloadHash && dispatch.payloadHash !== payloadHash) {
+      return NextResponse.json(
+        { success: false, error: "Payload hash does not match approved DispatchRecord" },
+        { status: 409 }
+      );
+    }
+
+    // Idempotency check in persistent SimulatorRecord
     const existing = await prisma.simulatorRecord.findUnique({
       where: { actionKey },
     });
@@ -31,6 +80,7 @@ export async function POST(req: NextRequest) {
           externalId: existing.externalId,
           resultingState: existing.resultingState,
           actionKey: existing.actionKey,
+          targetId: existing.targetId,
           mode: "simulator",
           idempotent: true,
         });
@@ -42,25 +92,49 @@ export async function POST(req: NextRequest) {
     }
 
     const externalId = `MM-HOLD-${payloadHash.slice(0, 8).toUpperCase()}`;
-    const record = await prisma.simulatorRecord.create({
-      data: {
-        actionKey,
-        payloadHash,
-        targetId: String(targetId),
-        externalId,
-        actionType: "HOLD_MATERIAL_LOT",
-        resultingState: "QUALITY_HOLD",
-      },
-    });
 
-    return NextResponse.json({
-      success: true,
-      externalId: record.externalId,
-      resultingState: record.resultingState,
-      actionKey: record.actionKey,
-      mode: "simulator",
-      idempotent: false,
-    });
+    try {
+      const record = await prisma.simulatorRecord.create({
+        data: {
+          actionKey,
+          payloadHash,
+          targetId: String(targetId).trim(),
+          externalId,
+          actionType: "HOLD_MATERIAL_LOT",
+          resultingState: "QUALITY_HOLD",
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        externalId: record.externalId,
+        resultingState: record.resultingState,
+        actionKey: record.actionKey,
+        targetId: record.targetId,
+        mode: "simulator",
+        idempotent: false,
+      });
+    } catch (createErr: unknown) {
+      if (typeof createErr === "object" && createErr !== null && "code" in createErr && createErr.code === "P2002") {
+        const raced = await prisma.simulatorRecord.findUnique({ where: { actionKey } });
+        if (raced && raced.payloadHash === payloadHash) {
+          return NextResponse.json({
+            success: true,
+            externalId: raced.externalId,
+            resultingState: raced.resultingState,
+            actionKey: raced.actionKey,
+            targetId: raced.targetId,
+            mode: "simulator",
+            idempotent: true,
+          });
+        }
+        return NextResponse.json(
+          { success: false, error: "Conflicting actionKey write race in simulator" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
+    }
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Simulator write failure" },
@@ -70,6 +144,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = validateInternalApiKey(req);
+  if (!auth.authorized) {
+    return unauthorizedResponse("Simulator requires valid internal authentication");
+  }
+
   const { searchParams } = new URL(req.url);
   const actionKey = searchParams.get("actionKey");
 
@@ -82,7 +161,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!record) {
-    return NextResponse.json({ success: false, error: "Record not found" }, { status: 404 });
+    return NextResponse.json({ success: false, error: "Record not found in simulator" }, { status: 404 });
   }
 
   return NextResponse.json({
@@ -91,5 +170,6 @@ export async function GET(req: NextRequest) {
     resultingState: record.resultingState,
     targetId: record.targetId,
     actionKey: record.actionKey,
+    mode: "simulator",
   });
 }

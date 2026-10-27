@@ -20,6 +20,7 @@ import {
   Layers,
   Info,
 } from "lucide-react";
+import { useSigapGlobal } from "@/context/sigap-global-context";
 
 interface BoundingBox {
   x: number;
@@ -43,6 +44,37 @@ export function InspectionCameraPanel({
 }: InspectionCameraPanelProps) {
   // Mode: "upload" (File Upload) | "camera" (Webcam & Optical Feed)
   const [activeMode, setActiveMode] = useState<"upload" | "camera">("upload");
+  const { inspections, refreshServerState } = useSigapGlobal();
+  const currentInspection = inspections[0];
+  const imageWidth = currentInspection?.imageWidth || 640;
+  const imageHeight = currentInspection?.imageHeight || 480;
+
+  useEffect(() => {
+    if (currentInspection) {
+      const isDef = currentInspection.outcome === "defect" || currentInspection.defectDetected;
+      setLastResult({
+        status: isDef ? "defect" : currentInspection.outcome === "unknown" ? "idle" : "ok",
+        defectClass: currentInspection.defectClass || (isDef ? "defect" : "OK"),
+        confidence: currentInspection.confidence ?? 0,
+        severity: currentInspection.severity || (isDef ? "High" : "None"),
+        escalationScore: 0,
+        recommendation: isDef ? "quarantine" : "release",
+        boundingBoxes: (currentInspection.boundingBoxes || []).map((b) => ({
+          x: b.x,
+          y: b.y,
+          width: b.width,
+          height: b.height,
+          label: b.label || "defect",
+          confidence: b.confidence ?? 90,
+        })),
+        sapTickets: [],
+        timestamp: currentInspection.timestamp || new Date().toLocaleTimeString("id-ID"),
+      });
+      if (currentInspection.imageUrl) {
+        setSelectedImage(currentInspection.imageUrl);
+      }
+    }
+  }, [currentInspection]);
 
   // State File Upload
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -367,106 +399,18 @@ export function InspectionCameraPanel({
   };
 
   // Handler utama klik "Ambil Frame Sekarang"
-  const handleCaptureFrame = async () => {
-    if (isAnalyzing) return;
-
-    // 1. Shutter sound & visual flash
+  const handleCaptureFrame = () => {
     playShutterSound();
     setIsCapturingFlash(true);
     setTimeout(() => setIsCapturingFlash(false), 220);
 
-    // 2. Ambil snapshot frame dari video
     const frameData = grabFrameFromVideo();
     const timeNow = new Date().toLocaleTimeString("id-ID");
 
     if (frameData) {
       setCapturedSnapshot(frameData);
       setSnapshotTimestamp(timeNow);
-      setCameraViewMode("snapshot"); // Freeze dan perlihatkan frame yang ditangkap
-      // 3. Jalankan analisis AI pada frame ini
-      await runAiAnalysis(frameData);
-    } else {
-      // Fallback
-      setSnapshotTimestamp(timeNow);
-      await runAiAnalysis();
-    }
-  };
-
-  // ===========================================================================
-  // 5. EKSEKUSI PIPELINE ANALISIS AI BACKEND
-  // ===========================================================================
-  const runAiAnalysis = async (customImageBase64?: string) => {
-    if (isAnalyzing) return;
-    setIsAnalyzing(true);
-
-    try {
-      const payload: any = {
-        lotId,
-        productType,
-      };
-
-      if (customImageBase64) {
-        payload.imageBase64 = customImageBase64;
-      } else if (activeMode === "upload") {
-        if (!selectedImage) return;
-        payload.imageBase64 = selectedImage.startsWith("data:") ? selectedImage : undefined;
-      } else if (activeMode === "camera") {
-        if (capturedSnapshot) {
-          payload.imageBase64 = capturedSnapshot;
-        } else {
-          const frameData = grabFrameFromVideo();
-          if (frameData) {
-            payload.imageBase64 = frameData;
-            setCapturedSnapshot(frameData);
-          } else {
-            payload.testType = "defect";
-          }
-        }
-      }
-
-      const res = await fetch("/api/inspection/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      if (data.success) {
-        const isDef = data.inspection?.defectDetected;
-        const boxes = Array.isArray(data.boundingBoxes) ? data.boundingBoxes : [];
-        const sapTicketList = (data.sapDispatches || []).map(
-          (d: any) => `${d.consumer}: ${d.ticketId}`
-        );
-
-        setLastResult({
-          status: isDef ? "defect" : "ok",
-          defectClass: data.inspection?.defectClass || (isDef ? "defect" : "ok"),
-          confidence: data.inspection?.confidence || 95.0,
-          severity: data.inspection?.severity || (isDef ? "High" : "None"),
-          escalationScore: data.escalationScore ?? 0.74,
-          recommendation: data.recommendation || (isDef ? "quarantine" : "release"),
-          boundingBoxes: boxes,
-          sapTickets: sapTicketList,
-          timestamp: new Date().toLocaleTimeString("id-ID"),
-        });
-
-        if (activeMode === "camera") {
-          setCameraHasAnalyzed(true);
-        }
-
-        if (onAnalysisComplete) {
-          onAnalysisComplete(data);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal menjalankan analisis backend:", err);
-    } finally {
-      setIsAnalyzing(false);
+      setCameraViewMode("snapshot");
     }
   };
 
@@ -500,7 +444,7 @@ export function InspectionCameraPanel({
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
       setSelectedImage(dataUrl);
-      runAiAnalysis(dataUrl);
+
     };
     reader.readAsDataURL(file);
   };
@@ -640,17 +584,29 @@ export function InspectionCameraPanel({
                 title="Click to select another image file"
               >
                 <svg
-                  viewBox="0 0 640 480"
+                  viewBox={`0 0 ${imageWidth} ${imageHeight}`}
                   preserveAspectRatio="xMidYMid meet"
                   className="max-h-[420px] w-auto select-none"
                 >
-                  <image href={selectedImage} width="640" height="480" />
+                  <image href={selectedImage} width={imageWidth} height={imageHeight} />
+                  {/* Center square ROI overlay */}
+                  <rect
+                    x={(imageWidth - Math.min(imageWidth, imageHeight) * 0.75) / 2}
+                    y={(imageHeight - Math.min(imageWidth, imageHeight) * 0.75) / 2}
+                    width={Math.min(imageWidth, imageHeight) * 0.75}
+                    height={Math.min(imageWidth, imageHeight) * 0.75}
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="2"
+                    strokeDasharray="6 4"
+                    rx="6"
+                  />
                   {showBoundingBoxes &&
                     lastResult.boundingBoxes.map((box, idx) => {
-                      const bx = (box.x * 640) / 100;
-                      const by = (box.y * 480) / 100;
-                      const bw = (box.width * 640) / 100;
-                      const bh = (box.height * 480) / 100;
+                      const bx = (box.x * imageWidth) / 100;
+                      const by = (box.y * imageHeight) / 100;
+                      const bw = (box.width * imageWidth) / 100;
+                      const bh = (box.height * imageHeight) / 100;
                       const isDef = lastResult.status === "defect";
                       return (
                         <g key={idx}>
@@ -809,17 +765,29 @@ export function InspectionCameraPanel({
                 {cameraViewMode === "snapshot" && capturedSnapshot && (
                   <div className="relative w-full h-full flex items-center justify-center">
                     <svg
-                      viewBox="0 0 640 480"
+                      viewBox={`0 0 ${imageWidth} ${imageHeight}`}
                       preserveAspectRatio="xMidYMid meet"
                       className="w-full max-h-[420px] select-none"
                     >
-                      <image href={capturedSnapshot} width="640" height="480" />
+                      <image href={capturedSnapshot} width={imageWidth} height={imageHeight} />
+                      {/* Center square ROI overlay */}
+                      <rect
+                        x={(imageWidth - Math.min(imageWidth, imageHeight) * 0.75) / 2}
+                        y={(imageHeight - Math.min(imageWidth, imageHeight) * 0.75) / 2}
+                        width={Math.min(imageWidth, imageHeight) * 0.75}
+                        height={Math.min(imageWidth, imageHeight) * 0.75}
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="2"
+                        strokeDasharray="6 4"
+                        rx="6"
+                      />
                       {showBoundingBoxes &&
                         lastResult.boundingBoxes.map((box, idx) => {
-                          const bx = (box.x * 640) / 100;
-                          const by = (box.y * 480) / 100;
-                          const bw = (box.width * 640) / 100;
-                          const bh = (box.height * 480) / 100;
+                          const bx = (box.x * imageWidth) / 100;
+                          const by = (box.y * imageHeight) / 100;
+                          const bw = (box.width * imageWidth) / 100;
+                          const bh = (box.height * imageHeight) / 100;
                           const isDef = lastResult.status === "defect";
                           return (
                             <g key={idx}>
@@ -892,16 +860,11 @@ export function InspectionCameraPanel({
 
                       <button
                         type="button"
-                        onClick={() => runAiAnalysis(capturedSnapshot)}
-                        disabled={isAnalyzing}
+                        onClick={() => refreshServerState?.()}
                         className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-zinc-100 border border-slate-700 font-medium text-xs flex items-center gap-1.5 shadow-lg cursor-pointer"
                       >
-                        <RefreshCw
-                          className={`w-3.5 h-3.5 text-blue-400 ${
-                            isAnalyzing ? "animate-spin" : ""
-                          }`}
-                        />
-                        <span>Re-analyze</span>
+                        <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Sync Evidence</span>
                       </button>
                     </div>
                   </div>
@@ -980,16 +943,11 @@ export function InspectionCameraPanel({
           {activeMode === "upload" ? (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => runAiAnalysis()}
-                disabled={!selectedImage || isAnalyzing}
-                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-xs flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+                onClick={() => refreshServerState?.()}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-2 transition-all shadow-xs cursor-pointer"
               >
-                {isAnalyzing ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5 text-blue-400 fill-blue-400" />
-                )}
-                <span>{isAnalyzing ? "Analyzing..." : "Analyze Frame"}</span>
+                <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                <span>Sync Pi Evidence</span>
               </button>
 
               <button
@@ -1050,16 +1008,11 @@ export function InspectionCameraPanel({
                   </button>
 
                   <button
-                    onClick={() => runAiAnalysis(capturedSnapshot || undefined)}
-                    disabled={isAnalyzing}
+                    onClick={() => refreshServerState?.()}
                     className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                   >
-                    <RefreshCw
-                      className={`w-3.5 h-3.5 text-slate-500 ${
-                        isAnalyzing ? "animate-spin" : ""
-                      }`}
-                    />
-                    <span>Re-analyze</span>
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Sync Evidence</span>
                   </button>
                 </>
               )}

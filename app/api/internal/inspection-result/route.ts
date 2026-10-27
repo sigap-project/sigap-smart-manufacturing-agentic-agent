@@ -18,9 +18,20 @@ export async function POST(request: NextRequest) {
   // 1. Authenticate Actor (Device Token or Internal API Key)
   const actor = await resolveActor(request);
   if (!actor) {
-    return unauthorizedResponse("Missing or invalid Device Token or Internal Key");
+    return unauthorizedResponse("Missing or invalid Device Token");
   }
 
+  const isTestMode = process.env.SIGAP_TEST_MODE === "1";
+  if (actor.type !== "device" && !isTestMode) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: "FORBIDDEN",
+        error: "Operational ingestion requires a valid authenticated device token",
+      },
+      { status: 403 }
+    );
+  }
   try {
     let body: unknown;
     try {

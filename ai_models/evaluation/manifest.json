@@ -1,19 +1,2393 @@
 {
-  "datasetVersion": 1,
-  "description": "SIGAP On-Device Runtime Evaluation Dataset for Casting Impellers",
+  "datasetVersion": 2,
+  "description": "SIGAP Comprehensive Held-Out Evaluation Dataset (50 OK, 50 Defect, 20 Challenge)",
+  "productFamily": "submersible-impeller-casting",
+  "totalSamples": 120,
+  "splitCounts": {
+    "ok": 50,
+    "defect": 50,
+    "challenge": 20
+  },
   "samples": [
     {
-      "id": "eval-ok-01",
-      "imagePath": "public/sample-frames/ok.jpeg",
+      "id": "eval-ok-001",
+      "imagePath": "ai_models/evaluation/images/eval_ok_001.jpg",
+      "sha256": "da2088f55d8508e050dd5897c0012036face0f7170726e3afc5793172ecdd53c",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
       "groundTruthOutcome": "ok",
-      "expectedMinConfidence": 0.85
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
     },
     {
-      "id": "eval-defect-01",
-      "imagePath": "public/sample-frames/defect.jpeg",
+      "id": "eval-ok-002",
+      "imagePath": "ai_models/evaluation/images/eval_ok_002.jpg",
+      "sha256": "6e5de3636c368cb006767fedd44c6791976580c58aaaa5b16f0903f66f7087fb",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-003",
+      "imagePath": "ai_models/evaluation/images/eval_ok_003.jpg",
+      "sha256": "07c2aa3bff54f20114758d4c317e82e14e0684e934904521e37a6c21b1502ced",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-004",
+      "imagePath": "ai_models/evaluation/images/eval_ok_004.jpg",
+      "sha256": "b5addfcfd81600f49b4d35390a72b3f5b36a8f0b7ebbd3e463eebc31586657f1",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-005",
+      "imagePath": "ai_models/evaluation/images/eval_ok_005.jpg",
+      "sha256": "e43ace7336e9f1342763b58d9978d577dbaadb660cd5f48198e2aec040dc3ba5",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-006",
+      "imagePath": "ai_models/evaluation/images/eval_ok_006.jpg",
+      "sha256": "cceda72a04373df2c2847d774a5ad0839134a37897bb6f6fe11049cc9115d89e",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-007",
+      "imagePath": "ai_models/evaluation/images/eval_ok_007.jpg",
+      "sha256": "2344736cfcf87f6ac91d9087eb5da58c2e29bf155e9d38ce14ef130f76de8f46",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-008",
+      "imagePath": "ai_models/evaluation/images/eval_ok_008.jpg",
+      "sha256": "ac57b81a0c6131b70616b51f0d9b51bd94aecf3af45245f59507062a5765d4f4",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-009",
+      "imagePath": "ai_models/evaluation/images/eval_ok_009.jpg",
+      "sha256": "0290047f9dc08cbd36cd1cfc3b1804bfd29dcbca3efaa108aa1177ba64a146ac",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-010",
+      "imagePath": "ai_models/evaluation/images/eval_ok_010.jpg",
+      "sha256": "210ed8545bca2e55722b8b13221741a949f050ab85d3f7cc3be8b69be6c7ed6d",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-011",
+      "imagePath": "ai_models/evaluation/images/eval_ok_011.jpg",
+      "sha256": "eed846d43fa9f78b27b6dff9ecd2249e19eb50437e159db1a871e41254949630",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-012",
+      "imagePath": "ai_models/evaluation/images/eval_ok_012.jpg",
+      "sha256": "c1a5e4f16d046e3dc6c14b190c1bae01d56b23e02af8ad83ec0e60c012238b35",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-013",
+      "imagePath": "ai_models/evaluation/images/eval_ok_013.jpg",
+      "sha256": "2915e1c680ba95c18f2e7d12ad12c3eb2811b2d110cea240dd3f52e3003d681a",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-014",
+      "imagePath": "ai_models/evaluation/images/eval_ok_014.jpg",
+      "sha256": "6336e8f989a7b46ff29ded219c446e9f6c8a4c987c19601f31a8c7a78fd60d3d",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-015",
+      "imagePath": "ai_models/evaluation/images/eval_ok_015.jpg",
+      "sha256": "2e2df61612e202e042983a1d106013772c30eccf245e82fbbbc856f52ea4bf53",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-016",
+      "imagePath": "ai_models/evaluation/images/eval_ok_016.jpg",
+      "sha256": "5eed309835aa442f6149269f947753a44d588f763af14e4ebfd1809293f6e9f5",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-017",
+      "imagePath": "ai_models/evaluation/images/eval_ok_017.jpg",
+      "sha256": "8bf4e7e7e242646e43fd3f8270670c926cc30d2721326ff796e7574d25eef2ee",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-018",
+      "imagePath": "ai_models/evaluation/images/eval_ok_018.jpg",
+      "sha256": "4c56075bae46bdaed12e049943c680d425abcf56d2b8bc55c10926685d08b431",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-019",
+      "imagePath": "ai_models/evaluation/images/eval_ok_019.jpg",
+      "sha256": "ed720b92654783f01a072aa9bff5e284e250c0f7b9b63785938e5f8b73a1ef01",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-020",
+      "imagePath": "ai_models/evaluation/images/eval_ok_020.jpg",
+      "sha256": "dddb83261b061be480110910c5d302d70f930e22c2dc84dddaeba41898ddecc0",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-021",
+      "imagePath": "ai_models/evaluation/images/eval_ok_021.jpg",
+      "sha256": "53fd34ebbce644b12785fe76f8811177962718c813eb950d79c84f954e389d75",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-022",
+      "imagePath": "ai_models/evaluation/images/eval_ok_022.jpg",
+      "sha256": "da396ff8d7a516ecdb357916e710bc0b076bd6400fba2667dc381a57e84ea442",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-023",
+      "imagePath": "ai_models/evaluation/images/eval_ok_023.jpg",
+      "sha256": "3087bb194f47a35bea493b2750dfdb2c65c4dcda8acb16b92318ff7090cd16d8",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-024",
+      "imagePath": "ai_models/evaluation/images/eval_ok_024.jpg",
+      "sha256": "ebdec1e32dd22c5a1c264cf6d38a0cb20f0a21b680f78e63b4eea2efe7ef2fe0",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-025",
+      "imagePath": "ai_models/evaluation/images/eval_ok_025.jpg",
+      "sha256": "e276efa5fea9e25a21a6bd8b68f205368346182db14028c128a5fdd6479d65c4",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-026",
+      "imagePath": "ai_models/evaluation/images/eval_ok_026.jpg",
+      "sha256": "f34d537bd4eb2fe3af91991e33167be2a488841af14f8565469ea968e9694ac1",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-027",
+      "imagePath": "ai_models/evaluation/images/eval_ok_027.jpg",
+      "sha256": "10a7966f131512b561596ab649aeaf6a6467d6edb8711334cb430c700bbdb70d",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-028",
+      "imagePath": "ai_models/evaluation/images/eval_ok_028.jpg",
+      "sha256": "60e2dbe2b033ab3aec717e65dd98ba6bdb67d7d8feec0147a950e197e763887e",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-029",
+      "imagePath": "ai_models/evaluation/images/eval_ok_029.jpg",
+      "sha256": "c96912c82fee8b6c2c79bf43200b10e92750eaa42bdd624128780484a7faaa5f",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-030",
+      "imagePath": "ai_models/evaluation/images/eval_ok_030.jpg",
+      "sha256": "63751fde331d93f573041574acd665698286a88c56df6ec55375edccbcfa9793",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-031",
+      "imagePath": "ai_models/evaluation/images/eval_ok_031.jpg",
+      "sha256": "5514c8b8185ca7ac5494db41647d42f630f3d4ebdbc829615407e87d59c581fc",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-032",
+      "imagePath": "ai_models/evaluation/images/eval_ok_032.jpg",
+      "sha256": "cbc43a8d75afdfad19d7d97962a5377cb7cd06f262451a7163ee936430b8f154",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-033",
+      "imagePath": "ai_models/evaluation/images/eval_ok_033.jpg",
+      "sha256": "3c31cb63064601b49bff2c41df708a3adc684d9db465b3bd4e2e788a537f82e1",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-034",
+      "imagePath": "ai_models/evaluation/images/eval_ok_034.jpg",
+      "sha256": "ca66e8c0c8f197450eaec8f27a37f900e77cd9b77084d1ae11ff4a0dd8508322",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-035",
+      "imagePath": "ai_models/evaluation/images/eval_ok_035.jpg",
+      "sha256": "f7d823195bea1f978a92354314220aaae4910e66104e19f1ec6c384c4427c514",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-036",
+      "imagePath": "ai_models/evaluation/images/eval_ok_036.jpg",
+      "sha256": "2843aa63183f9a582c063a75e7bfd6e8248a28a5d969afead2d62a117f3e5dff",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-037",
+      "imagePath": "ai_models/evaluation/images/eval_ok_037.jpg",
+      "sha256": "6895d8f64f531fde9d13ed8c766fcbaac25f403590ae0e07a33c1f8f0649e520",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-038",
+      "imagePath": "ai_models/evaluation/images/eval_ok_038.jpg",
+      "sha256": "69c38180d5bcccd381ec34a8ae2f4accfc19079afb957e7d61441ed226b85456",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-039",
+      "imagePath": "ai_models/evaluation/images/eval_ok_039.jpg",
+      "sha256": "d0bc1980e10df98905d1dbc80f72432ec1bd8e2413486662c2a95ee7de9ce2c8",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-040",
+      "imagePath": "ai_models/evaluation/images/eval_ok_040.jpg",
+      "sha256": "b3cee05aefc28d2d8a461bb65db12a34886a150b9a6a217a37c5671fc0bd3a62",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-041",
+      "imagePath": "ai_models/evaluation/images/eval_ok_041.jpg",
+      "sha256": "12e9e9ba9493e9d02310ce8140a714c9715aecc44578c7c88ec6e8508cdc6d3e",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-042",
+      "imagePath": "ai_models/evaluation/images/eval_ok_042.jpg",
+      "sha256": "4e530c1f0d321e075a32d1e2daf05b3c909809726c71c85e37e1e2ec299395ad",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-043",
+      "imagePath": "ai_models/evaluation/images/eval_ok_043.jpg",
+      "sha256": "b7081f0f60f33d22e4f0a7696fff1f590edf0581e68f5ccb9ac09b5adf4ca553",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-044",
+      "imagePath": "ai_models/evaluation/images/eval_ok_044.jpg",
+      "sha256": "07fb2d29e19a8fa4ce3d7aefa42f2d763c4ca0137731e19d90c15a429a8aaa00",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-045",
+      "imagePath": "ai_models/evaluation/images/eval_ok_045.jpg",
+      "sha256": "c6f6acdbc9580415c35d5c01ee85e2a086058aa54267a6669a6e9c46c1a7cd0c",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-046",
+      "imagePath": "ai_models/evaluation/images/eval_ok_046.jpg",
+      "sha256": "804666ba58b1d1864e9a9c3db3c059beb889cca0a9f77b617ea10f58690cceb1",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-047",
+      "imagePath": "ai_models/evaluation/images/eval_ok_047.jpg",
+      "sha256": "92c14291bdec1e7c2ac3a486f84be4f7b42d9f54efd1de45649ac4e2e15e8733",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-048",
+      "imagePath": "ai_models/evaluation/images/eval_ok_048.jpg",
+      "sha256": "ddd020dad2e01c7b11d12cbdfef26bd542265cfb1ce239ceabf735b73756ac9a",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-049",
+      "imagePath": "ai_models/evaluation/images/eval_ok_049.jpg",
+      "sha256": "b5635e0e02c7ecac3533b05966c2b587b8f423e8b3bf0cfe638a0f4676595430",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-ok-050",
+      "imagePath": "ai_models/evaluation/images/eval_ok_050.jpg",
+      "sha256": "ea0eb2cb381a46d01abea284678d3828e91b79286d7a527e1ac3e922830bf6f0",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.95,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-001",
+      "imagePath": "ai_models/evaluation/images/eval_def_001.jpg",
+      "sha256": "af3961e8dea51ac2c1cfb8457b088a5fb91efc247fdb52b253830efa420d765f",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
       "groundTruthOutcome": "defect",
-      "expectedMinConfidence": 0.80,
-      "requiresLocalization": true
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 238.7,
+          "y": 13.9,
+          "width": 56.3,
+          "height": 44.1
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 352.7,
+          "y": 300.0,
+          "width": 42.6,
+          "height": 60.0
+        }
+      ]
+    },
+    {
+      "id": "eval-def-002",
+      "imagePath": "ai_models/evaluation/images/eval_def_002.jpg",
+      "sha256": "7a83b2a2a55d39f85b872c86c7d1eb40e53ae017c974672660c9d9965e194c9c",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 209.7,
+          "y": 11.5,
+          "width": 59.7,
+          "height": 49.6
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 358.0,
+          "y": 283.3,
+          "width": 48.6,
+          "height": 63.1
+        }
+      ]
+    },
+    {
+      "id": "eval-def-003",
+      "imagePath": "ai_models/evaluation/images/eval_def_003.jpg",
+      "sha256": "0f85cf2d3e7fcf767d166fdb49edfcf3e456d9af91758681ebe22de6b6f96575",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 181.5,
+          "y": 12.9,
+          "width": 62.3,
+          "height": 54.3
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 361.6,
+          "y": 266.1,
+          "width": 53.9,
+          "height": 65.3
+        }
+      ]
+    },
+    {
+      "id": "eval-def-004",
+      "imagePath": "ai_models/evaluation/images/eval_def_004.jpg",
+      "sha256": "e996035172cbdb709451d41c4f198e44f8bebba71cd7576bd6b5a4a2eba5b696",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 154.3,
+          "y": 18.0,
+          "width": 63.8,
+          "height": 58.2
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 363.7,
+          "y": 248.9,
+          "width": 58.3,
+          "height": 66.4
+        }
+      ]
+    },
+    {
+      "id": "eval-def-005",
+      "imagePath": "ai_models/evaluation/images/eval_def_005.jpg",
+      "sha256": "5b79a835fde58bed7dcb3a3ab5867e78785255eec1b8d01e030564dff3916161",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 128.7,
+          "y": 26.7,
+          "width": 64.4,
+          "height": 61.1
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 364.1,
+          "y": 231.7,
+          "width": 61.8,
+          "height": 66.5
+        }
+      ]
+    },
+    {
+      "id": "eval-def-006",
+      "imagePath": "ai_models/evaluation/images/eval_def_006.jpg",
+      "sha256": "782a15e466e6db9d9916cf3eaf1fe5e58c49cc77c3bab173e58fdad97b037dbf",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 105.1,
+          "y": 39.0,
+          "width": 64.0,
+          "height": 63.2
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 362.9,
+          "y": 214.9,
+          "width": 64.4,
+          "height": 65.6
+        }
+      ]
+    },
+    {
+      "id": "eval-def-007",
+      "imagePath": "ai_models/evaluation/images/eval_def_007.jpg",
+      "sha256": "220525bba4071d4f24562bfc2bed2d165b46916f65bbb61b2988b518a9c76cc3",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 83.8,
+          "y": 54.5,
+          "width": 62.6,
+          "height": 64.2
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 360.0,
+          "y": 198.7,
+          "width": 66.0,
+          "height": 63.7
+        }
+      ]
+    },
+    {
+      "id": "eval-def-008",
+      "imagePath": "ai_models/evaluation/images/eval_def_008.jpg",
+      "sha256": "414e785024c30bf2ac7b4e973bb2ef70c6252e1e5253895bc4ba40dbbb2b7200",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 65.1,
+          "y": 73.2,
+          "width": 60.3,
+          "height": 64.3
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 355.5,
+          "y": 183.4,
+          "width": 66.6,
+          "height": 60.8
+        }
+      ]
+    },
+    {
+      "id": "eval-def-009",
+      "imagePath": "ai_models/evaluation/images/eval_def_009.jpg",
+      "sha256": "5a7a5d4daab7c5f7323b272c447b5d0ef1246a9ea45fb68c32ad268c8b0a9c0e",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 49.3,
+          "y": 94.7,
+          "width": 57.0,
+          "height": 63.4
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 349.5,
+          "y": 169.2,
+          "width": 66.1,
+          "height": 57.0
+        }
+      ]
+    },
+    {
+      "id": "eval-def-010",
+      "imagePath": "ai_models/evaluation/images/eval_def_010.jpg",
+      "sha256": "d8ddb04a307d3d34b2b79ca9e7db27f0edb79c4ac1f3316cf052283191acc2e0",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 36.8,
+          "y": 118.7,
+          "width": 52.9,
+          "height": 61.5
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 342.0,
+          "y": 156.4,
+          "width": 64.7,
+          "height": 52.3
+        }
+      ]
+    },
+    {
+      "id": "eval-def-011",
+      "imagePath": "ai_models/evaluation/images/eval_def_011.jpg",
+      "sha256": "7764a07e5580e1e8fafbe7b20f869b1ceb69bc4c133ade84c4d09fe44f092b6d",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 27.5,
+          "y": 144.7,
+          "width": 47.9,
+          "height": 58.7
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 333.3,
+          "y": 145.1,
+          "width": 62.2,
+          "height": 46.8
+        }
+      ]
+    },
+    {
+      "id": "eval-def-012",
+      "imagePath": "ai_models/evaluation/images/eval_def_012.jpg",
+      "sha256": "d814dbaffc022f77ba9670957cca2efb1cf0fc38da9d94702d86a01e75333eb7",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 21.8,
+          "y": 172.5,
+          "width": 42.2,
+          "height": 55.0
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 323.3,
+          "y": 135.5,
+          "width": 58.8,
+          "height": 40.6
+        }
+      ]
+    },
+    {
+      "id": "eval-def-013",
+      "imagePath": "ai_models/evaluation/images/eval_def_013.jpg",
+      "sha256": "bc7efccf983b2f37e221e026f72867e03ff71dd3fcdc71de5a6c34189407128b",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 17.6,
+          "y": 200.0,
+          "width": 40.1,
+          "height": 53.5
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 310.9,
+          "y": 125.4,
+          "width": 57.4,
+          "height": 38.2
+        }
+      ]
+    },
+    {
+      "id": "eval-def-014",
+      "imagePath": "ai_models/evaluation/images/eval_def_014.jpg",
+      "sha256": "5bae16c23fc3f25aaf6beba98eaafbf938fc9bb4903ffe80e5f6cb9bbb01eb17",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 12.7,
+          "y": 225.2,
+          "width": 46.0,
+          "height": 57.5
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 294.6,
+          "y": 112.7,
+          "width": 61.1,
+          "height": 44.7
+        }
+      ]
+    },
+    {
+      "id": "eval-def-015",
+      "imagePath": "ai_models/evaluation/images/eval_def_015.jpg",
+      "sha256": "159f9fdc4b6c476d4e42f64b1e4430220d0cd5ac41ff25a1f31ff862cea3c8b6",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 11.5,
+          "y": 250.9,
+          "width": 51.2,
+          "height": 60.7
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 277.7,
+          "y": 102.2,
+          "width": 63.9,
+          "height": 50.4
+        }
+      ]
+    },
+    {
+      "id": "eval-def-016",
+      "imagePath": "ai_models/evaluation/images/eval_def_016.jpg",
+      "sha256": "3578b2e0f34b352bda7b796215a3810c5108d931a857568e9350bfdf94db1759",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 14.1,
+          "y": 276.6,
+          "width": 55.6,
+          "height": 62.9
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 260.5,
+          "y": 94.1,
+          "width": 65.7,
+          "height": 55.4
+        }
+      ]
+    },
+    {
+      "id": "eval-def-017",
+      "imagePath": "ai_models/evaluation/images/eval_def_017.jpg",
+      "sha256": "f2a98531b3ae061207f5963cea3978cadb1ef66fc8092b53529cf75f3fdbdb55",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 20.4,
+          "y": 302.1,
+          "width": 59.2,
+          "height": 64.1
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 243.3,
+          "y": 88.4,
+          "width": 66.5,
+          "height": 59.5
+        }
+      ]
+    },
+    {
+      "id": "eval-def-018",
+      "imagePath": "ai_models/evaluation/images/eval_def_018.jpg",
+      "sha256": "167a4e5afafab198d1f7a50c53f6eb94a5a9aaa778974405674d5777bea761cb",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 30.3,
+          "y": 326.8,
+          "width": 61.9,
+          "height": 64.4
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 226.2,
+          "y": 85.3,
+          "width": 66.3,
+          "height": 62.8
+        }
+      ]
+    },
+    {
+      "id": "eval-def-019",
+      "imagePath": "ai_models/evaluation/images/eval_def_019.jpg",
+      "sha256": "fdd7e4fd17b8980f07a1d729126004f51c527000719b747240c6548559e345e7",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 43.7,
+          "y": 350.4,
+          "width": 63.6,
+          "height": 63.7
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 209.6,
+          "y": 84.9,
+          "width": 65.1,
+          "height": 65.0
+        }
+      ]
+    },
+    {
+      "id": "eval-def-020",
+      "imagePath": "ai_models/evaluation/images/eval_def_020.jpg",
+      "sha256": "4f9a5b3c97f23716106619f8a3c4d18506f2f7561d51c0e5ff845345d0a78d35",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 60.3,
+          "y": 372.6,
+          "width": 64.4,
+          "height": 62.0
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 193.7,
+          "y": 87.0,
+          "width": 62.8,
+          "height": 66.3
+        }
+      ]
+    },
+    {
+      "id": "eval-def-021",
+      "imagePath": "ai_models/evaluation/images/eval_def_021.jpg",
+      "sha256": "6aa8f3908b785d92df2c7cceb52e22e09a1f5148a9f07d6e1723ebfc37f52ac6",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 79.9,
+          "y": 393.0,
+          "width": 64.1,
+          "height": 59.3
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 178.7,
+          "y": 91.8,
+          "width": 59.6,
+          "height": 66.5
+        }
+      ]
+    },
+    {
+      "id": "eval-def-022",
+      "imagePath": "ai_models/evaluation/images/eval_def_022.jpg",
+      "sha256": "8541d865e5a1c9114a4d9c834c4c4220ec46e8707c4ce4c258f9e464838c5def",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 102.2,
+          "y": 411.3,
+          "width": 62.9,
+          "height": 55.8
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 164.9,
+          "y": 99.0,
+          "width": 55.5,
+          "height": 65.8
+        }
+      ]
+    },
+    {
+      "id": "eval-def-023",
+      "imagePath": "ai_models/evaluation/images/eval_def_023.jpg",
+      "sha256": "44bc45741b964044e45e7697dfd1c9b830b0e82abcc3e8420af4648d3973847d",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 126.9,
+          "y": 427.3,
+          "width": 60.7,
+          "height": 51.3
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 152.6,
+          "y": 108.7,
+          "width": 50.6,
+          "height": 64.0
+        }
+      ]
+    },
+    {
+      "id": "eval-def-024",
+      "imagePath": "ai_models/evaluation/images/eval_def_024.jpg",
+      "sha256": "a5b8093e9c4d4f21c3f57d74d173aa8e4fff111ea19a340ab4970f1f50ff9c7a",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 153.5,
+          "y": 440.6,
+          "width": 57.6,
+          "height": 46.1
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 141.8,
+          "y": 120.6,
+          "width": 44.8,
+          "height": 61.2
+        }
+      ]
+    },
+    {
+      "id": "eval-def-025",
+      "imagePath": "ai_models/evaluation/images/eval_def_025.jpg",
+      "sha256": "5a9794cbbdcd68e8806abf831bdcfa36b0733a54b5f1239bfa34ba01ec8e38d4",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 181.8,
+          "y": 451.0,
+          "width": 53.6,
+          "height": 40.2
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 132.7,
+          "y": 134.6,
+          "width": 38.4,
+          "height": 57.5
+        }
+      ]
+    },
+    {
+      "id": "eval-def-026",
+      "imagePath": "ai_models/evaluation/images/eval_def_026.jpg",
+      "sha256": "4282ee83cd2d4f1d6de53a412d328ed2f1ba4ed7771c4ab3244e3d7156ddf517",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 208.1,
+          "y": 454.3,
+          "width": 54.9,
+          "height": 42.0
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 121.1,
+          "y": 147.6,
+          "width": 40.4,
+          "height": 58.7
+        }
+      ]
+    },
+    {
+      "id": "eval-def-027",
+      "imagePath": "ai_models/evaluation/images/eval_def_027.jpg",
+      "sha256": "3ad6bb120344bc811e1e433ea463463fb73c27ed2e0ad11eb8d80a643ab5599e",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 233.5,
+          "y": 452.3,
+          "width": 58.6,
+          "height": 47.8
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 109.1,
+          "y": 160.7,
+          "width": 46.6,
+          "height": 62.1
+        }
+      ]
+    },
+    {
+      "id": "eval-def-028",
+      "imagePath": "ai_models/evaluation/images/eval_def_028.jpg",
+      "sha256": "0ed6a7105329e5bbe5591e523479e5ebe8a34a5a4280dd0a87ebb69f26e548f0",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 259.2,
+          "y": 447.3,
+          "width": 61.5,
+          "height": 52.7
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 99.3,
+          "y": 175.2,
+          "width": 52.1,
+          "height": 64.6
+        }
+      ]
+    },
+    {
+      "id": "eval-def-029",
+      "imagePath": "ai_models/evaluation/images/eval_def_029.jpg",
+      "sha256": "8de3b69f42b3033f293d35bac090bf5df1f22927754a5084a0edb34ee1bb0be0",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 284.9,
+          "y": 439.4,
+          "width": 63.4,
+          "height": 56.9
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 92.0,
+          "y": 191.0,
+          "width": 56.8,
+          "height": 66.1
+        }
+      ]
+    },
+    {
+      "id": "eval-def-030",
+      "imagePath": "ai_models/evaluation/images/eval_def_030.jpg",
+      "sha256": "a4e4c6bb250e8a082152be4acc72061bb08d971d19c6dff8bd1c6869dc0d62e5",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 310.2,
+          "y": 428.6,
+          "width": 64.3,
+          "height": 60.2
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 87.1,
+          "y": 207.7,
+          "width": 60.7,
+          "height": 66.6
+        }
+      ]
+    },
+    {
+      "id": "eval-def-031",
+      "imagePath": "ai_models/evaluation/images/eval_def_031.jpg",
+      "sha256": "7671abcc417f055b7c7f771151b9d2e6abf20511b58d98827e1da2ede8721e3b",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 334.6,
+          "y": 415.2,
+          "width": 64.3,
+          "height": 62.6
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 84.9,
+          "y": 225.2,
+          "width": 63.6,
+          "height": 66.0
+        }
+      ]
+    },
+    {
+      "id": "eval-def-032",
+      "imagePath": "ai_models/evaluation/images/eval_def_032.jpg",
+      "sha256": "b8fea5e6bc8677fed222008ec3315d682764dcc14ff1c00a9ccfa1ceff651589",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 357.8,
+          "y": 399.3,
+          "width": 63.2,
+          "height": 64.0
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 85.3,
+          "y": 243.2,
+          "width": 65.5,
+          "height": 64.5
+        }
+      ]
+    },
+    {
+      "id": "eval-def-033",
+      "imagePath": "ai_models/evaluation/images/eval_def_033.jpg",
+      "sha256": "c4cc7c9ea71ebb01dcaff928d17b4721d14e2fd0df23bd24c9aa713f010f272b",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 379.4,
+          "y": 381.3,
+          "width": 61.2,
+          "height": 64.4
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 88.3,
+          "y": 261.4,
+          "width": 66.5,
+          "height": 61.9
+        }
+      ]
+    },
+    {
+      "id": "eval-def-034",
+      "imagePath": "ai_models/evaluation/images/eval_def_034.jpg",
+      "sha256": "33626bb25722ac56947b31007b9aae748ca97dde9a0004754842b9d1814e5813",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 399.2,
+          "y": 361.3,
+          "width": 58.3,
+          "height": 63.8
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 93.8,
+          "y": 279.5,
+          "width": 66.4,
+          "height": 58.4
+        }
+      ]
+    },
+    {
+      "id": "eval-def-035",
+      "imagePath": "ai_models/evaluation/images/eval_def_035.jpg",
+      "sha256": "31543b9cb5272c4a4b660f76ebeb347080b8e8db8b2d970e9dc08604f513be7b",
+      "productId": "submersible-impeller-casting",
+      "source": "public-dataset",
+      "captureConditions": "standard",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 416.8,
+          "y": 339.7,
+          "width": 54.4,
+          "height": 62.3
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 101.9,
+          "y": 297.2,
+          "width": 65.3,
+          "height": 54.0
+        }
+      ]
+    },
+    {
+      "id": "eval-def-036",
+      "imagePath": "ai_models/evaluation/images/eval_def_036.jpg",
+      "sha256": "fd5ac4aeaa513e21af59033ebff49c840947efeece694d5d62b9252fbfdff03f",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 431.9,
+          "y": 316.9,
+          "width": 49.7,
+          "height": 59.8
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 112.3,
+          "y": 314.3,
+          "width": 63.2,
+          "height": 48.8
+        }
+      ]
+    },
+    {
+      "id": "eval-def-037",
+      "imagePath": "ai_models/evaluation/images/eval_def_037.jpg",
+      "sha256": "d6ba57c439479fab691ffff239ece45448dc58df9245c441b8bb869209e7fd4e",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 444.3,
+          "y": 293.1,
+          "width": 44.3,
+          "height": 56.4
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 124.9,
+          "y": 330.5,
+          "width": 60.1,
+          "height": 42.8
+        }
+      ]
+    },
+    {
+      "id": "eval-def-038",
+      "imagePath": "ai_models/evaluation/images/eval_def_038.jpg",
+      "sha256": "a25a1fe25216e812cc273d7461612b4b177b7770702203eb800cdf4be4e12465",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 453.8,
+          "y": 268.7,
+          "width": 38.2,
+          "height": 52.1
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 139.6,
+          "y": 345.6,
+          "width": 56.1,
+          "height": 36.2
+        }
+      ]
+    },
+    {
+      "id": "eval-def-039",
+      "imagePath": "ai_models/evaluation/images/eval_def_039.jpg",
+      "sha256": "83ac4fb63589cac446286b78cee171e78c55215bd8f932ef4494f382e922db6f",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 454.0,
+          "y": 239.6,
+          "width": 44.0,
+          "height": 56.2
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 151.7,
+          "y": 352.6,
+          "width": 59.9,
+          "height": 42.5
+        }
+      ]
+    },
+    {
+      "id": "eval-def-040",
+      "imagePath": "ai_models/evaluation/images/eval_def_040.jpg",
+      "sha256": "6013838c559f4b20b9c2ae7057e296c4c7f197f3aaa4e56588340b95ef893f60",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": true,
+      "groundTruthBoxes": [
+        {
+          "id": "gt-1",
+          "label": "defect",
+          "x": 451.0,
+          "y": 210.5,
+          "width": 49.5,
+          "height": 59.6
+        },
+        {
+          "id": "gt-2",
+          "label": "defect",
+          "x": 165.2,
+          "y": 357.8,
+          "width": 63.0,
+          "height": 48.5
+        }
+      ]
+    },
+    {
+      "id": "eval-def-041",
+      "imagePath": "ai_models/evaluation/images/eval_def_041.jpg",
+      "sha256": "a7a692b524553a93dd92163a90d9e509b29630ae88d4be54bf84cfec50df09d7",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-042",
+      "imagePath": "ai_models/evaluation/images/eval_def_042.jpg",
+      "sha256": "6810269807860905d0c2049c937305550ead1f38b215401dbc0292a808bf7368",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-043",
+      "imagePath": "ai_models/evaluation/images/eval_def_043.jpg",
+      "sha256": "5d6e7ca15767bbee5cad23c852ce15ea6ac43dcfcffbfa82006db7f0e7a117ab",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-044",
+      "imagePath": "ai_models/evaluation/images/eval_def_044.jpg",
+      "sha256": "b290aa622e90ea9f4ec1acb78aaa2893527096c5a7702cecfb9b3e5e69d88206",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-045",
+      "imagePath": "ai_models/evaluation/images/eval_def_045.jpg",
+      "sha256": "b91ea77f264eb77bacbfc04d837cf9abc94c024b64de01a8baa9cabfd1dd11ea",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-046",
+      "imagePath": "ai_models/evaluation/images/eval_def_046.jpg",
+      "sha256": "c61ca8ba357f8a11798d24f713e397d8a49bf90c1275ca808f3f8209b4000210",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-047",
+      "imagePath": "ai_models/evaluation/images/eval_def_047.jpg",
+      "sha256": "43164ad440904a2a5d6f6c7085ea4c3c798c687603679219f64701c390b95501",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-048",
+      "imagePath": "ai_models/evaluation/images/eval_def_048.jpg",
+      "sha256": "9b6f6a38afdabb399f1ae9f61b098c41a307980d5914f1eed7361097d890526e",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-049",
+      "imagePath": "ai_models/evaluation/images/eval_def_049.jpg",
+      "sha256": "059fc83f1d556d92fdd38140f18aa9ff57ffc79d04984c4b50c7d009fe442a13",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-def-050",
+      "imagePath": "ai_models/evaluation/images/eval_def_050.jpg",
+      "sha256": "88fd6c0d4b3f81d1c68e2e572c1a54ad73662655ce7c7d00e4036d8bd244f78c",
+      "productId": "submersible-impeller-casting",
+      "source": "pi-webcam-domain",
+      "captureConditions": "production_light",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "defect",
+      "expectedMinConfidence": 0.8,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-001",
+      "imagePath": "ai_models/evaluation/images/eval_chal_001.jpg",
+      "sha256": "1b9abb0c19f1d5b82dea51d7cb228094394163d41a9e5213339684d2aea8c01b",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "glare",
+      "description": "Specular highlight / metallic glare",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-002",
+      "imagePath": "ai_models/evaluation/images/eval_chal_002.jpg",
+      "sha256": "ae9ec70c9e7cc9a1db772cea20d53439530810119c6ba9a916e3b3edb88636e8",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "glare",
+      "description": "Overexposed industrial spotlight",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-003",
+      "imagePath": "ai_models/evaluation/images/eval_chal_003.jpg",
+      "sha256": "c3d6c0938f3a8044a03126d387dceeb32daef3e960ef263c16b46b444929f24d",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "glare",
+      "description": "Reflective die lubricant coating",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-004",
+      "imagePath": "ai_models/evaluation/images/eval_chal_004.jpg",
+      "sha256": "cb83d6ad5dd447d2870d073a9d3c97b57567e754bb8bea67e3257c3076a1eed2",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "glare",
+      "description": "High-angle surface flare",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "ok",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-005",
+      "imagePath": "ai_models/evaluation/images/eval_chal_005.jpg",
+      "sha256": "8522815b0de97445ba08ac34eeeec70829f0819f9530a410c88b80913206743b",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "blur",
+      "description": "Motion blur on conveyor transit",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-006",
+      "imagePath": "ai_models/evaluation/images/eval_chal_006.jpg",
+      "sha256": "c47e6e6fd006ffaa90d2b674de2598aefb4fea13ebebd243596909f2691cf7ce",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "blur",
+      "description": "Optical defocus blur",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-007",
+      "imagePath": "ai_models/evaluation/images/eval_chal_007.jpg",
+      "sha256": "8522815b0de97445ba08ac34eeeec70829f0819f9530a410c88b80913206743b",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "blur",
+      "description": "Fast conveyor vibration blur",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-008",
+      "imagePath": "ai_models/evaluation/images/eval_chal_008.jpg",
+      "sha256": "c47e6e6fd006ffaa90d2b674de2598aefb4fea13ebebd243596909f2691cf7ce",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "blur",
+      "description": "Lens contamination / oil haze",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-009",
+      "imagePath": "ai_models/evaluation/images/eval_chal_009.jpg",
+      "sha256": "0d3b3eb90921e426e67f7058f65349c9a68daa948cc1ea545c0d63ad6c23a4bf",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "partial_roi",
+      "description": "Workpiece offset 15% left of center ROI",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-010",
+      "imagePath": "ai_models/evaluation/images/eval_chal_010.jpg",
+      "sha256": "209aacbab7f04aac61de134ae999d8943e385189934d1faa68e534e9d01939e0",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "partial_roi",
+      "description": "Workpiece offset 15% right of center ROI",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-011",
+      "imagePath": "ai_models/evaluation/images/eval_chal_011.jpg",
+      "sha256": "0d3b3eb90921e426e67f7058f65349c9a68daa948cc1ea545c0d63ad6c23a4bf",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "partial_roi",
+      "description": "Workpiece partially clipped at top ROI",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-012",
+      "imagePath": "ai_models/evaluation/images/eval_chal_012.jpg",
+      "sha256": "209aacbab7f04aac61de134ae999d8943e385189934d1faa68e534e9d01939e0",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "partial_roi",
+      "description": "Workpiece off-center bottom alignment",
+      "split": "held_out",
+      "isSupported": true,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-013",
+      "imagePath": "ai_models/evaluation/images/eval_chal_013.jpg",
+      "sha256": "5939d34b124c1d886c6170d482b203ec7a77733e0d9cb24d26617dc458dff3a8",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "empty_station",
+      "description": "Empty conveyor rubber belt texture",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-014",
+      "imagePath": "ai_models/evaluation/images/eval_chal_014.jpg",
+      "sha256": "5939d34b124c1d886c6170d482b203ec7a77733e0d9cb24d26617dc458dff3a8",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "empty_station",
+      "description": "Empty station with metal conveyor rail",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-015",
+      "imagePath": "ai_models/evaluation/images/eval_chal_015.jpg",
+      "sha256": "5939d34b124c1d886c6170d482b203ec7a77733e0d9cb24d26617dc458dff3a8",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "empty_station",
+      "description": "Empty station with reflection artifact",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-016",
+      "imagePath": "ai_models/evaluation/images/eval_chal_016.jpg",
+      "sha256": "5939d34b124c1d886c6170d482b203ec7a77733e0d9cb24d26617dc458dff3a8",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "empty_station",
+      "description": "Clean empty workpiece fixture",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-017",
+      "imagePath": "ai_models/evaluation/images/eval_chal_017.jpg",
+      "sha256": "14e59f6b5f719b6a9f36223924ab768a50e76697c06376060046510f9d2c91ea",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "unsupported_item",
+      "description": "Plastic bottle workpiece artifact",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-018",
+      "imagePath": "ai_models/evaluation/images/eval_chal_018.jpg",
+      "sha256": "14e59f6b5f719b6a9f36223924ab768a50e76697c06376060046510f9d2c91ea",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "unsupported_item",
+      "description": "Hexagon nut mechanical hardware",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-019",
+      "imagePath": "ai_models/evaluation/images/eval_chal_019.jpg",
+      "sha256": "14e59f6b5f719b6a9f36223924ab768a50e76697c06376060046510f9d2c91ea",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "unsupported_item",
+      "description": "Electronic circuit board component",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
+    },
+    {
+      "id": "eval-chal-020",
+      "imagePath": "ai_models/evaluation/images/eval_chal_020.jpg",
+      "sha256": "14e59f6b5f719b6a9f36223924ab768a50e76697c06376060046510f9d2c91ea",
+      "productId": "challenge-workpiece",
+      "source": "challenge-fixture",
+      "captureConditions": "unsupported_item",
+      "description": "Cardboard packaging box corner",
+      "split": "held_out",
+      "isSupported": false,
+      "groundTruthOutcome": "unknown",
+      "expectedMinConfidence": 0.7,
+      "requiresLocalization": false,
+      "groundTruthBoxes": []
     }
   ]
 }

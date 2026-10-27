@@ -28,15 +28,16 @@ export type SapDispatchResult =
       retryable: boolean;
     };
 
-function getEndpointForAction(actionType: ActionType): string {
-  switch (actionType) {
-    case "CREATE_QUALITY_NOTIFICATION":
-      return "/api/mock/sap/qm";
-    case "HOLD_MATERIAL_LOT":
-      return "/api/mock/sap/mm";
-    case "HOLD_WORK_ORDER":
-      return "/api/mock/sap/pp";
-  }
+function getUrlForAction(actionType: ActionType): string {
+  const rawBase = (process.env.SAP_ODATA_BASE_URL || "http://localhost:3000/api/mock/sap").replace(/\/+$/, "");
+  const base = rawBase.endsWith("/api/mock/sap") ? rawBase : `${rawBase}/api/mock/sap`;
+  const sub =
+    actionType === "CREATE_QUALITY_NOTIFICATION"
+      ? "qm"
+      : actionType === "HOLD_MATERIAL_LOT"
+      ? "mm"
+      : "pp";
+  return `${base}/${sub}`;
 }
 
 async function executeSimulatorInProcess(payload: SapDispatchPayload): Promise<SapDispatchResult> {
@@ -104,16 +105,14 @@ async function executeSimulatorInProcess(payload: SapDispatchPayload): Promise<S
 }
 
 export async function dispatchToSap(payload: SapDispatchPayload): Promise<SapDispatchResult> {
-  const baseUrl = process.env.SAP_ODATA_BASE_URL || "http://localhost:3000";
-  const path = getEndpointForAction(payload.actionType);
-  const url = `${baseUrl.replace(/\/+$/, "")}${path}`;
+  const url = getUrlForAction(payload.actionType);
 
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-sigap-simulator": "true",
+        Authorization: `Bearer ${process.env.INTERNAL_API_KEY || "sigap-internal-dev-key-2026"}`,
       },
       body: JSON.stringify(payload),
     });
@@ -147,10 +146,7 @@ export async function dispatchToSap(payload: SapDispatchPayload): Promise<SapDis
       response: data,
     };
   } catch (error) {
-    // If standalone worker or test without HTTP server running, persist directly in DB SimulatorRecord
-    if (baseUrl.includes("localhost:3000")) {
-      return executeSimulatorInProcess(payload);
-    }
+
     return {
       ok: false,
       code: "NETWORK_ERROR",
@@ -164,13 +160,13 @@ export async function readBackFromSap(
   actionKey: string,
   actionType: ActionType
 ): Promise<{ ok: boolean; externalId?: string; resultingState?: string; error?: string }> {
-  const baseUrl = process.env.SAP_ODATA_BASE_URL || "http://localhost:3000";
-  const path = getEndpointForAction(actionType);
-  const url = `${baseUrl.replace(/\/+$/, "")}${path}?actionKey=${encodeURIComponent(actionKey)}`;
+  const url = `${getUrlForAction(actionType)}?actionKey=${encodeURIComponent(actionKey)}`;
 
   try {
     const res = await fetch(url, {
-      headers: { "x-sigap-simulator": "true" },
+      headers: {
+        Authorization: `Bearer ${process.env.INTERNAL_API_KEY || "sigap-internal-dev-key-2026"}`,
+      },
     });
 
     if (res.status === 404) {
@@ -188,18 +184,7 @@ export async function readBackFromSap(
       resultingState: data.resultingState,
     };
   } catch (err) {
-    // Direct DB read-back fallback for standalone worker
-    if (baseUrl.includes("localhost:3000")) {
-      const record = await prisma.simulatorRecord.findUnique({ where: { actionKey } });
-      if (record) {
-        return {
-          ok: true,
-          externalId: record.externalId,
-          resultingState: record.resultingState,
-        };
-      }
-      return { ok: false, error: "Record not found in simulator" };
-    }
+
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Read-back network error",

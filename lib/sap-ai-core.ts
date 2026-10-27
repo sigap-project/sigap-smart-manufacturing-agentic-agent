@@ -130,15 +130,18 @@ export class SapAiCoreAdapter implements AIProviderAdapter {
         } else {
           chatMessages.push({ role: "assistant", content: msg.summary || msg.content || "" });
         }
-      } else if (msg.toolResult) {
-        chatMessages.push({
-          role: "tool",
-          tool_call_id: msg.toolResult.toolCallId,
-          content:
-            typeof msg.toolResult.result === "string"
-              ? msg.toolResult.result
-              : JSON.stringify(msg.toolResult.result),
-        });
+      } else if (msg.toolResults || msg.toolResult) {
+        const resultsList = msg.toolResults || (msg.toolResult ? [msg.toolResult] : []);
+        for (const tr of resultsList) {
+          chatMessages.push({
+            role: "tool",
+            tool_call_id: tr.toolCallId,
+            content:
+              typeof tr.result === "string"
+                ? tr.result
+                : JSON.stringify(tr.result),
+          });
+        }
       }
     }
 

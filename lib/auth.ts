@@ -118,6 +118,24 @@ export function verifySessionCookie(request: NextRequest): SessionPayload | null
     return null;
   }
 }
+export function verifyMutationAuth(
+  request: NextRequest,
+  actor: Actor
+): { authorized: boolean; error?: string } {
+  const cookie = request.cookies.get("sigap_session")?.value;
+  if (cookie && actor.type === "user" && actor.id !== "system-internal") {
+    const session = verifySessionCookie(request);
+    if (!session) {
+      return { authorized: false, error: "Invalid or expired session cookie" };
+    }
+    const clientCsrf = request.headers.get("x-csrf-token");
+    if (!clientCsrf || !safeEqual(clientCsrf, session.csrfToken)) {
+      return { authorized: false, error: "Missing or invalid CSRF token (x-csrf-token header required)" };
+    }
+  }
+  return { authorized: true };
+}
+
 
 export async function validateDeviceToken(
   request: NextRequest,

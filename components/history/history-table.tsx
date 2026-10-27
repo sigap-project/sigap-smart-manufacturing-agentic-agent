@@ -44,8 +44,8 @@ export function HistoryTable({
   };
 
   const sortedRecords = [...inspections].sort((a, b) => {
-    let aVal = a[sortField];
-    let bVal = b[sortField];
+    const aVal = a[sortField] ?? 0;
+    const bVal = b[sortField] ?? 0;
 
     if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
     if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -248,18 +248,18 @@ export function HistoryTable({
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-slate-900 tabular-nums">
-                          {item.confidence.toFixed(1)}%
+                          {item.confidence !== null ? `${item.confidence.toFixed(1)}%` : "N/A"}
                         </span>
                         <div className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                           <div
                             className={`h-full ${
-                              item.confidence >= 90
+                              (item.confidence ?? 0) >= 90
                                 ? "bg-emerald-500"
-                                : item.confidence >= 75
+                                : (item.confidence ?? 0) >= 75
                                 ? "bg-amber-500"
                                 : "bg-rose-500"
                             }`}
-                            style={{ width: `${item.confidence}%` }}
+                            style={{ width: `${item.confidence ?? 0}%` }}
                           />
                         </div>
                       </div>

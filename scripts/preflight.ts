@@ -69,57 +69,57 @@ async function verifyAiProvider(): Promise<{
   const modelId = adapter.modelId;
 
   try {
-    const testTool = {
-      name: "echo_status",
-      description: "Echoes a status string to verify tool invocation",
-      inputSchema: {
-        type: "object" as const,
-        properties: {
-          status: { type: "string", description: "Status to echo" },
-        },
-        required: ["status"],
-      },
+    const toolContext = {
+      name: "get_context",
+      description: "Retrieves inspection and station context",
+      inputSchema: { type: "object" as const, properties: {} },
+    };
+    const toolPolicy = {
+      name: "get_policy",
+      description: "Retrieves quality escalation policy",
+      inputSchema: { type: "object" as const, properties: {} },
     };
 
-    // Turn 1: Ask model to use the tool
+    // Turn 1: Ask model to call both tools
     const turn1 = await adapter.nextTurn(
-      [{ role: "user", content: "Please call echo_status with status 'healthy'." }],
-      [testTool],
-      "You are a preflight diagnostic worker. You must call echo_status when requested."
+      [{ role: "user", content: "Call both get_context and get_policy tools to evaluate station status." }],
+      [toolContext, toolPolicy],
+      "You are a preflight diagnostic worker. You must call both get_context and get_policy tools."
     );
 
-    const call = turn1.toolCalls.find((c) => c.name === "echo_status");
-    if (!call) {
+    if (turn1.toolCalls.length === 0) {
       return {
         provider: providerName,
         model: modelId,
         status: "FAIL",
-        details: `Model responded without calling test tool: ${turn1.summary?.slice(0, 80) || "No content"}`,
+        details: `Model responded without calling diagnostic tools: ${turn1.summary?.slice(0, 80) || "No content"}`,
       };
     }
 
-    // Turn 2: Feed back tool result
+    const toolResults = turn1.toolCalls.map((tc, idx) => ({
+      toolCallId: tc.id,
+      result: idx === 0 ? { stationId: "station-01", status: "operational" } : { threshold: 3, windowMinutes: 8 },
+    }));
+
+    // Turn 2: Feed back plural tool observations and verify subsequent decision synthesis
     const turn2 = await adapter.nextTurn(
       [
-        { role: "user", content: "Please call echo_status with status 'healthy'." },
-        { role: "assistant", toolCalls: [call] },
+        { role: "user", content: "Call both get_context and get_policy tools to evaluate station status." },
+        { role: "assistant", toolCalls: turn1.toolCalls },
         {
           role: "user",
-          toolResult: {
-            toolCallId: call.id,
-            result: { ack: true, received: call.input.status },
-          },
+          toolResults,
         },
       ],
-      [testTool],
-      "Acknowledge the tool result with a brief confirmation."
+      [toolContext, toolPolicy],
+      "Synthesize both tool observations into a concise confirmation statement citing both stationId and threshold."
     );
 
     return {
       provider: providerName,
       model: modelId,
       status: "PASS",
-      details: `Tool round trip verified (callId: ${call.id.slice(0, 12)}...); prompt tokens: ${turn2.usage?.inputTokens}, completion tokens: ${turn2.usage?.outputTokens}`,
+      details: `Two-tool observation round trip verified (${turn1.toolCalls.length} tool calls synthesized into decision); prompt tokens: ${turn2.usage?.inputTokens}, completion tokens: ${turn2.usage?.outputTokens}`,
     };
   } catch (err) {
     const errorName = err instanceof Error ? err.name : "ProviderError";

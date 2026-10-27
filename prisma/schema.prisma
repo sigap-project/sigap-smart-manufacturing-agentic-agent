@@ -58,7 +58,7 @@ model Inspection {
   imageUrl            String?
   defectDetected      Boolean      @default(false)
   defectClass         String       @default("OK") // "OK", "defect", "def_front", "ok_front"
-  confidence          Float        @default(99.0) // e.g. 94.2
+  confidence          Float?
   severity            String?      // "Low", "Medium", "High", "Critical"
   agentReasoningTrace Json?        // JSON Array of reasoning deduction steps (legacy snapshot)
   status              String       @default("Lolos QC") // "Lolos QC", "Ditahan", "Pending Review", "Ditolak"
@@ -73,14 +73,16 @@ model Inspection {
   captureSource       String       @default("pi-webcam") // "pi-webcam" | "pi-file-replay"
   inferenceLocation   String       @default("pi")
   modelVersion        String?
-  inferenceMs         Int?
-  classificationMs    Int?
-  localizationMs      Int?
+  inferenceMs         Float?
+  classificationMs    Float?
+  localizationMs      Float?
   localizationStatus  String?      // "completed" | "skipped" | "failed"
-  localAlertMs        Int?
+  localAlertMs        Float?
   outcome             String?      // "ok" | "defect" | "unknown"
   probabilities       Json?        // { ok: number, defect: number }
   imageKey            String?      // Private S3 or local key
+  evidenceStore       String?      // "local" | "s3"
+  payloadHash         String?
   imageSha256         String?
   imageWidth          Int?
   imageHeight         Int?
@@ -143,6 +145,7 @@ model WorkflowRun {
   attempts        Int         @default(0)
   nextAttemptAt   DateTime?
   leaseUntil      DateTime?
+  leaseOwner      String?
   lastError       String?     @db.Text
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @default(now()) @updatedAt
@@ -183,6 +186,7 @@ model DispatchRecord {
   attempts              Int       @default(0)
   nextAttemptAt         DateTime?
   leaseUntil            DateTime?
+  leaseOwner            String?
   errorCode             String?
   verifiedAt            DateTime?
   createdAt             DateTime  @default(now())

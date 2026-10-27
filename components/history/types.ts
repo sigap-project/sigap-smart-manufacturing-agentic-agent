@@ -25,19 +25,58 @@ export interface ReasoningStep {
 
 export interface InspectionRecord {
   id: string;
+  inspectionId?: string;
+  eventId?: string | null;
   defectClass: DefectClass;
-  confidence: number;
+  confidence: number | null;
   batchId: string;
+  lotId?: string;
+  itemId?: string | null;
+  deviceId?: string | null;
+  bindingVersion?: number;
+  caseEpoch?: number;
   partName: string;
   timestamp: string;
   rawDate: string; // ISO date for filtering & sorting
+  capturedAt?: string;
+  receivedAt?: string;
   status: InspectionStatus;
+  outcome?: "ok" | "defect" | "unknown";
+  probabilities?: { ok: number; defect: number } | null;
+  inferenceMs?: number | null;
+  classificationMs?: number | null;
+  localizationMs?: number | null;
+  localizationStatus?: "completed" | "skipped" | "failed" | null;
+  localAlertMs?: number | null;
+  imageWidth?: number;
+  imageHeight?: number;
+  imageSha256?: string | null;
+  coordinateSpace?: string;
+  boundingBoxes?: Array<{
+    id?: string;
+    label: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    confidence: number;
+  }>;
+  defectDetected?: boolean;
+  severity?: string;
+  reviewOutcome?: "confirmed_ok" | "confirmed_defect" | "unresolved" | null;
+  reviewReason?: string | null;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  payloadHash?: string | null;
+  evidenceStore?: "local" | "s3" | null;
   reasoningSteps: ReasoningStep[];
-  dispatchId?: string;
+  dispatchId?: string | null;
   lotCount: number;
   supplier: string;
   line: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
+  agentLogs?: unknown[];
+  agentReasoningTrace?: unknown[];
 }
 
 export const INITIAL_INSPECTIONS: InspectionRecord[] = [

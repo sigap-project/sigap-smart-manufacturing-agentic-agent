@@ -47,7 +47,9 @@ export interface IngestResult {
   runId: string;
   duplicate: boolean;
   batchVersion: number;
+  caseEpoch: number;
   imageSha256: string;
+  payloadHash?: string;
 }
 
 export type UserRole = "viewer" | "operator" | "supervisor";
@@ -95,7 +97,15 @@ export interface InspectionView {
     confidence: number;
   }[];
   imageUrl: string;
+  imageWidth: number;
+  imageHeight: number;
+  imageSha256: string;
+  payloadHash?: string | null;
+  evidenceStore?: "local" | "s3" | null;
   reviewOutcome?: "confirmed_ok" | "confirmed_defect" | "unresolved" | null;
+  reviewReason?: string | null;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
   status?: string;
   errorCode?: string;
 }
@@ -169,6 +179,7 @@ export interface AIProviderAdapter {
 export interface DeviceHeartbeat {
   deviceId: string;
   queueDepth: number;
+  blockedQueueDepth?: number;
   cameraHealthy: boolean;
   modelHealthy: boolean;
   modelVersion: string;
@@ -176,6 +187,8 @@ export interface DeviceHeartbeat {
   paused: boolean;
   lastEventId?: string;
   localAlert: boolean;
+  hardwareMode?: "physical" | "simulated" | "fault";
+  lastErrorCode?: string | null;
   timestamp: string;
 }
 
@@ -183,6 +196,7 @@ export interface DeviceStatusResponse {
   batchId: string;
   bindingVersion: number;
   stateVersion: number;
+  batchVersion: number;
   caseEpoch: number;
   batchStatus: string;
   latestInspectionId?: string;

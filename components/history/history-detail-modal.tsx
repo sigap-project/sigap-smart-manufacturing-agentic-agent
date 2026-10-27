@@ -105,7 +105,7 @@ export function HistoryDetailModal({
                     <CheckCircle2 className="w-9 h-9 text-emerald-400" />
                   </div>
                   <span className="font-mono text-xs font-semibold text-emerald-300 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30">
-                    PASSED OK [{record.confidence.toFixed(1)}%]
+                    PASSED OK [{record.confidence !== null ? record.confidence.toFixed(1) : "N/A"}%]
                   </span>
                 </div>
               ) : (
@@ -114,7 +114,7 @@ export function HistoryDetailModal({
                     <AlertTriangle className="w-9 h-9 text-amber-400" />
                   </div>
                   <span className="font-mono text-xs font-semibold text-amber-300 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
-                    {record.defectClass.toUpperCase()} [{record.confidence.toFixed(1)}%]
+                    {record.defectClass.toUpperCase()} [{record.confidence !== null ? record.confidence.toFixed(1) : "N/A"}%]
                   </span>
                 </div>
               )}

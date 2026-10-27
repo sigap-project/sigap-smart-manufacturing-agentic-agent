@@ -106,6 +106,7 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
   });
 
   const stateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const processedEventsRef = useRef(new Set<string>());
 
   const triggerSystemState = useCallback(
     (state: SystemStateType, durationMs: number = 7000) => {
@@ -162,7 +163,7 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
           batchesHeldCount: s.batchesHeldCount || 0,
           activeLot: s.activeLotId || "N/A",
           activePart: "Submersible Pump Impeller Casting",
-          escalationScore: defects >= 3 ? 0.88 : (defects > 0 ? 0.45 : 0.05),
+          escalationScore: typeof s.escalationScore === "number" ? s.escalationScore : 0.0,
         });
       }
     } catch (err) {
@@ -180,20 +181,31 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
   // Apply inspection snapshot from server or verified edge
   const applyInspectionSnapshot = useCallback(
     (payload: IngestInspectionPayload | InspectionRecord) => {
-      const id = payload.id || `INS-${Date.now().toString().slice(-6)}`;
-      const isDefect =
-        "defectDetected" in payload
-          ? payload.defectDetected
-          : payload.status === "Held" || payload.defectClass !== "OK";
+      const eventKey = ("eventId" in payload && payload.eventId) || payload.id || `INS-${Date.now()}`;
+      if (processedEventsRef.current.has(eventKey)) {
+        refreshServerState();
+        return;
+      }
+      processedEventsRef.current.add(eventKey);
 
-      triggerSystemState(isDefect ? "defect" : "ok", 7000);
+      const outcome = ("outcome" in payload && payload.outcome)
+        ? payload.outcome
+        : ("defectDetected" in payload && payload.defectDetected)
+        ? "defect"
+        : (payload.defectClass && payload.defectClass.toLowerCase() === "defect" ? "defect" : "ok");
 
-      // Reconcile with server to get authoritative aggregates
+      if (outcome === "defect") {
+        triggerSystemState("defect", 7000);
+      } else if (outcome === "ok") {
+        triggerSystemState("ok", 5000);
+      } else {
+        triggerSystemState("idle", 5000);
+      }
+
       refreshServerState();
 
-      // Trigger notification if defect
-      if (isDefect) {
-        const notifId = `notif-${id}`;
+      if (outcome === "defect") {
+        const notifId = `notif-${eventKey}`;
         setNotifications((prev) => {
           if (prev.some((n) => n.id === notifId)) return prev;
           const newNotif: NotificationItem = {

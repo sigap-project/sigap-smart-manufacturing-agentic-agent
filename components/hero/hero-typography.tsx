@@ -126,15 +126,15 @@ export function HeroTypography({ onOpenDemo }: HeroTypographyProps) {
         <div>
           <div className="flex items-center gap-2">
             <span className="font-display text-sm font-semibold text-white tracking-normal">
-              99.72% Akurasi Validasi
+              ONNX CPU Vision Runtime
             </span>
             <span className="text-zinc-600">•</span>
             <span className="font-mono text-xs text-emerald-400 font-medium">
-              80.4% Precision • 5.3ms YOLOv8
+              Raspberry Pi 4 • Governed Reasoning
             </span>
           </div>
           <p className="font-sans text-xs text-zinc-400 mt-0.5">
-            0% Defect Escape Rate • Teruji pada dataset biner (Defect vs OK) pengecoran logam SME
+            Offline Edge Inference • Human-in-the-Loop ERP Action Proposals
           </p>
         </div>
       </motion.div>
