@@ -1,0 +1,45 @@
+{
+  "model_name": "sigap-casting-yolov8-detect",
+  "task": "object_detection",
+  "evaluation_split": "test",
+  "dataset_yaml": "/kaggle/working/sigap_casting_data.yaml",
+  "summary_metrics": {
+    "mAP50": 0.1911,
+    "mAP50_pct": 19.11,
+    "mAP75": 0.0121,
+    "mAP50_95": 0.0579,
+    "mAP50_95_pct": 5.79,
+    "mean_precision": 0.8056,
+    "mean_precision_pct": 80.56,
+    "mean_recall": 0.2035,
+    "mean_recall_pct": 20.35,
+    "f1_score": 0.3249,
+    "f1_score_pct": 32.49
+  },
+  "per_class_metrics": {
+    "defect": {
+      "precision": 0.8056,
+      "recall": 0.2035,
+      "f1_score": 0.3249,
+      "map50_95": 0.0579
+    }
+  },
+  "detection_counts": {
+    "true_positive_boxes": 64,
+    "false_positive_boxes": 221,
+    "false_negative_boxes": 8
+  },
+  "nms_configuration": {
+    "iou_threshold": 0.35,
+    "containment_iom_threshold": 0.6,
+    "agnostic_nms": true,
+    "confidence_threshold": 0.4
+  },
+  "speed_benchmark_ms": {
+    "preprocess_latency_ms": 4.37,
+    "inference_latency_ms": 5.47,
+    "postprocess_latency_ms": 3.68,
+    "total_latency_ms": 13.52,
+    "fps_throughput": 74.0
+  }
+}

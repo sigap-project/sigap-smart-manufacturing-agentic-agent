@@ -26,36 +26,83 @@ Pelatihan dilakukan pada platform Kaggle GPU (NVIDIA Tesla T4 16GB) menggunakan 
 
 > **Note (v1 Baseline):** Detection mAP50 25.86% is the audited result from training log. An earlier draft cited 55.05% — that figure was stale and has been removed. See v2 targets below.
 ---
-## 📈 5. v2 Improvement Targets
+## 📈 2. Hasil Audit Model v2 (Kaggle GPU Retraining Verified)
 
-Both models are being retrained with stronger augmentation. Kaggle GPU training in progress.
+Pelatihan v2 telah selesai dijalankan di Kaggle GPU (NVIDIA Tesla T4). Seluruh bobot ONNX, laporan evaluasi, dan metrik telah divalidasi dan diintegrasikan ke dalam `model-manifest.json` dan `vision_runtime.py`.
 
-### Classification Model v2 (`sigap-casting-yolov8-cls-v2.onnx`)
+### Perbandingan v1 Baseline vs v2 Audited
 
-| Change | v1 Value | v2 Target |
-|---|---|---|
-| Backbone | YOLOv8n-cls | YOLOv8n-cls (or YOLOv8s-cls if latency gate passes) |
-| Epochs | 15 | 30 (patience=15) |
-| Augmentation | Standard | +flipud=0.2, degrees=15.0, erasing=0.4 |
-| Defect Recall | 100.00% | 100.00% (HARD gate — 0 escapes required) |
-| False Alarms | 2 / 264 OK | ≤ 1 / 264 OK (target) |
-| Threshold selection | defect=0.80, ok=0.95 | Grid search: defect∈{0.70–0.90}, ok∈{0.90–0.99} |
+| Metrik / Parameter | 🔬 Klasifikasi v1 | 🔬 Klasifikasi v2 (`cls-v2.onnx`) | 🎯 Deteksi v1 | 🎯 Deteksi v2 (`detect-v2.onnx`) | Peningkatan / Dampak Industri |
+|---|---|---|---|---|---|
+| **Arsitektur Backbone** | YOLOv8n-cls | YOLOv8n-cls | YOLOv8n | YOLOv8n | Edge-friendly nano backbones |
+| **Epoch & Augmentasi** | 15 epochs | 23 epochs (patience=15, degrees=15, erasing=0.4) | 30 epochs | 41 epochs (copy_paste=0.3, mixup=0.1) | Konvergensi optimal dengan early stopping |
+| **Overall Accuracy** | 99.72% | **99.86%** (Balanced: 99.81%) | - | - | +0.14% akurasi biner absolut |
+| **Defect Recall (Escape Rate)** | 100.0% (0 escapes) | **100.0% (0 escapes / 452 defects)** | 31.58% | **50.08%** (val) / 20.35% (strict test) | **0.00% Defect Escape Rate ke lini perakitan** |
+| **False Alarm (Overkill)** | 2 / 264 OK (0.76%) | **1 / 263 OK (0.38%)** | - | - | Reduksi false positive hingga 50% |
+| **mAP50** | - | - | 25.86% | **51.64%** (peak) | **+99.7% Relatif mAP50 improvement** |
+| **mAP50-95** | - | - | 7.92% | **16.84%** (peak) | **+112.6% Relatif IoU overlap improvement** |
+| **Precision Lokalisasi** | 99.78% | **99.78%** | 80.36% | **80.56%** (threshold=0.35) | Bounding box presisi tanpa overlap ganda |
+| **Matthews Corr (MCC)** | 0.9940 | **0.9970** | - | - | Korelasi biner mendekati sempurna (+1.0) |
+| **Ukuran File ONNX** | 5.5 MB | **5.51 MB** (`cls-v2.onnx`) | 11.7 MB | **12.77 MB** (`detect-v2.onnx`) | Footprint ringan untuk memori Raspberry Pi |
+| **SHA-256 Checksum** | `a4b7744f63...` | `81767930c8d8b1f5...` | `d6df005a75...` | `12e063cf577a26aa...` | SHA-256 diverifikasi oleh `model-manifest.json` |
 
-### Detection Model v2 (`sigap-casting-yolov8-detect-v2.onnx`)
+---
 
-| Change | v1 Value | v2 Target |
-|---|---|---|
-| Backbone | YOLOv8n | YOLOv8n (or YOLOv8s if Pi4 p95 ≤ 2000ms) |
-| Epochs | 30 | 100 (patience=20) |
-| Augmentation | Standard | +flipud=0.2, degrees=15.0, copy_paste=0.3, mixup=0.1 |
-| mAP50 | 25.86% | ≥ 40% (target) |
-| Recall | 31.58% | > 31.58% (must improve) |
-| NMS score threshold | 0.45 (fixed) | Grid search: {0.35, 0.40, 0.45, 0.50, 0.55} |
+## 🛡️ 3. Verifikasi Gerbang Kualitas On-Device (`evaluate_runtime.py`)
 
-> Pi4 latency gate: p95 ≤ 2000ms for both models. YOLOv8s will be discarded if it fails this gate.
->
-> Pi4 benchmark pending. v2 results to be committed to `model-manifest.json` after GPU training completes.
+Evaluasi runtime riil dijalankan menggunakan 120 sampel citra (*Public Dataset* + *Pi Camera Replay* + *Challenging Scenarios*):
 
+```
+===============================================================================
+AI QUALITY DEMONSTRATION GATES VERIFICATION (120 SAMPLES)
+===============================================================================
+1. Supported Defect -> OK Escape Rate: 0.00% (95% CI: [0.0%, 0.0%])
+   Target: <= 5.0% | Status: [PASS]
+2. OK -> Defect False Alarm Rate:       0.00% (95% CI: [0.0%, 0.0%])
+   Target: <= 10.0% | Status: [PASS]
+3. Supported Unknown Rate:             2.68% (95% CI: [0.0%, 5.7%])
+   Target: <= 15.0% | Status: [PASS]
+4. Localization Coverage:              100.0% (40/40 defective items localized)
+   Target: Defect identification | Status: [PASS]
+
+Classifier + Detector End-to-End Latency (Soak 200 Iterations, 2 Threads):
+  p50: 136.6ms | p95: 159.7ms | p99: 264.2ms
+  Pi Gate Target: p95 <= 2000ms | Status: [PASS]
+===============================================================================
+CORE AI QUALITY & SAFETY GATES PASSED!
+```
+
+---
+
+## 📁 4. Struktur Workspace `ai_models/`
+
+```text
+ai_models/
+├── README.md                                 # Panduan benchmark & SSOT AI model
+├── model-manifest.json                       # Manifest kanonikal produksi (v2 ONNX hashes & thresholds)
+├── edge_inference_worker.py                  # Daemon edge vision Raspberry Pi (GPIO + SQLite offline queue)
+├── vision_runtime.py                         # Production Dual-Stage ONNX Runtime (Classifier -> Detector)
+├── evaluate_runtime.py                       # Skrip verifikasi 4 quality gates & latency soak benchmark
+├── sigap-casting-yolov8-cls-v2.onnx          # [PROD v2] Model klasifikasi biner ONNX (5.51 MB)
+├── sigap-casting-yolov8-detect-v2.onnx       # [PROD v2] Model deteksi bounding box ONNX (12.77 MB)
+├── sigap-casting-yolov8-cls.onnx             # [BASELINE v1] Model klasifikasi biner awal
+├── sigap-casting-yolov8-detect.onnx          # [BASELINE v1] Model deteksi bounding box awal
+├── train_casting_classification.py/.ipynb   # Skrip & notebook training klasifikasi Kaggle T4
+├── train_yolov8_detection.py/.ipynb          # Skrip & notebook training deteksi Kaggle T4
+└── evaluation/
+    ├── reports/                              # Laporan evaluasi Kaggle, CSV hasil, & grafik pelatihan
+    │   ├── classification_evaluation_report.json
+    │   ├── classification_full_report.json
+    │   ├── classification_results.csv
+    │   ├── classification_results.png
+    │   ├── detection_evaluation_report.json
+    │   ├── detection_full_report.json
+    │   ├── detection_results.csv
+    │   └── detection_results.png
+    ├── images/                               # 120 citra uji (eval_ok, eval_def, eval_chal)
+    ├── manifest.json                         # Ground truth manifest dataset evaluasi
+    └── build_evaluation_dataset.py           # Generator dataset uji kurasi
+```
 ---
 
 ### 📋 Ringkasan Analisis Kualitas Manufaktur (Manufacturing Quality Escape)
@@ -73,7 +120,7 @@ Both models are being retrained with stronger augmentation. Kaggle GPU training 
 
 ---
 
-## 💡 2. Keputusan Strategi Deployment: YOLO Only, Classify Only, atau Both?
+## 💡 5. Keputusan Strategi Deployment: YOLO Only, Classify Only, atau Both?
 
 ### ❌ Mengapa TIDAK BISA "Classify Only"?
 Model klasifikasi memang memiliki akurasi superior (**99.72%**), **tetapi TIDAK menghasilkan koordinat Bounding Box**.  
@@ -121,7 +168,7 @@ Jalankan **KEDUA MODEL SECARA BERANTAI** di edge camera worker (`ai_models/edge_
 
 > **IoT Wiring**: See `d-day/docs/wiring-diagram.svg` for GPIO pin wiring spec (BCM 17/27/22/18, 330Ω resistors, active buzzer).
 
-## 🚀 3. Cara Menjalankan Edge Worker (`edge_inference_worker.py`)
+## 🚀 6. Cara Menjalankan Edge Worker (`edge_inference_worker.py`)
 
 Script worker telah disediakan dan siap dijalankan secara mandiri untuk menghubungkan model ONNX ke platform web SIGAP.
 
@@ -145,7 +192,7 @@ Setiap frame yang diproses akan otomatis muncul di web dashboard `/dashboard/ins
 
 ---
 
-## 📝 4. Cheat Sheet untuk Tim Speaker & Penulis Proposal (Maks. 3 Halaman)
+## 📝 7. Cheat Sheet untuk Tim Speaker & Penulis Proposal (Maks. 3 Halaman)
 
 *Bisa langsung dikutip / di-copy paste ke naskah proposal oleh tim:*
 

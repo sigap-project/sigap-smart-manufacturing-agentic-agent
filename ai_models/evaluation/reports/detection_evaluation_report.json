@@ -1,0 +1,8 @@
+{
+  "model": "sigap-casting-yolov8-detect-v2",
+  "sha256": "12e063cf577a26aa99573842f165715c9cb825fb1c3fb66330fbc2bfe1479f57",
+  "byteSize": 12773173,
+  "selected_score_thresh": 0.35,
+  "iouThreshold": 0.35,
+  "iomThreshold": 0.6
+}
