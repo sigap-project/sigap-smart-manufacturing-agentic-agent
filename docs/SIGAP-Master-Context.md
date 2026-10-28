@@ -710,6 +710,7 @@ Key deliverables:
 - `ai_models/model-manifest.json` — SHA-256 + thresholds updated post-training
 - `ai_models/evaluate_runtime.py` — all 4 gates passing or honestly reported
 - `docs/wiring-diagram.svg` — physical GPIO wiring
+- `ai_models/AI_IMPROVEMENT_ROADMAP.md` — Technical findings on Pi 4 CPU quantization & mAP/latency improvement roadmap
 
 ### Role 2 — Web Engineer
 **Tanggung jawab**: Dashboard visual, SSE real-time, approval flow, SAP mock integration.

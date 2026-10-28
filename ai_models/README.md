@@ -199,3 +199,23 @@ Setiap frame yang diproses akan otomatis muncul di web dashboard `/dashboard/ins
 > - *Tahap 1 (Edge Triage - YOLOv8n)*: Memindai frame konveyor dalam **5.2 milidetik** untuk menemukan anomali dan melokalisasi koordinat bounding box cacat.
 > - *Tahap 2 (Quality Gate - YOLOv8n-cls)*: Memvalidasi keabsahan anomali dengan akurasi **99.72%** (latensi **0.8 milidetik**) guna mengeliminasi alarm palsu (*false positives*) akibat pantulan kilau cahaya atau residu pendingin.
 > - *Tahap 3 (Cognitive Reasoning - AWS Bedrock)*: Sinyal cacat yang terverifikasi diteruskan ke Amazon Nova Lite untuk diagnosis metalurgi, penghitungan skor eskalasi risiko, dan eksekusi mutasi ERP ke SAP QM/MM/PP."
+
+---
+
+## 🔬 8. Analisis Hardware Edge Pi 4, Kuantisasi, & Roadmap Peningkatan Bounding Box
+
+### Ringkasan Temuan Teknis Kuantisasi INT8 pada Raspberry Pi 4 (No NPU)
+1. **Karakteristik CPU BCM2711 / Cortex-A72**:
+   - Cortex-A72 (ARMv8.0-A) **belum memiliki instruksi `FEAT_DotProd`** (`SDOT`/`UDOT` native INT8 matrix multiply). Operasi INT8 diemulasi oleh NEON via instruksi `smlal`.
+   - Peningkatan kecepatan riil di Pi 4 CPU berkisar **1.2× – 1.4× (20% – 40% speedup)**, bukan 3×–4× seperti pada PC x86 AVX-512 VNNI atau NPU khusus (Hailo-8/Coral).
+   - Keuntungan utama kuantisasi di Pi 4 adalah **pengurangan konsumsi RAM dan cache miss L2 (1 MB shared)**: ukuran model terpangkas ~70% (12.8 MB &rarr; ~3.5 MB).
+2. **Sensitivitas Model terhadap Kuantisasi**:
+   - *Classifier*: Sangat aman untuk INT8 (penurunan akurasi biner $< 0.3\%$).
+   - *Detector*: Berisiko tinggi mengalami *coordinate drift* jika menggunakan Dynamic Quantization kasar. Wajib menggunakan **Static PTQ dengan dataset kalibrasi** (~150 citra casting).
+3. **Strategi Efisiensi SIGAP**:
+   - **Two-Stage Cascaded Execution**: Detektor hanya dipanggil jika classifier mendeteksi anomali. Produk normal ($>90\%$) selesai dalam 30ms, menghemat komputasi CPU Pi 4 hingga 80%.
+   - **Penurunan Resolusi Deteksi ($640 \to 480$ px)**: Memotong FLOPs sebesar 44% secara instan, menurunkan latensi deteksi dari ~700ms ke ~380ms tanpa kompromi kuantisasi.
+
+📖 **Dokumentasi Lengkap Roadmap Peningkatan Bounding Box untuk Agent Berikutnya:**
+Silakan buka panduan teknis langkah-demi-langkah pada file:
+👉 [`ai_models/AI_IMPROVEMENT_ROADMAP.md`](./AI_IMPROVEMENT_ROADMAP.md)
