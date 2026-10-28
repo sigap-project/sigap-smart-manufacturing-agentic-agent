@@ -286,8 +286,9 @@ def main():
         sys.exit(1)
 
     if not gate_box:
-        print("[OBSERVED] Detector box precision below 80% target (45.9% measured).")
-        print("           Aligned with training mAP50 25.86% audit baseline; no fabricated accuracy claims.")
+        print(f"[OBSERVED] Detector box precision {box_precision_pct:.1f}% (target 80%).")
+        print(f"           Model: {manifest.get('detector', {}).get('modelPath', 'unknown')} | "
+              f"Training mAP50: see ai_models/README.md for v2 benchmark.")
     else:
         print("[PASS] Box precision target met.")
 

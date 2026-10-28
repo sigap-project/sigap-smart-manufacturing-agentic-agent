@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" font-family="monospace, 'Courier New'" font-size="12">
+  <!--
+    SIGAP IoT Wiring Diagram
+    Raspberry Pi 4 GPIO wiring for SIGAP casting inspection system
+    Resistor rationale: At 3.3V GPIO with 2.0V LED forward voltage:
+      (3.3V - 2.0V) / 0.004A = 325Ω → 330Ω standard value gives ~4mA, within 16mA GPIO limit
+    No scripts. No external references. No animation.
+  -->
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- RASPBERRY PI 4 BOARD BODY                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="10" y="80" width="140" height="440" rx="6" ry="6"
+        fill="none" stroke="var(--accent, #6366f1)" stroke-width="2"/>
+
+  <!-- Pi board label -->
+  <text x="80" y="72" text-anchor="middle" fill="var(--fg, #1e293b)" font-weight="bold" font-size="11">Raspberry Pi 4 — 4 GB</text>
+
+  <!-- 5V USB-C Power label -->
+  <text x="80" y="537" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="10">⚡ 5V USB-C Power</text>
+  <!-- USB-C power line from below board -->
+  <line x1="80" y1="520" x2="80" y2="540" stroke="var(--fg, #1e293b)" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- 40-PIN GPIO HEADER                                             -->
+  <!-- Two-column layout: odd pins left col, even pins right col      -->
+  <!-- Row r (0-indexed): y = 100 + r*11; pins 2r+1 (odd) and 2r+2  -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Column headers -->
+  <text x="42" y="95" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" opacity="0.6">ODD</text>
+  <text x="110" y="95" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" opacity="0.6">EVEN</text>
+
+  <!-- Pin rows — default style (non-highlighted) -->
+  <!-- Row 0: pins 1, 2 -->
+  <rect x="28" y="101" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="101" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="108" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 1 3V3</text>
+  <text x="113" y="108" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 2 5V</text>
+
+  <!-- Row 1: pins 3, 4 -->
+  <rect x="28" y="112" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="112" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="119" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 3 SDA</text>
+  <text x="113" y="119" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 4 5V</text>
+
+  <!-- Row 2: pins 5, 6 — GND pin 6 highlighted -->
+  <rect x="28" y="123" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="123" width="14" height="8" rx="1" fill="var(--accent, #6366f1)" opacity="0.85"/>
+  <text x="25" y="130" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 5 SCL</text>
+  <text x="113" y="130" text-anchor="start" fill="var(--accent, #6366f1)" font-size="9" font-weight="bold"> 6 GND ★</text>
+
+  <!-- Row 3: pins 7, 8 -->
+  <rect x="28" y="134" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="134" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="141" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 7 GP4</text>
+  <text x="113" y="141" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 8 TX</text>
+
+  <!-- Row 4: pins 9, 10 -->
+  <rect x="28" y="145" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="145" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="152" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55"> 9 GND</text>
+  <text x="113" y="152" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">10 RX</text>
+
+  <!-- Row 5: pins 11, 12 — GPIO17 (pin 11) and GPIO18 (pin 12) highlighted -->
+  <rect x="28" y="156" width="14" height="8" rx="1" fill="var(--accent, #6366f1)" opacity="0.85"/>
+  <rect x="96" y="156" width="14" height="8" rx="1" fill="var(--accent, #6366f1)" opacity="0.85"/>
+  <text x="25" y="163" text-anchor="end" fill="#DC2626" font-size="9" font-weight="bold">11 GPIO17 ★</text>
+  <text x="113" y="163" text-anchor="start" fill="var(--accent, #6366f1)" font-size="9" font-weight="bold">12 GPIO18 ★</text>
+
+  <!-- Row 6: pins 13, 14 — GPIO27 (pin 13) highlighted -->
+  <rect x="28" y="167" width="14" height="8" rx="1" fill="var(--accent, #6366f1)" opacity="0.85"/>
+  <rect x="96" y="167" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="174" text-anchor="end" fill="#EAB308" font-size="9" font-weight="bold">13 GPIO27 ★</text>
+  <text x="113" y="174" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">14 GND</text>
+
+  <!-- Row 7: pins 15, 16 — GPIO22 (pin 15) highlighted -->
+  <rect x="28" y="178" width="14" height="8" rx="1" fill="var(--accent, #6366f1)" opacity="0.85"/>
+  <rect x="96" y="178" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="185" text-anchor="end" fill="#16A34A" font-size="9" font-weight="bold">15 GPIO22 ★</text>
+  <text x="113" y="185" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">16 GP23</text>
+
+  <!-- Row 8: pins 17, 18 -->
+  <rect x="28" y="189" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="189" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="196" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">17 3V3</text>
+  <text x="113" y="196" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">18 GP24</text>
+
+  <!-- Row 9: pins 19, 20 -->
+  <rect x="28" y="200" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="200" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="207" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">19 MOSI</text>
+  <text x="113" y="207" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">20 GND</text>
+
+  <!-- Row 10: pins 21, 22 -->
+  <rect x="28" y="211" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="211" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="218" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">21 MISO</text>
+  <text x="113" y="218" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">22 GP25</text>
+
+  <!-- Row 11: pins 23, 24 -->
+  <rect x="28" y="222" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="222" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="229" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">23 SCLK</text>
+  <text x="113" y="229" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">24 CE0</text>
+
+  <!-- Row 12: pins 25, 26 -->
+  <rect x="28" y="233" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="233" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="240" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">25 GND</text>
+  <text x="113" y="240" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">26 CE1</text>
+
+  <!-- Row 13: pins 27, 28 -->
+  <rect x="28" y="244" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="244" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="251" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">27 ID_SD</text>
+  <text x="113" y="251" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">28 ID_SC</text>
+
+  <!-- Row 14: pins 29, 30 -->
+  <rect x="28" y="255" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="255" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="262" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">29 GP5</text>
+  <text x="113" y="262" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">30 GND</text>
+
+  <!-- Row 15: pins 31, 32 -->
+  <rect x="28" y="266" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="266" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="273" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">31 GP6</text>
+  <text x="113" y="273" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">32 GP12</text>
+
+  <!-- Row 16: pins 33, 34 -->
+  <rect x="28" y="277" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="277" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="284" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">33 GP13</text>
+  <text x="113" y="284" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">34 GND</text>
+
+  <!-- Row 17: pins 35, 36 -->
+  <rect x="28" y="288" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="288" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="295" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">35 GP19</text>
+  <text x="113" y="295" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">36 GP16</text>
+
+  <!-- Row 18: pins 37, 38 -->
+  <rect x="28" y="299" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="299" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="306" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">37 GP26</text>
+  <text x="113" y="306" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">38 GP20</text>
+
+  <!-- Row 19: pins 39, 40 -->
+  <rect x="28" y="310" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <rect x="96" y="310" width="14" height="8" rx="1" fill="var(--fg, #1e293b)" opacity="0.35"/>
+  <text x="25" y="317" text-anchor="end" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">39 GND</text>
+  <text x="113" y="317" text-anchor="start" fill="var(--fg, #1e293b)" font-size="9" opacity="0.55">40 GP21</text>
+
+  <!-- GPIO header bracket label -->
+  <text x="80" y="335" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" opacity="0.5">40-pin GPIO Header</text>
+  <text x="80" y="346" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" opacity="0.5">max 16mA / pin (3.3V)</text>
+
+  <!-- USB-A port on Pi (right side of board) -->
+  <rect x="148" y="370" width="14" height="22" rx="2" fill="var(--fg, #1e293b)" opacity="0.4"/>
+  <text x="163" y="378" text-anchor="start" fill="var(--fg, #1e293b)" font-size="8" opacity="0.6">USB-A</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- USB WEBCAM (TOP CENTER)                                        -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="290" y="12" width="130" height="46" rx="5" fill="none" stroke="var(--fg, #1e293b)" stroke-width="1.5"/>
+  <!-- Lens circle -->
+  <circle cx="355" cy="35" r="14" fill="none" stroke="var(--fg, #1e293b)" stroke-width="1.5"/>
+  <circle cx="355" cy="35" r="8"  fill="var(--fg, #1e293b)" opacity="0.2"/>
+  <circle cx="355" cy="35" r="4"  fill="var(--fg, #1e293b)" opacity="0.5"/>
+  <text x="355" y="67" text-anchor="middle" fill="var(--fg, #1e293b)" font-weight="bold" font-size="11">USB Webcam</text>
+  <text x="355" y="79" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="10">/dev/video0 — 640×480</text>
+
+  <!-- USB cable: webcam down to Pi USB-A port -->
+  <!-- Cable from webcam bottom center down then left to Pi USB port -->
+  <path d="M355,58 L355,380 L162,381"
+        fill="none" stroke="var(--fg, #1e293b)" stroke-width="2" stroke-dasharray="6,3" opacity="0.6"/>
+  <text x="260" y="373" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" opacity="0.6">USB cable</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- GND COMMON BUS (vertical rail on right side of components)     -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- GND bus vertical bar -->
+  <line x1="850" y1="150" x2="850" y2="510" stroke="var(--muted, #94a3b8)" stroke-width="3"/>
+  <text x="855" y="330" fill="var(--muted, #94a3b8)" font-size="11" font-weight="bold">GND</text>
+  <!-- GND connection from Pi pin 6 (y≈127) to common bus -->
+  <path d="M110,127 L860,127 L860,150" fill="none" stroke="var(--muted, #94a3b8)" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- RED LED + 330Ω  — GPIO17 (pin 11) y=160                       -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Wire from Pin11 (odd col, x=28, y=160) going right -->
+  <path d="M28,160 L20,160 L20,185 L350,185" fill="none" stroke="#DC2626" stroke-width="2"/>
+
+  <!-- Resistor body: 350..390, y=185 -->
+  <rect x="350" y="179" width="40" height="12" rx="3" fill="none" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="370" y="178" text-anchor="middle" fill="#DC2626" font-size="9">330Ω</text>
+
+  <!-- Wire from resistor to LED anode -->
+  <line x1="390" y1="185" x2="430" y2="185" stroke="#DC2626" stroke-width="2"/>
+
+  <!-- LED body circle (anode left, cathode right) -->
+  <circle cx="450" cy="185" r="16" fill="#DC2626" opacity="0.9"/>
+  <!-- LED flat (cathode) marker -->
+  <line x1="461" y1="173" x2="461" y2="197" stroke="white" stroke-width="2"/>
+  <text x="450" y="188" text-anchor="middle" fill="white" font-size="8" font-weight="bold">LED</text>
+
+  <!-- Wire from LED cathode to GND bus -->
+  <line x1="466" y1="185" x2="850" y2="185" stroke="var(--muted, #94a3b8)" stroke-width="1.5"/>
+
+  <!-- Label -->
+  <text x="560" y="175" text-anchor="middle" fill="#DC2626" font-size="10" font-weight="bold">Red LED + 330Ω → BCM 17 (Pin 11)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- YELLOW LED + 330Ω — GPIO27 (pin 13) y=171                     -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Wire from Pin13 (odd col, x=28, y=171) going right -->
+  <path d="M28,171 L15,171 L15,285 L350,285" fill="none" stroke="#EAB308" stroke-width="2"/>
+
+  <!-- Resistor body: 350..390, y=285 -->
+  <rect x="350" y="279" width="40" height="12" rx="3" fill="none" stroke="#EAB308" stroke-width="1.5"/>
+  <text x="370" y="278" text-anchor="middle" fill="#EAB308" font-size="9">330Ω</text>
+
+  <!-- Wire from resistor to LED anode -->
+  <line x1="390" y1="285" x2="430" y2="285" stroke="#EAB308" stroke-width="2"/>
+
+  <!-- LED body circle -->
+  <circle cx="450" cy="285" r="16" fill="#EAB308" opacity="0.9"/>
+  <line x1="461" y1="273" x2="461" y2="297" stroke="white" stroke-width="2"/>
+  <text x="450" y="288" text-anchor="middle" fill="white" font-size="8" font-weight="bold">LED</text>
+
+  <!-- Wire from LED cathode to GND bus -->
+  <line x1="466" y1="285" x2="850" y2="285" stroke="var(--muted, #94a3b8)" stroke-width="1.5"/>
+
+  <!-- Label -->
+  <text x="560" y="275" text-anchor="middle" fill="#EAB308" font-size="10" font-weight="bold">Yellow LED + 330Ω → BCM 27 (Pin 13)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- GREEN LED + 330Ω  — GPIO22 (pin 15) y=182                     -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Wire from Pin15 (odd col, x=28, y=182) going right -->
+  <path d="M28,182 L10,182 L10,385 L350,385" fill="none" stroke="#16A34A" stroke-width="2"/>
+
+  <!-- Resistor body: 350..390, y=385 -->
+  <rect x="350" y="379" width="40" height="12" rx="3" fill="none" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="370" y="378" text-anchor="middle" fill="#16A34A" font-size="9">330Ω</text>
+
+  <!-- Wire from resistor to LED anode -->
+  <line x1="390" y1="385" x2="430" y2="385" stroke="#16A34A" stroke-width="2"/>
+
+  <!-- LED body circle -->
+  <circle cx="450" cy="385" r="16" fill="#16A34A" opacity="0.9"/>
+  <line x1="461" y1="373" x2="461" y2="397" stroke="white" stroke-width="2"/>
+  <text x="450" y="388" text-anchor="middle" fill="white" font-size="8" font-weight="bold">LED</text>
+
+  <!-- Wire from LED cathode to GND bus -->
+  <line x1="466" y1="385" x2="850" y2="385" stroke="var(--muted, #94a3b8)" stroke-width="1.5"/>
+
+  <!-- Label -->
+  <text x="560" y="375" text-anchor="middle" fill="#16A34A" font-size="10" font-weight="bold">Green LED + 330Ω → BCM 22 (Pin 15)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ACTIVE BUZZER — GPIO18 (pin 12, even col) y=160               -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Wire from Pin12 (even col, x=96+14=110, y=160) going right -->
+  <path d="M110,160 L225,160 L225,470 L350,470" fill="none" stroke="var(--accent, #6366f1)" stroke-width="2"/>
+
+  <!-- Buzzer body rectangle -->
+  <rect x="350" y="455" width="60" height="36" rx="4" fill="none" stroke="var(--fg, #1e293b)" stroke-width="2"/>
+  <!-- Buzzer top dome indicator -->
+  <ellipse cx="380" cy="455" rx="20" ry="6" fill="var(--fg, #1e293b)" opacity="0.15"/>
+  <!-- Plus terminal label -->
+  <text x="354" y="469" fill="var(--fg, #1e293b)" font-size="10" font-weight="bold">+</text>
+  <!-- Minus terminal label -->
+  <text x="394" y="469" fill="var(--fg, #1e293b)" font-size="10" font-weight="bold">−</text>
+  <text x="380" y="483" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="8">BUZZER</text>
+
+  <!-- Wire from buzzer minus to GND bus -->
+  <line x1="410" y1="473" x2="850" y2="473" stroke="var(--muted, #94a3b8)" stroke-width="1.5"/>
+
+  <!-- Buzzer label -->
+  <text x="540" y="450" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="10" font-weight="bold">Active Buzzer — BCM 18 (Pin 12)</text>
+  <text x="540" y="463" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9">3.3V logic; passive type: PWM 2kHz</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- LEGEND / NOTES                                                 -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Legend box -->
+  <rect x="170" y="105" width="150" height="65" rx="4" fill="none" stroke="var(--fg, #1e293b)" stroke-width="1" opacity="0.3"/>
+  <text x="245" y="118" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" font-weight="bold" opacity="0.7">LEGEND</text>
+  <line x1="178" y1="128" x2="200" y2="128" stroke="#DC2626" stroke-width="2"/>
+  <text x="205" y="131" fill="#DC2626" font-size="9">GPIO17 → Red LED</text>
+  <line x1="178" y1="140" x2="200" y2="140" stroke="#EAB308" stroke-width="2"/>
+  <text x="205" y="143" fill="#EAB308" font-size="9">GPIO27 → Yellow LED</text>
+  <line x1="178" y1="152" x2="200" y2="152" stroke="#16A34A" stroke-width="2"/>
+  <text x="205" y="155" fill="#16A34A" font-size="9">GPIO22 → Green LED</text>
+  <line x1="178" y1="164" x2="200" y2="164" stroke="var(--accent, #6366f1)" stroke-width="2"/>
+  <text x="205" y="167" fill="var(--accent, #6366f1)" font-size="9">GPIO18 → Buzzer</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- RESISTOR RATIONALE (bottom note)                              -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <text x="450" y="558" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" opacity="0.6">
+    330Ω: (3.3V − 2.0V) / 0.004A ≈ 325Ω → 330Ω standard; ~4mA, within 16mA GPIO limit
+  </text>
+  <text x="450" y="572" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="9" opacity="0.5">
+    SIGAP IoT Wiring Diagram | Hackathon SOKRATES × BINUS 2026
+  </text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- TITLE                                                          -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <text x="450" y="543" text-anchor="middle" fill="var(--fg, #1e293b)" font-size="13" font-weight="bold" opacity="0.8">
+    SIGAP GPIO Wiring — Raspberry Pi 4 Inspection System
+  </text>
+
+</svg>

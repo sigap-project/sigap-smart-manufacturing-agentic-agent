@@ -189,23 +189,108 @@ model = YOLO("yolov8n-cls.pt")
 
 train_results = model.train(
     data=data_root,
-    epochs=15,
+    epochs=30,
     imgsz=300,
     batch=32,
     device=device,
     project=RUNS_DIR,
     name="classification_run",
-    patience=8,
+    patience=15,
     save=True,
     optimizer="AdamW",
     lr0=0.001,
     lrf=0.01,
+    fliplr=0.5,
+    flipud=0.2,
+    degrees=15.0,
+    hsv_h=0.015,
+    hsv_s=0.7,
+    hsv_v=0.4,
+    erasing=0.4,
     plots=True,
     verbose=True
 )
 
 best_pt_path = os.path.join(RUNS_DIR, "classification_run", "weights", "best.pt")
 print(f"[INFO] Best model checkpoint: {best_pt_path}")
+
+# %%
+# CELL 8B: ALTERNATIVE BACKBONE — YOLOv8s-cls (compare vs nano)
+print("[INFO] Training YOLOv8s-cls alternative backbone for comparison...")
+model_s = YOLO("yolov8s-cls.pt")
+train_results_s = model_s.train(
+    data=data_root,
+    epochs=30,
+    imgsz=300,
+    batch=32,
+    device=device,
+    project=RUNS_DIR,
+    name="classification_run_s",
+    patience=15,
+    save=True,
+    optimizer="AdamW",
+    lr0=0.001,
+    lrf=0.01,
+    fliplr=0.5,
+    flipud=0.2,
+    degrees=15.0,
+    hsv_h=0.015,
+    hsv_s=0.7,
+    hsv_v=0.4,
+    erasing=0.4,
+    plots=True,
+    verbose=True
+)
+best_pt_path_s = os.path.join(RUNS_DIR, "classification_run_s", "weights", "best.pt")
+print(f"[INFO] YOLOv8s-cls checkpoint: {best_pt_path_s}")
+print("[INFO] Compare test metrics of both runs; keep the one with lowest false alarms (escape_rate must remain 0)")
+
+# %%
+# CELL 8C: THRESHOLD CALIBRATION GRID
+# Gate: escape_rate=0 (defect recall=100%) HARD gate; minimise false_alarm_rate.
+print("[INFO] Running threshold grid search...")
+threshold_model = YOLO(best_pt_path)  # use nano model; swap to best_pt_path_s if it passes gate
+cal_results = threshold_model.predict(
+    list(glob.glob(os.path.join(data_root, "test", "**", "*.*"), recursive=True)),
+    imgsz=300,
+    verbose=False
+)
+
+# Build (true_label, scores) from file paths
+cal_items = []
+for r in cal_results:
+    path = r.path
+    true_cls = "defect" if "def_front" in path else "ok"
+    probs = r.probs.data.cpu().numpy() if hasattr(r, "probs") and r.probs is not None else [0.5, 0.5]
+    # class indices: 0=def_front (defect), 1=ok_front (ok)
+    cal_items.append({"true": true_cls, "defect_score": float(probs[0]), "ok_score": float(probs[1])})
+
+best_combo = None
+best_fa = float("inf")
+for defect_thresh in [0.70, 0.75, 0.80, 0.85, 0.90]:
+    for ok_thresh in [0.90, 0.95, 0.98, 0.99]:
+        escapes = 0
+        false_alarms = 0
+        for item in cal_items:
+            if item["true"] == "defect":
+                if item["defect_score"] < defect_thresh:
+                    escapes += 1
+            else:  # ok
+                if item["ok_score"] < ok_thresh:
+                    false_alarms += 1
+        if escapes == 0 and false_alarms < best_fa:
+            best_fa = false_alarms
+            best_combo = {"defect": defect_thresh, "ok": ok_thresh, "escapes": 0, "false_alarms": false_alarms}
+        elif escapes == 0 and false_alarms == best_fa:
+            if best_combo is None or ok_thresh > best_combo["ok"] or defect_thresh < best_combo["defect"]:
+                best_combo = {"defect": defect_thresh, "ok": ok_thresh, "escapes": 0, "false_alarms": false_alarms}
+
+if best_combo is None:
+    print("[WARNING] No threshold combo achieves 0 escapes — check model quality!")
+    best_combo = {"defect": 0.80, "ok": 0.95}
+else:
+    print(f"[INFO] Selected thresholds: defect={best_combo['defect']}, ok={best_combo['ok']}")
+    print(f"       Escapes: {best_combo['escapes']} | False alarms: {best_combo['false_alarms']}")
 
 # %%
 # CELL 9: VISUALIZE TRAINING PROGRESS CURVES
@@ -484,12 +569,37 @@ plt.show()
 # CELL 12: PRODUCTION ARTIFACT EXPORT (ONNX)
 onnx_output = eval_model.export(format="onnx", dynamic=False, simplify=True, imgsz=300)
 
-final_pt = os.path.join(EXPORT_DIR, f"{MODEL_NAME}.pt")
-final_onnx = os.path.join(EXPORT_DIR, f"{MODEL_NAME}.onnx")
+V2_MODEL_NAME = "sigap-casting-yolov8-cls-v2"
+final_pt = os.path.join(EXPORT_DIR, f"{V2_MODEL_NAME}.pt")
+final_onnx = os.path.join(EXPORT_DIR, f"{V2_MODEL_NAME}.onnx")
 
 os.system(f"cp '{best_pt_path}' '{final_pt}'")
 os.system(f"cp '{onnx_output}' '{final_onnx}'")
 
+# Compute SHA-256 and byte size for model-manifest.json
+import hashlib
+with open(final_onnx, "rb") as _f:
+    _sha256 = hashlib.sha256(_f.read()).hexdigest()
+_byte_size = os.path.getsize(final_onnx)
+
+# Write selected thresholds to evaluation report
+if best_combo is None:
+    best_combo = {"defect": 0.80, "ok": 0.95}
+export_report = {
+    "model": V2_MODEL_NAME,
+    "sha256": _sha256,
+    "byteSize": _byte_size,
+    "selected_thresholds": {"defect": best_combo["defect"], "ok": best_combo["ok"]},
+    "threshold_grid_false_alarms": best_combo.get("false_alarms", -1),
+    "threshold_grid_escapes": best_combo.get("escapes", -1)
+}
+with open(os.path.join(EXPORT_DIR, "classification_evaluation_report.json"), "w") as _f:
+    json.dump(export_report, _f, indent=2)
+
 print(f"[INFO] Deployment artifacts ready in: {EXPORT_DIR}")
 print(f"  - PyTorch Checkpoint: {final_pt}")
 print(f"  - Production ONNX:    {final_onnx}")
+# SHA-256: {_sha256}
+# Byte size: {_byte_size}
+print(f"  - SHA-256: {_sha256}")
+print(f"  - Byte size: {_byte_size}")

@@ -1,14 +1,14 @@
 {
-  "manifestVersion": 1,
+  "manifestVersion": 2,
   "preprocessingVersion": "impeller-center-roi-v1",
   "productFamily": "submersible-impeller-casting",
   "classifier": {
-    "modelPath": "sigap-casting-yolov8-cls.onnx",
-    "sha256": "a4b7744f63ed2bfd18e399b055d6bece6efc16d4a0dcd777fe3bccce3121732b",
-    "byteSize": 5779358,
+    "modelPath": "sigap-casting-yolov8-cls-v2.onnx",
+    "sha256": "<measured SHA-256 from export step>",
+    "byteSize": 0,
     "inputName": "images",
-    "inputShape": [1, 3, 300, 300],
     "outputName": "output0",
+    "inputShape": [1, 3, 300, 300],
     "outputShape": [1, 2],
     "classes": ["def_front", "ok_front"],
     "classIndices": {
@@ -19,23 +19,57 @@
       "defect": 0.80,
       "ok": 0.95
     },
-    "doubleSoftmaxFixed": true
+    "doubleSoftmaxFixed": true,
+    "_note": "Thresholds are placeholders; replace with selected_thresholds from classification_evaluation_report.json after GPU training completes. SHA-256 and byteSize must match actual ONNX file before committing."
   },
   "detector": {
-    "modelPath": "sigap-casting-yolov8-detect.onnx",
-    "sha256": "d6df005a754267612183a61f3cd04f1913030f9ca9b5f736ab680a9d04d694d4",
-    "byteSize": 12265717,
+    "modelPath": "sigap-casting-yolov8-detect-v2.onnx",
+    "sha256": "<measured SHA-256 from export step>",
+    "byteSize": 0,
     "inputName": "images",
-    "inputShape": [1, 3, 640, 640],
     "outputName": "output0",
+    "inputShape": [1, 3, 640, 640],
     "outputShape": [1, 5, 8400],
     "classes": ["defect"],
     "scoreThreshold": 0.45,
     "iouThreshold": 0.35,
-    "iomThreshold": 0.60
+    "iomThreshold": 0.60,
+    "_note": "scoreThreshold is placeholder; replace with selected value from NMS grid calibration in detection_evaluation_report.json. SHA-256 and byteSize must match actual ONNX file."
   },
   "runtime": {
     "preferredProvider": "CPUExecutionProvider",
     "threads": 2
+  },
+  "previousBaseline": {
+    "_description": "v1 baseline preserved for regression comparison. Do not remove.",
+    "classifier": {
+      "modelPath": "sigap-casting-yolov8-cls.onnx",
+      "sha256": "a4b7744f63ed2bfd18e399b055d6bece6efc16d4a0dcd777fe3bccce3121732b",
+      "byteSize": 5779358,
+      "thresholds": {
+        "defect": 0.80,
+        "ok": 0.95
+      },
+      "benchmarks": {
+        "overallAccuracy": 0.9972,
+        "defectRecall": 1.0,
+        "falseAlarms": 2,
+        "falseAlarmsTotal": 264
+      }
+    },
+    "detector": {
+      "modelPath": "sigap-casting-yolov8-detect.onnx",
+      "sha256": "d6df005a754267612183a61f3cd04f1913030f9ca9b5f736ab680a9d04d694d4",
+      "byteSize": 12265717,
+      "scoreThreshold": 0.45,
+      "iouThreshold": 0.35,
+      "iomThreshold": 0.60,
+      "benchmarks": {
+        "mAP50": 0.2586,
+        "mAP50_95": 0.0792,
+        "recall": 0.3158,
+        "precision": 0.8036
+      }
+    }
   }
 }

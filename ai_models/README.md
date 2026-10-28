@@ -24,6 +24,38 @@ Pelatihan dilakukan pada platform Kaggle GPU (NVIDIA Tesla T4 16GB) menggunakan 
 | **Ukuran ONNX (Production)** | **11.7 MB** (`sigap-casting-yolov8-detect.onnx`) | **5.5 MB** (`sigap-casting-yolov8-cls.onnx`) | Siap dideploy pada Edge ONNX Runtime CPU/GPU |
 | **Output Biner** | `defect` (koordinat [x, y, w, h]) | `def_front` vs `ok_front` | 100% selaras dengan dataset biner aktual |
 
+> **Note (v1 Baseline):** Detection mAP50 25.86% is the audited result from training log. An earlier draft cited 55.05% — that figure was stale and has been removed. See v2 targets below.
+---
+## 📈 5. v2 Improvement Targets
+
+Both models are being retrained with stronger augmentation. Kaggle GPU training in progress.
+
+### Classification Model v2 (`sigap-casting-yolov8-cls-v2.onnx`)
+
+| Change | v1 Value | v2 Target |
+|---|---|---|
+| Backbone | YOLOv8n-cls | YOLOv8n-cls (or YOLOv8s-cls if latency gate passes) |
+| Epochs | 15 | 30 (patience=15) |
+| Augmentation | Standard | +flipud=0.2, degrees=15.0, erasing=0.4 |
+| Defect Recall | 100.00% | 100.00% (HARD gate — 0 escapes required) |
+| False Alarms | 2 / 264 OK | ≤ 1 / 264 OK (target) |
+| Threshold selection | defect=0.80, ok=0.95 | Grid search: defect∈{0.70–0.90}, ok∈{0.90–0.99} |
+
+### Detection Model v2 (`sigap-casting-yolov8-detect-v2.onnx`)
+
+| Change | v1 Value | v2 Target |
+|---|---|---|
+| Backbone | YOLOv8n | YOLOv8n (or YOLOv8s if Pi4 p95 ≤ 2000ms) |
+| Epochs | 30 | 100 (patience=20) |
+| Augmentation | Standard | +flipud=0.2, degrees=15.0, copy_paste=0.3, mixup=0.1 |
+| mAP50 | 25.86% | ≥ 40% (target) |
+| Recall | 31.58% | > 31.58% (must improve) |
+| NMS score threshold | 0.45 (fixed) | Grid search: {0.35, 0.40, 0.45, 0.50, 0.55} |
+
+> Pi4 latency gate: p95 ≤ 2000ms for both models. YOLOv8s will be discarded if it fails this gate.
+>
+> Pi4 benchmark pending. v2 results to be committed to `model-manifest.json` after GPU training completes.
+
 ---
 
 ### 📋 Ringkasan Analisis Kualitas Manufaktur (Manufacturing Quality Escape)
@@ -86,6 +118,8 @@ Jalankan **KEDUA MODEL SECARA BERANTAI** di edge camera worker (`ai_models/edge_
 3. **Penyelamat Demo (Fallback)**: Jika saat demo laptop terasa berat, kamu bisa mematikan Tahap 2 dan beralih ke **YOLO Only** tanpa mengubah kode web sama sekali.
 
 ---
+
+> **IoT Wiring**: See `d-day/docs/wiring-diagram.svg` for GPIO pin wiring spec (BCM 17/27/22/18, 330Ω resistors, active buzzer).
 
 ## 🚀 3. Cara Menjalankan Edge Worker (`edge_inference_worker.py`)
 
