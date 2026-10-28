@@ -3,9 +3,49 @@
 
 ---
 
+## 🌐 Live Deployed Environments
+
+| Component | Environment / Host | Endpoint / Identifier | Status |
+|---|---|---|---|
+| **Web & Dashboard UI** | AWS Amplify Hosting (`ap-southeast-2`) | [https://aws-sap.dsjuc7fhaopci.amplifyapp.com](https://aws-sap.dsjuc7fhaopci.amplifyapp.com) | ✅ Live (Branch `aws-sap`, Job 3 SUCCEED) |
+| **Background Worker** | SAP BTP Cloud Foundry (`ap10`) | App `sigap-workflow-remontada-rasa-mangga` (org `SEAIO_aws-sap-hackathon-si4ykj9d`, space `hackathon-remontada-rasa-mangga`) | ✅ Running (`1/1` instance, 1024M quota) |
+| **Database** | AWS RDS PostgreSQL (`ap-southeast-2`) | `sigap-postgres.c6i8syeuq32k.ap-southeast-2.rds.amazonaws.com` (`db.t4g.micro`, 20 GB) | ✅ Active (Prisma 6 ORM, conn limit: 3 on worker) |
+| **Evidence Store** | AWS S3 (`ap-southeast-2`) | Bucket `sigap-inspection-frames` | ✅ Active (SHA-256 content verification) |
+| **Governed AI** | AWS Bedrock (`us-east-1`) | `amazon.nova-lite-v1:0` (`SIGAP_BEDROCK_MAX_TOKENS=600`) | ✅ Active (Output truncated stop-reason protection) |
+| **SAP AI Core Hub** | SAP Generative AI Hub (`ap10`) | Deployment `d1a82575de60e02a` (`gpt-5.4`, resource group `default`) | ✅ Verified (Dual-adapter, keybroker JSON support) |
+| **SAP ERP Simulator** | Next.js API Routes | `https://aws-sap.dsjuc7fhaopci.amplifyapp.com/api/mock/sap` | ✅ Governed (`OPEN`, `QUALITY_HOLD`, `HELD`) |
+
+---
+
 ## 📌 Ringkasan Eksekutif & Arsitektur Sistem
 
 SIGAP menghubungkan dunia *Computer Vision* di lini konveyor produksi pabrik dengan sistem perencanaan sumber daya perusahaan (*Enterprise Resource Planning - ERP*) secara cerdas tanpa intervensi manual berulang, namun tetap menyediakan kendali persetujuan manusia (*Human-in-the-Loop*).
+
+```mermaid
+flowchart LR
+    subgraph Edge ["Raspberry Pi 4 / Edge Station"]
+        CAM[Camera Feed] --> YOLO[YOLOv8 Optical Scan]
+        YOLO --> INGEST[InspectionEvent v1]
+    end
+
+    subgraph AWS ["AWS Cloud Platform (Amplify & Bedrock)"]
+        INGEST -->|POST /api/internal/inspection-result| AMP[Amplify Next.js 15]
+        AMP --> RDS[(PostgreSQL RDS)]
+        AMP --> S3[(S3 Evidence)]
+        BEDROCK[AWS Bedrock Nova Lite]
+    end
+
+    subgraph BTP ["SAP BTP Cloud Foundry"]
+        WORKER[Durable Worker Instance]
+        WORKER <-->|Poll & Claim 4000ms| RDS
+        WORKER <-->|Governed Reasoning| BEDROCK
+        WORKER -->|Verified Dispatch| ERP_SIM[SAP Simulator /api/mock/sap]
+    end
+
+    subgraph HITL ["Human-in-the-Loop"]
+        UI[Supervisor Batch Board] -->|PATCH /api/dispatch/:id/approve| AMP
+    end
+```
 
 ```
   [Kamera Konveyor Optik]
@@ -69,19 +109,22 @@ SIGAP menghubungkan dunia *Computer Vision* di lini konveyor produksi pabrik den
 ## 🛠️ Tech Stack
 
 - **Framework**: [Next.js 15](https://nextjs.org/) (App Router, Turbopack, React Server Components)
-- **Frontend UI**: React 19, [Tailwind CSS v4](https://tailwindcss.com/), Framer Motion, Lucide Icons, Lenis Smooth Scroll
-- **Database & ORM**: PostgreSQL on [AWS RDS](https://aws.amazon.com/rds/) (Free Tier: `db.t4g.micro`) & [Prisma ORM v6](https://www.prisma.io/)
-- **Real-Time Streaming**: Server-Sent Events (SSE) dengan EventEmitter terdistribusi
-- **Integrasi Cloud & Enterprise**: YOLOv8 Vision Edge Inference, AWS Bedrock (**Amazon Nova Lite** / Claude 3.5 Haiku), AWS S3 Image Vault, SAP S/4HANA OData v4 Mock Gateway
-- **Hosting**: [AWS Amplify Hosting](https://aws.amazon.com/amplify/)
-
+- **Frontend UI**: React 19, [Tailwind CSS v4](https://tailwindcss.com/), Framer Motion, Lucide Icons, Spline 3D Digital Twin (`@splinetool/react-spline`)
+- **Database & ORM**: PostgreSQL on [AWS RDS](https://aws.amazon.com/rds/) (`sigap-postgres`, `db.t4g.micro`, single-AZ) & [Prisma ORM v6](https://www.prisma.io/)
+- **Background Worker**: Continuous daemon on [SAP BTP Cloud Foundry](https://help.sap.com/docs/btp/sap-business-technology-platform/cloud-foundry-environment) (`sigap-workflow-remontada-rasa-mangga`)
+- **Cross-Process Synchronization**: Dual polling architecture (5-second REST state reconciliation + 2-second trace polling)
+- **Integrasi Cloud AI**: AWS Bedrock (**Amazon Nova Lite** `amazon.nova-lite-v1:0` with 600-token cap) + SAP AI Core Generative AI Hub (`gpt-5.4`)
+- **Evidence Storage**: AWS S3 Image Vault (`sigap-inspection-frames`, `ap-southeast-2`)
+- **ERP Integration**: Governed Mock SAP OData Gateway (`/api/mock/sap` with `SAP_LIVE_NOT_IMPLEMENTED` rejection safeguard)
+- **Hosting**: [AWS Amplify Hosting](https://aws.amazon.com/amplify/) (`WEB_COMPUTE`, branch `aws-sap`)
 ---
 
 ## 📦 Panduan Instalasi & Menjalankan Lokal
 
 ### 1. Prasyarat
-- Node.js versi 18.18+ atau 20+
-- Database PostgreSQL (Bisa menggunakan AWS RDS PostgreSQL Free Tier, Neon serverless, atau PostgreSQL lokal)
+- Node.js versi 22.x LTS (mendukung `Promise.withResolvers` dan built-in `--env-file`)
+- PostgreSQL 15+ (AWS RDS PostgreSQL atau instance lokal)
+- Cloud Foundry CLI v8 (opsional, untuk deploy background worker ke SAP BTP)
 
 ### 2. Kloning & Install Dependencies
 ```bash
@@ -147,14 +190,15 @@ Silakan baca panduan lengkap, spesifikasi skema JSON, dan contoh skrip pengujian
 | Perintah | Deskripsi |
 |---|---|
 | `npm run dev` | Menjalankan Next.js development server dengan Turbopack |
-| `npm run build` | Mengompilasi aplikasi untuk production deployment |
-| `npm run start` | Menjalankan build produksi Next.js |
+| `npm run build` | Mengompilasi aplikasi untuk production deployment (termasuk transpiled Spline ESM) |
+| `npm run start` | Menjalankan build produksi Next.js secara lokal |
+| `npm run worker` | Menjalankan background durable orchestration worker (`scripts/workflow-worker.ts`) |
+| `npm run preflight` | Menjalankan verifikasi kontrak penuh sistem (RDS, S3, AI Provider) |
+| `npm run preflight -- --ai-only` | Verifikasi diagnostik AI provider saja (mendukung `bedrock` dan `sap-ai-core`) |
 | `npm run db:push` | Sinkronisasi skema `prisma/schema.prisma` ke PostgreSQL |
-| `npm run db:seed` | Menjalankan pengisian data awal (`prisma/seed.ts`) |
+| `npm run db:seed` | Menjalankan pengisian data awal manufaktur (`prisma/seed.ts`) |
 | `npm run db:studio` | Membuka Prisma Studio web GUI di browser (`localhost:5555`) |
-| `npx tsx scripts/qa-full-e2e.ts` | Menjalankan audit pengujian otomatis End-to-End |
-
----
+| `npm run qa:audit` | Menjalankan audit pengujian otomatis End-to-End |
 
 ## 🔒 Keamanan & Praktik Terbaik Repositori
 

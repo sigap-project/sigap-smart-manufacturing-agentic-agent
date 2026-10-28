@@ -735,4 +735,46 @@ Key deliverables:
 
 ---
 
-*Last updated: commit `b0de4c6` + SIGAP Model Improvement Plan execution. For AI model details see `ai_models/README.md`. For GPIO wiring see `docs/wiring-diagram.svg`.*
+## 15. Cloud Deployment & Credit Protection Status (Audited Oct 28, 2026)
+
+### 15.1 Live Deployed Environment Matrix
+
+| Component | Environment | Host & Identifier | Operational State |
+|---|---|---|---|
+| **Amplify Web Platform** | AWS Amplify (`ap-southeast-2`) | App `dsjuc7fhaopci`, Branch `aws-sap` | ✅ **Live**: [https://aws-sap.dsjuc7fhaopci.amplifyapp.com](https://aws-sap.dsjuc7fhaopci.amplifyapp.com) (Job 3 SUCCEED) |
+| **Background Worker** | SAP BTP Cloud Foundry (`ap10`) | App `sigap-workflow-remontada-rasa-mangga` in space `hackathon-remontada-rasa-mangga` | ✅ **Running**: `1/1` instance, 1024M quota (`npx prisma generate && npm run worker`) |
+| **Relational Database** | AWS RDS PostgreSQL (`ap-southeast-2`) | Instance `sigap-postgres` (`db.t4g.micro`, single-AZ, 20 GB) | ✅ **Active**: Verified connection (`batchCount: 8`, worker connection limit = 3) |
+| **Evidence Vault** | AWS S3 (`ap-southeast-2`) | Bucket `sigap-inspection-frames` | ✅ **Active**: SHA-256 byte integrity verified |
+| **Governed AI Reasoning** | AWS Bedrock (`us-east-1`) | `amazon.nova-lite-v1:0` | ✅ **Active**: Strict output token cap (600) & truncation handling |
+| **SAP AI Core Hub** | SAP Generative AI Hub (`ap10`) | Deployment `d1a82575de60e02a` (`gpt-5.4`, resource group `default`) | ✅ **Verified**: 100-token greeting probe & 2-tool preflight verified |
+| **SAP ERP Mock Gateway** | Next.js API Routes | `/api/mock/sap` (`qm`, `mm`, `pp`) | ✅ **Active**: Atomic state mutations (`OPEN`, `QUALITY_HOLD`, `HELD`) |
+
+### 15.2 Credit Protection & Usage Safeguards
+
+1. **Bedrock Nova Lite Token Bounding**:
+   - Environment variable: `SIGAP_BEDROCK_MAX_TOKENS=600` (integer 256–1200, strictly validated at startup).
+   - Provider `stopReason === "max_tokens"` throws `AI_OUTPUT_TRUNCATED`, driving workflow into `needs_review` with zero unauthorized ERP actions.
+2. **Token Consumption Accounting**:
+   - Each successful turn writes a structured `AgentLog` entry:
+     - `kind: "model_usage"`, `stage: "DECISION"`, `stepName: "DECISION"`, `step: "04"`.
+     - `output: { provider, modelId, turn, usage: { inputTokens, outputTokens, totalTokens } }`.
+3. **Deterministic Fast Paths (Zero LLM Tokens)**:
+   - Inspections with `outcome === "ok"` exit deterministically (`status: "completed"`, `actionsProposed: 0`, 0 model calls).
+   - Inspections with `outcome === "unknown"` exit deterministically (`status: "needs_review"`, `actionsProposed: 0`, 0 model calls).
+4. **Idle Worker Query Throttling**:
+   - Worker loop sleeps `4000ms` when idle (`scripts/workflow-worker.ts`), reducing RDS queries while preserving immediate execution when claims exist.
+   - Handlers for `SIGTERM` and `SIGINT` ensure clean disconnection.
+5. **Dual-Adapter AI Flexibility**:
+   - Default provider is `bedrock` for continuous production operation.
+   - Secondary provider `sap-ai-core` can be exercised via in-memory JSON key (`SIGAP_SAP_AI_CORE_SERVICE_KEY_JSON`) with `max_completion_tokens: 600`.
+6. **SAP Live Mode Barrier**:
+   - Any setting where `SAP_MODE !== "mock"` rejects execution with `SAP_LIVE_NOT_IMPLEMENTED` (`retryable: false`). No mock actions are silently executed under live flags.
+7. **Cross-Process State Synchronization**:
+   - Since the worker runs on SAP BTP Cloud Foundry and the UI runs on AWS Amplify, process-local Server-Sent Events do not cross process boundaries.
+   - Synchronized via REST polling: Global Context polls `/api/batches` and `/api/dashboard/stats` every 5 seconds; Inspection Agent Trace polls `/api/agent/logs` every 2 seconds.
+8. **Availability Target**:
+   - Budgeted to keep all SIGAP services continuously available through **November 3, 2026** within the reported $100.87 AWS credit balance.
+
+---
+
+*Last updated: commit `5dbef9f` + Cloud Deployment Audit (AWS Amplify branch `aws-sap` & SAP BTP Cloud Foundry worker verified).*
