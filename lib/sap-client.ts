@@ -41,6 +41,14 @@ function getUrlForAction(actionType: ActionType): string {
 }
 
 async function executeSimulatorInProcess(payload: SapDispatchPayload): Promise<SapDispatchResult> {
+  if (process.env.SAP_MODE && process.env.SAP_MODE.toLowerCase() !== "mock") {
+    return {
+      ok: false,
+      code: "SAP_LIVE_NOT_IMPLEMENTED",
+      error: `Live SAP ERP mode '${process.env.SAP_MODE}' is not implemented; only 'mock' is supported`,
+      retryable: false,
+    };
+  }
   const { actionKey, actionType, payloadHash, targetId } = payload;
   const existing = await prisma.simulatorRecord.findUnique({ where: { actionKey } });
 
@@ -105,6 +113,14 @@ async function executeSimulatorInProcess(payload: SapDispatchPayload): Promise<S
 }
 
 export async function dispatchToSap(payload: SapDispatchPayload): Promise<SapDispatchResult> {
+  if (process.env.SAP_MODE && process.env.SAP_MODE.toLowerCase() !== "mock") {
+    return {
+      ok: false,
+      code: "SAP_LIVE_NOT_IMPLEMENTED",
+      error: `Live SAP ERP mode '${process.env.SAP_MODE}' is not implemented; only 'mock' is supported`,
+      retryable: false,
+    };
+  }
   const url = getUrlForAction(payload.actionType);
 
   try {
@@ -160,6 +176,9 @@ export async function readBackFromSap(
   actionKey: string,
   actionType: ActionType
 ): Promise<{ ok: boolean; externalId?: string; resultingState?: string; error?: string }> {
+  if (process.env.SAP_MODE && process.env.SAP_MODE.toLowerCase() !== "mock") {
+    return { ok: false, error: "SAP_LIVE_NOT_IMPLEMENTED" };
+  }
   const url = `${getUrlForAction(actionType)}?actionKey=${encodeURIComponent(actionKey)}`;
 
   try {

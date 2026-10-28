@@ -254,10 +254,12 @@ async function main() {
   console.log("===============================================================================");
 
   let running = true;
-  process.on("SIGINT", () => {
+  const shutdown = () => {
     console.log("\n[WORKER] Gracefully shutting down...");
     running = false;
-  });
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 
   while (running) {
     try {
@@ -265,7 +267,7 @@ async function main() {
       const didDispatch = await processNextDispatch();
 
       if (!didWorkRun && !didDispatch) {
-        await sleep(1000);
+        await sleep(4000);
       }
     } catch (err) {
       console.error("[WORKER LOOP ERROR]:", err);

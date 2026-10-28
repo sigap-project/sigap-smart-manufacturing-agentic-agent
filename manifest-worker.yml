@@ -1,0 +1,14 @@
+---
+applications:
+  - name: sigap-workflow-remontada-rasa-mangga
+    instances: 1
+    memory: 512M
+    disk_quota: 2048M
+    no-route: true
+    health-check-type: process
+    buildpacks:
+      - nodejs_buildpack
+    command: npx prisma generate && npm run worker
+    env:
+      NODE_ENV: production
+      NPM_CONFIG_PRODUCTION: "false"

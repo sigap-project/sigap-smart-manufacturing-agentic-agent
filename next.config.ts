@@ -3,6 +3,14 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@splinetool/react-spline"],
+  webpack: (config) => {
+    config.resolve.conditionNames = [
+      ...(config.resolve.conditionNames || []),
+      "import",
+    ];
+    return config;
+  },
   outputFileTracingRoot: path.join(__dirname),
   serverExternalPackages: ["onnxruntime-node"],
   outputFileTracingExcludes: {

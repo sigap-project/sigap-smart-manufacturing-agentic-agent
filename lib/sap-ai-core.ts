@@ -24,12 +24,40 @@ interface SapAiCoreServiceKey {
 }
 
 async function loadServiceKey(): Promise<SapAiCoreServiceKey | null> {
+  const jsonStr = process.env.SIGAP_SAP_AI_CORE_SERVICE_KEY_JSON;
+  if (jsonStr !== undefined && jsonStr !== null) {
+    if (jsonStr.trim() === "") return null;
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        parsed.clientid &&
+        parsed.clientsecret &&
+        parsed.url &&
+        parsed.serviceurls?.AI_API_URL
+      ) {
+        return parsed as SapAiCoreServiceKey;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   const filePath = process.env.SIGAP_SAP_AI_CORE_SERVICE_KEY_FILE;
   if (!filePath) return null;
   try {
     const raw = await fs.readFile(filePath, "utf-8");
     const parsed = JSON.parse(raw);
-    if (parsed.clientid && parsed.clientsecret && parsed.url && parsed.serviceurls?.AI_API_URL) {
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      parsed.clientid &&
+      parsed.clientsecret &&
+      parsed.url &&
+      parsed.serviceurls?.AI_API_URL
+    ) {
       return parsed as SapAiCoreServiceKey;
     }
     return null;
@@ -95,7 +123,7 @@ export class SapAiCoreAdapter implements AIProviderAdapter {
   }> {
     const key = await loadServiceKey();
     if (!key) {
-      throw new Error("SAP AI Core service key file not configured or invalid");
+      throw new Error("SAP AI Core service key not configured or invalid");
     }
 
     const token = await getAccessToken(key);
@@ -164,7 +192,7 @@ export class SapAiCoreAdapter implements AIProviderAdapter {
       body: JSON.stringify({
         messages: chatMessages,
         ...(formattedTools.length > 0 ? { tools: formattedTools } : {}),
-        temperature: 0.1,
+        max_completion_tokens: 600,
       }),
     });
 
@@ -174,7 +202,11 @@ export class SapAiCoreAdapter implements AIProviderAdapter {
     }
 
     const data = await response.json();
-    const choice = data.choices?.[0]?.message;
+    const rawChoice = data.choices?.[0];
+    if (rawChoice?.finish_reason === "length") {
+      throw new Error("AI_OUTPUT_TRUNCATED");
+    }
+    const choice = rawChoice?.message;
     const toolCalls: ToolCall[] = [];
 
     if (choice?.tool_calls) {

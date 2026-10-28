@@ -8,6 +8,18 @@ import {
 import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import type { ConverseCommandInput } from "@aws-sdk/client-bedrock-runtime";
 
+function parseBedrockMaxTokens(): number {
+  const envVal = process.env.SIGAP_BEDROCK_MAX_TOKENS;
+  if (!envVal || envVal.trim() === "") return 600;
+  const num = Number(envVal);
+  if (!Number.isInteger(num) || num < 256 || num > 1200) {
+    throw new Error(
+      `SIGAP_BEDROCK_MAX_TOKENS must be an integer between 256 and 1200; got "${envVal}"`
+    );
+  }
+  return num;
+}
+
 export class BedrockAdapter implements AIProviderAdapter {
   providerName: "bedrock" = "bedrock";
   modelId: string;
@@ -137,12 +149,15 @@ export class BedrockAdapter implements AIProviderAdapter {
       messages: bedrockMessages as unknown as NonNullable<ConverseCommandInput["messages"]>,
       toolConfig: toolConfig as unknown as ConverseCommandInput["toolConfig"],
       inferenceConfig: {
-        maxTokens: 1200,
+        maxTokens: parseBedrockMaxTokens(),
         temperature: 0.1,
       },
     });
 
     const response = await client.send(command);
+    if (response.stopReason === "max_tokens") {
+      throw new Error("AI_OUTPUT_TRUNCATED");
+    }
     const toolCalls: ToolCall[] = [];
     let summary: string | undefined;
 

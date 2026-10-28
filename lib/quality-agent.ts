@@ -7,6 +7,7 @@ import {
   ActionType,
   AgentTurnMessage,
   AIProviderAdapter,
+  TokenUsage,
   ToolCall,
   ToolDefinition,
 } from "./contracts";
@@ -357,6 +358,7 @@ Rules:
     let turnResult: {
       toolCalls: ToolCall[];
       summary?: string;
+      usage?: TokenUsage;
     };
 
     try {
@@ -391,6 +393,26 @@ Rules:
       });
       return;
     }
+
+    // Persist model usage for this turn
+    await prisma.agentLog.create({
+      data: {
+        inspectionId: inspection.id,
+        runId: run.id,
+        sequence: currentSequence++,
+        step: "04",
+        stepName: "DECISION",
+        stage: "DECISION",
+        kind: "model_usage",
+        status: "completed",
+        output: {
+          provider: adapter.providerName,
+          modelId: adapter.modelId,
+          turn,
+          usage: (turnResult.usage ?? null) as unknown as Prisma.InputJsonValue,
+        },
+      },
+    });
 
     if (turnResult.toolCalls.length === 0) {
       // Model concluded turns loop
