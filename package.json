@@ -17,7 +17,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "qa:audit": "tsx scripts/qa-full-e2e.ts",
     "preflight": "tsx scripts/preflight.ts",
-    "worker": "tsx scripts/workflow-worker.ts"
+    "worker": "tsx scripts/workflow-worker.ts",
+    "postinstall": "node -e \"if (process.env.VCAP_APPLICATION) { const fs = require('fs'); ['onnxruntime-node', 'ffmpeg-static', 'next', '@next', '@splinetool', 'framer-motion', 'tailwindcss'].forEach(p => { try { fs.rmSync('node_modules/' + p, { recursive: true, force: true }); } catch {} }); }\""
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
