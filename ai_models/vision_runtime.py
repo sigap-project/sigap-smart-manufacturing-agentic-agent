@@ -24,8 +24,19 @@ except ImportError:
 
 
 def compute_canonical_manifest_hash(manifest_dict: dict) -> str:
-    """Computes deterministic SHA-256 of canonical manifest JSON with sorted keys."""
-    canonical_str = json.dumps(manifest_dict, sort_keys=True, separators=(",", ":"))
+    """Hashes sorted UTF-8 manifest JSON with JavaScript-compatible whole numbers."""
+    def normalize(value):
+        if isinstance(value, dict):
+            return {key: normalize(child) for key, child in value.items()}
+        if isinstance(value, list):
+            return [normalize(child) for child in value]
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return value
+
+    canonical_str = json.dumps(
+        normalize(manifest_dict), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
     return hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
 
 

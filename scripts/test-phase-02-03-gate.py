@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import json
+import hashlib
 import uuid
 import shutil
 import tempfile
@@ -31,6 +32,23 @@ from ai_models.edge_inference_worker import (
     LocalQueueDB,
     SigapEdgeWorker,
 )
+
+
+def test_manifest_identity():
+    print("Testing manifest identity across Python and JavaScript JSON numbers...")
+    manifest = {
+        "version": 1.0,
+        "nested": {"recall": 1.0, "threshold": 0.8, "labels": ["défaut"]},
+        "offset": -0.0,
+    }
+    canonical = (
+        '{"nested":{"labels":["défaut"],"recall":1,"threshold":0.8},'
+        '"offset":0,"version":1}'
+    )
+    expected = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    if compute_canonical_manifest_hash(manifest) != expected:
+        raise ValueError("Manifest identity differs from JavaScript canonical JSON")
+    print("   [PASS] Nested whole/fractional numbers, signed zero, and UTF-8 agree.")
 
 
 def test_geometry_roundtrip():
@@ -275,6 +293,7 @@ def main():
     print("PHASE 0.2 & 0.3 GATE TESTS: INFERENCE, HARDWARE SAFETY, AND OFFLINE DURABILITY")
     print("===============================================================================")
 
+    test_manifest_identity()
     test_geometry_roundtrip()
     test_corrupt_and_wrong_object()
     test_hardware_alert_and_latch_persistence()
