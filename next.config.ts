@@ -13,12 +13,15 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingRoot: path.join(__dirname),
   serverExternalPackages: ["onnxruntime-node"],
+  outputFileTracingIncludes: {
+    "/api/internal/inspection-result": ["./ai_models/model-manifest.json"],
+  },
   outputFileTracingExcludes: {
     "*": [
       "node_modules/ffmpeg-static/**/*",
       "node_modules/onnxruntime-node/**/*",
       "node_modules/prisma/**/*",
-      "ai_models/**/*",
+      "ai_models/**/*.onnx",
     ],
   },
   images: {
