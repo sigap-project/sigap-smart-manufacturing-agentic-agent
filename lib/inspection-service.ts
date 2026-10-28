@@ -209,7 +209,7 @@ export function validateInspectionEvent(event: unknown): InspectionEvent {
   ]);
   const isTestMode =
     process.env.SIGAP_TEST_MODE === "1" ||
-    (typeof e.modelVersion === "string" && e.modelVersion.startsWith("test-"));
+    (typeof e.modelVersion === "string" && (e.modelVersion.startsWith("test-") || e.modelVersion.startsWith("audit-")));
 
   if (!isTestMode && !knownModelVersions.has(e.modelVersion.toLowerCase())) {
     throw new IngestError(
