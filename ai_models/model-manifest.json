@@ -3,7 +3,7 @@
   "preprocessingVersion": "impeller-center-roi-v1",
   "productFamily": "submersible-impeller-casting",
   "classifier": {
-    "modelPath": "sigap-casting-yolov8-cls-v2.onnx",
+    "modelPath": "sigap-casting-yolov8-cls.onnx",
     "sha256": "81767930c8d8b1f59feacd60094e45c36f7d9cb8d463f4c05f8dd858e937b682",
     "byteSize": 5779358,
     "inputName": "images",
@@ -22,7 +22,7 @@
     "doubleSoftmaxFixed": true
   },
   "detector": {
-    "modelPath": "sigap-casting-yolov8-detect-v2.onnx",
+    "modelPath": "sigap-casting-yolov8-detect.onnx",
     "sha256": "12e063cf577a26aa99573842f165715c9cb825fb1c3fb66330fbc2bfe1479f57",
     "byteSize": 12773173,
     "inputName": "images",

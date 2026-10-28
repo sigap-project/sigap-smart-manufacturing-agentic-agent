@@ -83,12 +83,10 @@ ai_models/
 ├── edge_inference_worker.py                  # Daemon edge vision Raspberry Pi (GPIO + SQLite offline queue)
 ├── vision_runtime.py                         # Production Dual-Stage ONNX Runtime (Classifier -> Detector)
 ├── evaluate_runtime.py                       # Skrip verifikasi 4 quality gates & latency soak benchmark
-├── sigap-casting-yolov8-cls-v2.onnx          # [PROD v2] Model klasifikasi biner ONNX (5.51 MB)
-├── sigap-casting-yolov8-detect-v2.onnx       # [PROD v2] Model deteksi bounding box ONNX (12.77 MB)
-├── sigap-casting-yolov8-cls.onnx             # [BASELINE v1] Model klasifikasi biner awal
-├── sigap-casting-yolov8-detect.onnx          # [BASELINE v1] Model deteksi bounding box awal
-├── train_casting_classification.py/.ipynb   # Skrip & notebook training klasifikasi Kaggle T4
-├── train_yolov8_detection.py/.ipynb          # Skrip & notebook training deteksi Kaggle T4
+├── sigap-casting-yolov8-cls.onnx             # [PROD] Model klasifikasi biner ONNX terbaik (5.51 MB)
+├── sigap-casting-yolov8-detect.onnx          # [PROD] Model deteksi bounding box ONNX terbaik (12.77 MB)
+├── train_casting_classification.py          # Skrip training klasifikasi Kaggle T4 (v2)
+├── train_yolov8_detection.py                 # Skrip training deteksi Kaggle T4 (v2)
 └── evaluation/
     ├── reports/                              # Laporan evaluasi Kaggle, CSV hasil, & grafik pelatihan
     │   ├── classification_evaluation_report.json
