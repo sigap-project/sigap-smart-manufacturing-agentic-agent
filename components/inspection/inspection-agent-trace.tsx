@@ -74,7 +74,8 @@ export function InspectionAgentTrace({
         content: t.detail || t.content || (t.decision ? `Decision: ${t.decision}` : "Evidence recorded."),
         metric,
         status: t.status || "pending",
-        timestamp: t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : undefined,
+        // `timestamp` is a pre-formatted WIB string; parse the ISO field instead
+        timestamp: (t.startedAt || t.rawDate) ? new Date(t.startedAt || t.rawDate).toLocaleTimeString() : undefined,
         runId: t.runId,
         sequence: t.sequence,
       };

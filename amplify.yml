@@ -8,6 +8,7 @@ frontend:
         - npx prisma generate
         - rm -rf node_modules/ffmpeg-static
         - rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32 node_modules/onnxruntime-node/bin/napi-v6/linux/arm64
+        - rm -f node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_*.so
     build:
       commands:
         - env | grep -e DATABASE_URL -e SIGAP_ -e SAP_ -e INTERNAL_API_KEY -e EDGE_CAMERA_API_KEY >> .env.production
@@ -24,6 +25,7 @@ frontend:
         - rm -rf node_modules/@next/swc-* node_modules/@prisma/engines node_modules/@esbuild
         - rm -rf node_modules/ffmpeg-static node_modules/prisma node_modules/typescript node_modules/@types node_modules/.cache
         - rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32 node_modules/onnxruntime-node/bin/napi-v6/linux/arm64
+        - rm -f node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_*.so
         - rm -rf ai_models/evaluation/images ai_models/dataset ai_models/__pycache__
   artifacts:
     baseDirectory: .next

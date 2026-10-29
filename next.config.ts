@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
       "./ai_models/model-manifest.json",
       "./ai_models/sigap-casting-yolov8-cls.onnx",
       "./ai_models/sigap-casting-yolov8-detect.onnx",
+      // The binding dlopen()s libonnxruntime.so at runtime, which file tracing cannot see.
+      // Ship only the deploy target's folder to stay inside the Amplify size limit.
+      "./node_modules/onnxruntime-node/bin/napi-v6/linux/x64/*",
     ],
   },
   outputFileTracingExcludes: {
@@ -28,6 +31,7 @@ const nextConfig: NextConfig = {
       "node_modules/onnxruntime-node/bin/napi-v6/darwin/**/*",
       "node_modules/onnxruntime-node/bin/napi-v6/win32/**/*",
       "node_modules/onnxruntime-node/bin/napi-v6/linux/arm64/**/*",
+      "node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_*.so",
     ],
   },
   images: {

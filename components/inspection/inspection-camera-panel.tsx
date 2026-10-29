@@ -144,6 +144,107 @@ async function normalizeFile(file: File): Promise<NormalizedImage> {
   return normalizeCanvasToJpeg(canvas, img.naturalWidth, img.naturalHeight);
 }
 
+/**
+ * Still image with the server verdict drawn on it. Box geometry is source-percent;
+ * strokes and labels scale with the image so they stay readable at any resolution.
+ */
+function AnnotatedImage({
+  image,
+  result,
+  busy,
+}: {
+  image: NormalizedImage;
+  result: InspectionDisplayResult | null;
+  busy: boolean;
+}) {
+  // The still is displayed ~560px wide whatever its source size, so 1 unit ≈ 1 screen px
+  const unit = Math.max(image.width, image.height) / 560;
+  const boxes = result?.outcome === "defect" ? result.boundingBoxes : [];
+  const frameRef = useRef<HTMLDivElement | null>(null);
+
+  // Bring the verdict into view; the Submit button is usually what scrolled the page
+  useEffect(() => {
+    if (result) frameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [result]);
+
+  let verdict: { text: string; cls: string } | null = null;
+  if (result) {
+    const conf = result.confidence !== null ? ` • ${result.confidence}%` : "";
+    if (result.outcome === "ok") {
+      verdict = { text: `OK${conf}`, cls: "bg-emerald-600" };
+    } else if (result.outcome === "defect") {
+      const where =
+        boxes.length > 0
+          ? ` • ${boxes.length} location${boxes.length > 1 ? "s" : ""}`
+          : " • location not identified";
+      verdict = { text: `DEFECT${conf}${where}`, cls: "bg-rose-600" };
+    } else {
+      verdict = { text: `NEEDS REVIEW${conf}`, cls: "bg-amber-600" };
+    }
+  }
+
+  return (
+    <div
+      ref={frameRef}
+      className="w-full relative bg-slate-900 rounded-xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center"
+      style={{
+        aspectRatio: `${image.width} / ${image.height}`,
+        maxHeight: "min(560px, 55vh)",
+      }}
+    >
+      <svg
+        viewBox={`0 0 ${image.width} ${image.height}`}
+        className="w-full h-full block"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <image href={image.dataUrl} width={image.width} height={image.height} />
+        {boxes.map((box, idx) => {
+          const bx = (box.x / 100) * image.width;
+          const by = (box.y / 100) * image.height;
+          const bw = (box.width / 100) * image.width;
+          const bh = (box.height / 100) * image.height;
+          const fs = 12 * unit;
+          const label = `defect ${Math.round(box.confidence)}%`;
+          const labelH = fs * 1.6;
+          const labelY = by - labelH < 0 ? by : by - labelH;
+          return (
+            <g key={box.id || idx}>
+              <rect x={bx} y={by} width={bw} height={bh} fill="none" stroke="#ef4444" strokeWidth={2 * unit} />
+              <rect x={bx} y={labelY} width={label.length * fs * 0.62 + fs} height={labelH} fill="#ef4444" rx={2 * unit} />
+              <text
+                x={bx + fs * 0.5}
+                y={labelY + labelH * 0.72}
+                fill="#ffffff"
+                fontSize={fs}
+                fontWeight="600"
+                fontFamily="sans-serif"
+              >
+                {label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {verdict && !busy && (
+        <span
+          className={`absolute top-3 left-3 px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide text-white shadow-md ${verdict.cls}`}
+        >
+          {verdict.text}
+        </span>
+      )}
+
+      {busy && (
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 text-white">
+          <RefreshCw className="w-7 h-7 animate-spin" />
+          <span className="text-sm font-semibold">Analyzing image…</span>
+          <span className="text-xs text-slate-300">This can take a few seconds</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SubmitButton({
   disabled,
   isAnalyzing,
@@ -622,63 +723,7 @@ export function InspectionCameraPanel({
 
             {/* Media Container */}
             {uploadState === "ready" && normalizedUpload ? (
-              <div
-                className="w-full relative bg-slate-900 rounded-xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center"
-                style={{
-                  aspectRatio: `${normalizedUpload.width} / ${normalizedUpload.height}`,
-                  maxHeight: "560px",
-                }}
-              >
-                <svg
-                  viewBox={`0 0 ${normalizedUpload.width} ${normalizedUpload.height}`}
-                  className="w-full h-full block"
-                  preserveAspectRatio="xMidYMid meet"
-                >
-                  <image
-                    href={normalizedUpload.dataUrl}
-                    width={normalizedUpload.width}
-                    height={normalizedUpload.height}
-                  />
-                  {lastResult?.outcome === "defect" &&
-                    lastResult.boundingBoxes.map((box, idx) => {
-                      const bx = (box.x / 100) * normalizedUpload.width;
-                      const by = (box.y / 100) * normalizedUpload.height;
-                      const bw = (box.width / 100) * normalizedUpload.width;
-                      const bh = (box.height / 100) * normalizedUpload.height;
-                      return (
-                        <g key={box.id || idx}>
-                          <rect
-                            x={bx}
-                            y={by}
-                            width={bw}
-                            height={bh}
-                            fill="none"
-                            stroke="#ef4444"
-                            strokeWidth={Math.max(2, normalizedUpload.width / 320)}
-                          />
-                          <rect
-                            x={bx}
-                            y={Math.max(0, by - 20)}
-                            width={Math.max(50, bw * 0.45)}
-                            height={18}
-                            fill="#ef4444"
-                            rx={2}
-                          />
-                          <text
-                            x={bx + 4}
-                            y={Math.max(12, by - 6)}
-                            fill="#ffffff"
-                            fontSize={11}
-                            fontWeight="600"
-                            fontFamily="sans-serif"
-                          >
-                            {box.confidence ? `defect ${Math.round(box.confidence)}%` : "defect"}
-                          </text>
-                        </g>
-                      );
-                    })}
-                </svg>
-              </div>
+              <AnnotatedImage image={normalizedUpload} result={lastResult} busy={isAnalyzing} />
             ) : uploadState === "loading" ? (
               <div className="w-full h-64 sm:h-80 rounded-xl border border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2.5 text-slate-500">
                 <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
@@ -766,64 +811,8 @@ export function InspectionCameraPanel({
           <div className="space-y-4">
             {/* Media Viewport */}
             {webcamSnapshot ? (
-              // Snapshot Still View
-              <div
-                className="w-full relative bg-slate-900 rounded-xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center"
-                style={{
-                  aspectRatio: `${webcamSnapshot.width} / ${webcamSnapshot.height}`,
-                  maxHeight: "560px",
-                }}
-              >
-                <svg
-                  viewBox={`0 0 ${webcamSnapshot.width} ${webcamSnapshot.height}`}
-                  className="w-full h-full block"
-                  preserveAspectRatio="xMidYMid meet"
-                >
-                  <image
-                    href={webcamSnapshot.dataUrl}
-                    width={webcamSnapshot.width}
-                    height={webcamSnapshot.height}
-                  />
-                  {lastResult?.outcome === "defect" &&
-                    lastResult.boundingBoxes.map((box, idx) => {
-                      const bx = (box.x / 100) * webcamSnapshot.width;
-                      const by = (box.y / 100) * webcamSnapshot.height;
-                      const bw = (box.width / 100) * webcamSnapshot.width;
-                      const bh = (box.height / 100) * webcamSnapshot.height;
-                      return (
-                        <g key={box.id || idx}>
-                          <rect
-                            x={bx}
-                            y={by}
-                            width={bw}
-                            height={bh}
-                            fill="none"
-                            stroke="#ef4444"
-                            strokeWidth={Math.max(2, webcamSnapshot.width / 320)}
-                          />
-                          <rect
-                            x={bx}
-                            y={Math.max(0, by - 20)}
-                            width={Math.max(50, bw * 0.45)}
-                            height={18}
-                            fill="#ef4444"
-                            rx={2}
-                          />
-                          <text
-                            x={bx + 4}
-                            y={Math.max(12, by - 6)}
-                            fill="#ffffff"
-                            fontSize={11}
-                            fontWeight="600"
-                            fontFamily="sans-serif"
-                          >
-                            {box.confidence ? `defect ${Math.round(box.confidence)}%` : "defect"}
-                          </text>
-                        </g>
-                      );
-                    })}
-                </svg>
-              </div>
+
+              <AnnotatedImage image={webcamSnapshot} result={lastResult} busy={isAnalyzing} />
             ) : (
               <>
               {/* Live Video Feed (plain, no overlays). Mounted as soon as a stream exists so the ref is available. */}
