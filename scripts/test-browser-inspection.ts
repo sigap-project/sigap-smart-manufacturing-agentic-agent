@@ -351,7 +351,7 @@ async function main() {
         capturedAt: new Date().toISOString(),
         captureSource: "browser-upload",
         inferenceLocation: "server",
-        modelVersion: "d02adab2cefeeadba1da48ad5324a0f45178bf7193383f55b7f7930accd0df7d",
+        modelVersion: "4c762ef2a0c3d2e1f5d9dd21b2dda9ff74e8ce7c7cce95047ac306ea2a67e6de",
         inferenceMs: 50,
         classificationMs: 50,
         localizationMs: null,
