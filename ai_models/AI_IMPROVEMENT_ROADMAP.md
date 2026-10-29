@@ -44,6 +44,13 @@ Sistem penglihatan komputer SIGAP dirancang dengan prinsip **kemitraan dua tahap
 
 Bagi AI Agent selanjutnya yang ingin mendongkrak mAP deteksi lebih lanjut, lakukan langkah-langkah terukur berikut:
 
+### 📏 Temuan Audit 2026-10-29 (Wajib Dibaca Sebelum Strategi A–D)
+- **Ground truth evaluasi lokal tidak lengkap**: 40 citra lokalisasi di `evaluation/manifest.json` adalah rotasi dari **satu** foto (`public/sample-frames/defect.jpeg`) yang hanya dianotasi 2 cacat, padahal terlihat 8 cacat (burr/flash di rim + pinhole ring dalam). Semua "false positive" v2 memiliki IoU < 0.1 terhadap GT → model menembak cacat yang tidak dianotasi. GT kini dilengkapi (8 cacat, 320 kotak); byte citra tidak berubah.
+- **Matching evaluator diperbaiki** menjadi one-to-one (satu GT hanya boleh dicocokkan sekali) dan kini melaporkan **recall + F1**, bukan hanya precision/coverage.
+- **Baseline v2 terkoreksi** (`evaluate_runtime.py`): Precision **58.0%** (105/181), Recall **32.8%** (105/320), F1 **41.9%**. Kelemahan utama v2 adalah **recall**, bukan duplikasi kotak.
+- **Skor detektor v2 tidak pernah > ~0.55**, sehingga menaikkan threshold mematikan recall. Perbaikan harus lewat retraining (Strategi D, lihat `train_yolov8_detection.py` v3).
+- Test mAP50 19.11% di laporan Kaggle dihitung dengan `conf=0.40` (memotong kurva PR). Skrip v3 kini memakai `conf=0.001` untuk mAP dan ambang F1-optimal dari val.
+
 ### Strategi A: SAHI (Slicing Aided Hyper Inference) / Tiled Inference
 - **Akar Masalah**: Pori-pori cacat pengecoran berukuran mikro ($< 25 \times 25$ px). Saat citra $640 \times 640$ di-*downsample* bertahap oleh stride $8, 16, 32$ backbone YOLO, resolusi spasial pori kecil menyusut menjadi $< 1$ pixel di feature map P5.
 - **Implementasi**:
@@ -51,6 +58,7 @@ Bagi AI Agent selanjutnya yang ingin mendongkrak mAP deteksi lebih lanjut, lakuk
   2. Bagi citra ROI tengah menjadi 4 *tiles* berukuran $320 \times 320$ dengan *overlap ratio* 0.20.
   3. Jalankan inferensi pada masing-masing tile, lalu gabungkan dengan `NMSPOSTPROCESS` / `NMM` (Non-Maximum Merging).
 - **Ekspektasi**: Peningkatan mAP50 untuk cacat mikro sebesar **+15% hingga +22%**.
+- **Status (2026-10-29): Tidak diprioritaskan.** Cacat pada citra uji berukuran ~20–60 px di 512 px (bukan mikro), dan 4 tile = ~4× latensi detektor di Pi 4.
 
 ### Strategi B: Spatial Box Merging (Box Clustering)
 - **Akar Masalah**: Ketidakpastian anotasi manusia (*ground truth variance*). Anotator manusia sering menandai sekelompok lubang jarum (*pinholes cluster*) sebagai 1 bounding box besar. Sementara YOLO mendeteksi tiap lubang sebagai kotak terpisah. Pada evaluasi IoU ketat ($\ge 0.5$), kotak-kotak kecil ini dianggap *false positive*.
@@ -62,6 +70,7 @@ Bagi AI Agent selanjutnya yang ingin mendongkrak mAP deteksi lebih lanjut, lakuk
       # Jika dua kotak cacat saling berdekatan, satukan ke enclosing bounding box
   ```
 - **Dampak**: Menaikkan kesesuaian evaluasi terhadap *ground truth* tanpa mengubah bobot model.
+- **Status (2026-10-29): Dievaluasi & DITOLAK.** Sweep pada eval set (GT lama): tanpa merge P=35.9%/R=81.2%; merge gap 10 px → P=35.2%/R=77.5%; gap 20 px → P=34.7%/R=75.0%. Kotak prediksi tidak berkerumun — mereka berada di cacat terpisah.
 
 ### Strategi C: Migrasi ke Instance Segmentation (`YOLOv8n-seg`)
 - **Akar Masalah**: Cacat logam tuang (retakan rambut, cacat sirip, penyusutan) berbentuk amorf/irregular. Bounding box persegi panjang menyertakan $50\% - 70\%$ latar belakang logam sehat di dalam kotak.
@@ -117,7 +126,10 @@ Untuk platform Linux ARM (Raspberry Pi OS 64-bit), **NCNN** jauh lebih efisien d
 ## 📋 Ringkasan Action Checklist untuk Agent Berikutnya
 
 - [ ] Uji coba resolusi detektor $480 \times 480$ di `train_yolov8_detection.py` (`imgsz=480`).
-- [ ] Implementasikan *spatial box clustering* di `ai_models/vision_runtime.py` untuk menggabungkan pori-pori berdekatan.
+- [x] ~~Implementasikan *spatial box clustering*~~ — ditolak, menurunkan precision & recall (lihat Strategi B).
+- [x] Lengkapi GT evaluasi lokal + one-to-one matching, recall, F1 di `evaluate_runtime.py` (2026-10-29).
+- [x] Skrip training v3 (`train_yolov8_detection.py`): 200 epoch, cos LR, `box=9.0`, `dfl=2.0`, `degrees=180`, kalibrasi ambang F1-optimal, test mAP pada `conf=0.001`.
+- [ ] Jalankan v3 di Kaggle; terima hanya jika P/R/F1 lokal & test mAP50 mengalahkan v2 (P 58.0 / R 32.8 / F1 41.9). Update `model-manifest.json` (sha256, byteSize, scoreThreshold).
 - [ ] Export model deteksi ke format NCNN jika ingin optimasi latensi Pi 4 maksimal.
 - [ ] Jangan kuantisasi INT8 secara dinamis pada model deteksi; gunakan Static Calibration Dataset jika ingin INT8.
 - [ ] Selalu validasi 4 quality gates dengan menjalankan `python ai_models/evaluate_runtime.py` setelah setiap perubahan model.

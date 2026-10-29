@@ -1,3 +1,5 @@
+import type { InspectionRecord } from "@/components/history/types";
+
 /**
  * SIGAP Shared Contracts & Wire Interfaces (Schema Version 1)
  * Defined in SIGAP_INTEGRATION_PLAN.md
@@ -6,13 +8,13 @@
 export interface InspectionEvent {
   schemaVersion: 1;
   eventId: string; // UUID generated once before persistence/retry
-  deviceId: string;
+  deviceId: string | null;
   batchId: string; // exact database Batch.id, never display lotId
   bindingVersion: number;
   itemId: string; // operator-assigned identity within this batch
   capturedAt: string; // UTC ISO; backend also records receivedAt
-  captureSource: "pi-webcam" | "pi-file-replay";
-  inferenceLocation: "pi";
+  captureSource: "pi-webcam" | "pi-file-replay" | "browser-upload" | "browser-webcam";
+  inferenceLocation: "pi" | "server";
   modelVersion: string; // versioned manifest hash
   inferenceMs: number;
   classificationMs: number;
@@ -68,15 +70,15 @@ export interface InspectionView {
   inspectionId: string;
   runId?: string;
   caseEpoch?: number;
-  deviceId: string;
+  deviceId: string | null;
   batchId: string;
   lotId?: string;
   bindingVersion: number;
   itemId: string;
   capturedAt: string;
   receivedAt: string;
-  captureSource: "pi-webcam" | "pi-file-replay";
-  inferenceLocation: "pi";
+  captureSource: "pi-webcam" | "pi-file-replay" | "browser-upload" | "browser-webcam";
+  inferenceLocation: "pi" | "server";
   modelVersion: string;
   inferenceMs: number;
   classificationMs: number;
@@ -108,6 +110,21 @@ export interface InspectionView {
   reviewedBy?: string | null;
   status?: string;
   errorCode?: string;
+}
+
+export interface BrowserInspectionRequest {
+  eventId: string;
+  batchId: string;
+  itemId: string;
+  capturedAt: string;
+  captureSource: "browser-upload" | "browser-webcam";
+  jpegBase64: string;
+}
+
+export interface BrowserInspectionResult {
+  inspection: InspectionRecord;
+  runId: string;
+  duplicate: boolean;
 }
 
 export type ActionType =

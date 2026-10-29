@@ -48,7 +48,7 @@ export function InspectionAgentTrace({
       let tagColor = "text-rose-700 bg-rose-50 border-rose-200/70";
 
       if (stage === "DETECT") {
-        tag = "Pi-Edge-ONNX";
+        tag = "ONNX Vision";
         tagColor = "text-blue-700 bg-blue-50 border-blue-200/70";
       } else if (stage === "MEMORY") {
         tag = "Postgres-Context";
@@ -96,15 +96,23 @@ export function InspectionAgentTrace({
     },
   });
   useEffect(() => {
+    setTraces([]);
     if (!inspectionId) return;
 
+    let active = true;
     const fetchLogs = async () => {
       try {
-        const res = await fetch(`/api/agent/logs?inspectionId=${encodeURIComponent(inspectionId)}&limit=100`);
-        if (res.ok) {
+        const res = await fetch(
+          `/api/agent/logs?inspectionId=${encodeURIComponent(inspectionId)}&limit=100`
+        );
+        if (res.ok && active) {
           const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            updateTracesFromData(json.data);
+          if (json.success) {
+            if (Array.isArray(json.data) && json.data.length > 0) {
+              updateTracesFromData(json.data);
+            } else {
+              setTraces([]);
+            }
           }
         }
       } catch {
@@ -114,7 +122,10 @@ export function InspectionAgentTrace({
 
     fetchLogs();
     const interval = setInterval(fetchLogs, 2000);
-    return () => clearInterval(interval);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, [inspectionId]);
 
   return (
@@ -154,7 +165,9 @@ export function InspectionAgentTrace({
       <div className="space-y-3">
         {traces.length === 0 ? (
           <div className="p-6 text-center text-xs text-slate-400 font-mono">
-            No reasoning traces recorded yet for this inspection.
+            {inspectionId
+              ? "No reasoning traces recorded yet for this inspection."
+              : "Analyze an image to view agent reasoning deduction logs."}
           </div>
         ) : (
           traces.map((trace, index) => (
@@ -207,6 +220,13 @@ export function InspectionAgentTrace({
             </motion.div>
           ))
         )}
+        {traces.length > 0 &&
+          !traces.some((t) => t.stage === "DECISION" || t.stage === "DISPATCH") && (
+            <div className="p-3 rounded-xl border border-dashed border-blue-200 bg-blue-50/40 flex items-center gap-2 text-xs text-blue-700 font-mono">
+              <Activity className="w-3.5 h-3.5 animate-spin shrink-0" />
+              <span>Awaiting cloud agent reasoning…</span>
+            </div>
+          )}
       </div>
     </div>
   );

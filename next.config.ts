@@ -15,13 +15,17 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["onnxruntime-node"],
   outputFileTracingIncludes: {
     "/api/internal/inspection-result": ["./ai_models/model-manifest.json"],
+    "/api/inspection/analyze": [
+      "./ai_models/model-manifest.json",
+      "./ai_models/sigap-casting-yolov8-cls.onnx",
+      "./ai_models/sigap-casting-yolov8-detect.onnx",
+      "./node_modules/onnxruntime-node/**/*",
+    ],
   },
   outputFileTracingExcludes: {
     "*": [
       "node_modules/ffmpeg-static/**/*",
-      "node_modules/onnxruntime-node/**/*",
       "node_modules/prisma/**/*",
-      "ai_models/**/*.onnx",
     ],
   },
   images: {

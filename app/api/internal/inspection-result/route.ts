@@ -46,6 +46,21 @@ export async function POST(request: NextRequest) {
     // 2. Validate Event Schema
     const validatedEvent = validateInspectionEvent(body);
 
+    if (
+      validatedEvent.captureSource === "browser-upload" ||
+      validatedEvent.captureSource === "browser-webcam" ||
+      validatedEvent.inferenceLocation === "server"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: "FORBIDDEN",
+          error: "Browser inspection provenance is not permitted on the internal device route",
+        },
+        { status: 403 }
+      );
+    }
+
     // 3. Ingest with Idempotency and Transactional Persistence
     const result = await ingestInspection(validatedEvent, actor);
 

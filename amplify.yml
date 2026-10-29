@@ -6,7 +6,7 @@ frontend:
         - rm -rf .agents ai_models/logs scripts/tools
         - npm ci
         - npx prisma generate
-        - rm -rf node_modules/onnxruntime-node node_modules/ffmpeg-static
+        - rm -rf node_modules/ffmpeg-static
     build:
       commands:
         - env | grep -e DATABASE_URL -e SIGAP_ -e SAP_ -e INTERNAL_API_KEY -e EDGE_CAMERA_API_KEY >> .env.production
@@ -20,7 +20,7 @@ frontend:
     postBuild:
       commands:
         - rm -rf .next/cache .next/standalone
-        - rm -rf node_modules/onnxruntime-node node_modules/ffmpeg-static node_modules/prisma node_modules/typescript node_modules/@types
+        - rm -rf node_modules/ffmpeg-static node_modules/prisma node_modules/typescript node_modules/@types
   artifacts:
     baseDirectory: .next
     files:

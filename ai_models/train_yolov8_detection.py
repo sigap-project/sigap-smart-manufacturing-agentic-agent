@@ -219,26 +219,29 @@ model = YOLO("yolov8n.pt")
 
 train_results = model.train(
     data=working_yaml_path,
-    epochs=100,
+    epochs=200,
     imgsz=640,
     batch=16,
     device=device,
     project=RUNS_DIR,
     name="detection_run",
-    patience=20,
+    patience=50,
     save=True,
     save_period=10,
     optimizer="AdamW",
     lr0=0.001,
     lrf=0.01,
-    box=7.5,
+    cos_lr=True,
+    close_mosaic=20,
+    box=9.0,               # v3: heavier IoU box regression weight
+    dfl=2.0,               # v3: sharper box edges via distribution focal loss
     cls=0.5,
     fliplr=0.5,
-    flipud=0.2,
-    degrees=15.0,
+    flipud=0.5,
+    degrees=180.0,         # v3: impeller is rotationally symmetric
+    scale=0.5,
+    translate=0.1,
     mosaic=1.0,
-    copy_paste=0.3,
-    mixup=0.1,
     hsv_h=0.015,
     hsv_s=0.7,
     hsv_v=0.4,
@@ -251,73 +254,17 @@ best_pt_path = os.path.join(RUNS_DIR, "detection_run", "weights", "best.pt")
 print(f"[INFO] Training completed. Best checkpoint: {best_pt_path}")
 
 # %%
-# CELL 8B: ALTERNATIVE BACKBONE — YOLOv8s detection (larger, compare latency vs recall)
-print("[INFO] Training YOLOv8s alternative backbone for comparison...")
-print("[GATE] Pi4 p95 latency must remain <= 2000ms; discard YOLOv8s if it exceeds gate.")
-model_s = YOLO("yolov8s.pt")
-train_results_s = model_s.train(
-    data=working_yaml_path,
-    epochs=100,
-    imgsz=640,
-    batch=16,
-    device=device,
-    project=RUNS_DIR,
-    name="detection_run_s",
-    patience=20,
-    save=True,
-    save_period=10,
-    optimizer="AdamW",
-    lr0=0.001,
-    lrf=0.01,
-    box=7.5,
-    cls=0.5,
-    fliplr=0.5,
-    flipud=0.2,
-    degrees=15.0,
-    mosaic=1.0,
-    copy_paste=0.3,
-    mixup=0.1,
-    hsv_h=0.015,
-    hsv_s=0.7,
-    hsv_v=0.4,
-    agnostic_nms=True,
-    plots=True,
-    verbose=True
-)
-best_pt_path_s = os.path.join(RUNS_DIR, "detection_run_s", "weights", "best.pt")
-print(f"[INFO] YOLOv8s checkpoint: {best_pt_path_s}")
-print("[INFO] Benchmark p95 inference on Pi4 CPU before accepting YOLOv8s result.")
-print("[INFO] If p95 > 2000ms on Pi4, keep YOLOv8n result (detection_run/weights/best.pt).")
-
-# %%
-# CELL 8C: NMS SCORE THRESHOLD CALIBRATION GRID
-# Fixed: iouThreshold=0.35, iomThreshold=0.60 (anti-concentric-box geometry; do not change)
-# Select score_thresh with highest coverage (localization_covered/attempted) AND box_precision >= 80%.
-print("[INFO] Running NMS score threshold calibration grid...")
+# CELL 8C: SCORE THRESHOLD CALIBRATION (F1-OPTIMAL ON VAL)
+# Full PR curve needs conf=0.001; pick the confidence that maximizes F1 on the val split.
+# iouThreshold=0.35 and iomThreshold=0.60 stay fixed (anti-concentric-box geometry).
 cal_model = YOLO(best_pt_path)
-test_imgs_cal = glob.glob(os.path.join(dataset_path, "test", "images", "*.*"))
-
-best_score_thresh = 0.45
-best_coverage = 0.0
-best_precision = 0.0
-
-for score_thresh in [0.35, 0.40, 0.45, 0.50, 0.55]:
-    preds = cal_model.predict(test_imgs_cal, conf=score_thresh, iou=0.35, imgsz=640, verbose=False)
-    total_boxes = sum(len(r.boxes) for r in preds if r.boxes is not None)
-    # Coverage: fraction of test images with at least one detected box
-    covered = sum(1 for r in preds if r.boxes is not None and len(r.boxes) > 0)
-    attempted = len(preds)
-    coverage = covered / max(attempted, 1)
-    # Box precision: use model val at this conf level (approximation from training metrics)
-    # Use precision from last val run as proxy; score_thresh sweep primarily affects coverage.
-    print(f"  score_thresh={score_thresh:.2f}: coverage={coverage:.3f} ({covered}/{attempted} imgs), boxes={total_boxes}")
-    if coverage > best_coverage:
-        best_coverage = coverage
-        best_score_thresh = score_thresh
-        best_precision = coverage  # actual precision requires GT match; report coverage honestly
-
-print(f"[INFO] Selected score_thresh: {best_score_thresh} (coverage={best_coverage:.3f})")
-print("[INFO] iouThreshold=0.35 and iomThreshold=0.60 remain fixed (anti-overlap geometry).")
+cal_metrics = cal_model.val(data=working_yaml_path, split="val", imgsz=640, conf=0.001, iou=0.35, agnostic_nms=True, plots=False)
+f1_mean = cal_metrics.box.f1_curve.mean(0)
+best_idx = int(f1_mean.argmax())
+best_score_thresh = round(float(cal_metrics.box.px[best_idx]), 2)
+print(f"[INFO] F1-optimal score_thresh (val): {best_score_thresh} | "
+      f"P={cal_metrics.box.p_curve.mean(0)[best_idx]:.3f} R={cal_metrics.box.r_curve.mean(0)[best_idx]:.3f} F1={f1_mean[best_idx]:.3f}")
+print("[INFO] Copy this value into model-manifest.json -> detector.scoreThreshold")
 
 # %%
 # CELL 9: VISUALIZE TRAINING LOSS & METRICS CURVES
@@ -361,7 +308,7 @@ metrics = eval_model.val(
     data=working_yaml_path,
     split="test",
     imgsz=640,
-    conf=0.40,
+    conf=0.001,            # Full PR curve for mAP; P/R below are at the F1-optimal operating point
     iou=0.35,              # Strict IoU NMS to eliminate overlapping double boxes
     agnostic_nms=True,     # Class-agnostic NMS to prevent stacked duplicate boxes
     plots=True
@@ -444,7 +391,7 @@ eval_report_det = {
         "iou_threshold": 0.35,
         "containment_iom_threshold": 0.60,
         "agnostic_nms": True,
-        "confidence_threshold": 0.40,
+        "confidence_threshold": best_score_thresh,
     },
     "speed_benchmark_ms": {
         "preprocess_latency_ms": round(prep_ms, 2),
@@ -490,7 +437,7 @@ report_det_text += f"""---------------------------------------------------------
   • IoU Suppression Threshold             : 0.35 (Strict suppression against overlapping twins)
   • Containment (IoM) Threshold           : 0.60 (Eliminates nested/concentric double boxes)
   • Class-Agnostic NMS                    : Active (True)
-  • Inference Confidence Floor            : 0.40
+  • Inference Confidence Floor            : {best_score_thresh:.2f}
 
 ----------------------------------------------------------------------------------------------------
 [5] RUNTIME LATENCY & REAL-TIME CONVEYOR SPEED:
@@ -604,7 +551,7 @@ def suppress_overlapping_boxes(
 test_imgs = glob.glob(os.path.join(dataset_path, "test", "images", "*.*"))[:4]
 pred_results = eval_model.predict(
     test_imgs,
-    conf=0.40,             # Confidence threshold dinaikkan untuk mengeliminasi false alarm sporadis
+    conf=best_score_thresh,  # Ambang F1-optimal hasil kalibrasi CELL 8C
     iou=0.35,              # IoU threshold ketat untuk mencegah box beririsan/kembar
     agnostic_nms=True,     # Agnostic NMS untuk mencegah penumpukan antar-label
     max_det=10,
@@ -662,9 +609,9 @@ print(f"[INFO] Clean prediction visualizer saved with 0 duplicate overlapping bo
 # CELL 12: PRODUCTION ARTIFACT EXPORT (ONNX)
 onnx_output = eval_model.export(format="onnx", dynamic=False, simplify=True, imgsz=640)
 
-V2_MODEL_NAME = "sigap-casting-yolov8-detect-v2"
-final_pt = os.path.join(EXPORT_DIR, f"{V2_MODEL_NAME}.pt")
-final_onnx = os.path.join(EXPORT_DIR, f"{V2_MODEL_NAME}.onnx")
+V3_MODEL_NAME = "sigap-casting-yolov8-detect-v3"
+final_pt = os.path.join(EXPORT_DIR, f"{V3_MODEL_NAME}.pt")
+final_onnx = os.path.join(EXPORT_DIR, f"{V3_MODEL_NAME}.onnx")
 
 os.system(f"cp '{best_pt_path}' '{final_pt}'")
 os.system(f"cp '{onnx_output}' '{final_onnx}'")
@@ -675,7 +622,7 @@ with open(final_onnx, "rb") as _f:
 _byte_size = os.path.getsize(final_onnx)
 
 detect_export_report = {
-    "model": V2_MODEL_NAME,
+    "model": V3_MODEL_NAME,
     "sha256": _sha256,
     "byteSize": _byte_size,
     "selected_score_thresh": best_score_thresh,

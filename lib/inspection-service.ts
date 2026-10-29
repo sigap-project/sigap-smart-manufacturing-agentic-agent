@@ -127,6 +127,52 @@ export function computePayloadHash(event: InspectionEvent): string {
   return crypto.createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
 
+function isDuplicateInspection(
+  existing: {
+    payloadHash?: string | null;
+    imageSha256?: string | null;
+    batchId: string;
+    itemId?: string | null;
+    captureSource?: string | null;
+    capturedAt?: Date | string | null;
+    deviceId?: string | null;
+    inferenceLocation?: string | null;
+  },
+  event: InspectionEvent,
+  payloadHash: string
+): boolean {
+  if (existing.payloadHash === payloadHash) {
+    return true;
+  }
+  const sameFrameBatchItem =
+    existing.imageSha256?.toLowerCase() === event.frame.sha256.toLowerCase() &&
+    existing.batchId === event.batchId &&
+    existing.itemId === event.itemId;
+
+  if (!sameFrameBatchItem) {
+    return false;
+  }
+
+  const isBrowser =
+    event.captureSource === "browser-upload" || event.captureSource === "browser-webcam";
+
+  if (!isBrowser) {
+    return true;
+  }
+
+  const matchingSource = existing.captureSource === event.captureSource;
+  const existingCapturedAt = existing.capturedAt
+    ? new Date(existing.capturedAt).toISOString()
+    : null;
+  const eventCapturedAt = new Date(event.capturedAt).toISOString();
+  const matchingCapturedAt = existingCapturedAt === eventCapturedAt;
+  const matchingDevice = existing.deviceId === null && event.deviceId === null;
+  const matchingLocation =
+    existing.inferenceLocation === "server" && event.inferenceLocation === "server";
+
+  return matchingSource && matchingCapturedAt && matchingDevice && matchingLocation;
+}
+
 export function validateInspectionEvent(event: unknown): InspectionEvent {
   if (!event || typeof event !== "object") {
     throw new IngestError(400, "MALFORMED_JSON", "Request body must be a valid JSON object");
@@ -145,25 +191,11 @@ export function validateInspectionEvent(event: unknown): InspectionEvent {
     throw new IngestError(422, "INVALID_EVENT_ID", "eventId must be a valid 36-character UUID");
   }
 
-  if (typeof e.deviceId !== "string" || !e.deviceId.trim()) {
-    throw new IngestError(422, "INVALID_DEVICE_ID", "deviceId must be a non-empty string");
-  }
 
   if (typeof e.batchId !== "string" || !e.batchId.trim()) {
     throw new IngestError(422, "INVALID_BATCH_ID", "batchId must be a non-empty string");
   }
 
-  if (
-    typeof e.bindingVersion !== "number" ||
-    !Number.isInteger(e.bindingVersion) ||
-    e.bindingVersion < 1
-  ) {
-    throw new IngestError(
-      422,
-      "INVALID_BINDING_VERSION",
-      "bindingVersion must be an integer >= 1"
-    );
-  }
 
   if (typeof e.itemId !== "string" || !e.itemId.trim() || e.itemId.length > 64) {
     throw new IngestError(
@@ -185,16 +217,98 @@ export function validateInspectionEvent(event: unknown): InspectionEvent {
     );
   }
 
-  if (e.captureSource !== "pi-webcam" && e.captureSource !== "pi-file-replay") {
+  if (
+    e.captureSource !== "pi-webcam" &&
+    e.captureSource !== "pi-file-replay" &&
+    e.captureSource !== "browser-upload" &&
+    e.captureSource !== "browser-webcam"
+  ) {
     throw new IngestError(
       422,
       "INVALID_CAPTURE_SOURCE",
-      "captureSource must be 'pi-webcam' or 'pi-file-replay'"
+      "captureSource must be 'pi-webcam', 'pi-file-replay', 'browser-upload', or 'browser-webcam'"
     );
   }
 
-  if (e.inferenceLocation !== "pi") {
-    throw new IngestError(422, "INVALID_INFERENCE_LOCATION", "inferenceLocation must be 'pi'");
+  if (e.inferenceLocation !== "pi" && e.inferenceLocation !== "server") {
+    throw new IngestError(
+      422,
+      "INVALID_INFERENCE_LOCATION",
+      "inferenceLocation must be 'pi' or 'server'"
+    );
+  }
+
+  const isBrowserSource =
+    e.captureSource === "browser-upload" || e.captureSource === "browser-webcam";
+
+  if (isBrowserSource) {
+    if (e.inferenceLocation !== "server") {
+      throw new IngestError(
+        422,
+        "INVALID_INFERENCE_LOCATION",
+        "Browser sources require inferenceLocation 'server'"
+      );
+    }
+    if (e.deviceId !== null) {
+      throw new IngestError(
+        422,
+        "INVALID_DEVICE_ID",
+        "Browser sources require deviceId to be null"
+      );
+    }
+    if (e.bindingVersion !== 1) {
+      throw new IngestError(
+        422,
+        "INVALID_BINDING_VERSION",
+        "Browser sources require bindingVersion to be 1"
+      );
+    }
+    if (e.localAlertMs !== null) {
+      throw new IngestError(
+        422,
+        "INVALID_LOCAL_ALERT_MS",
+        "Browser sources require localAlertMs to be null"
+      );
+    }
+  } else {
+    // Pi sources
+    if (e.inferenceLocation !== "pi") {
+      throw new IngestError(
+        422,
+        "INVALID_INFERENCE_LOCATION",
+        "Pi sources require inferenceLocation 'pi'"
+      );
+    }
+    if (typeof e.deviceId !== "string" || !e.deviceId.trim()) {
+      throw new IngestError(
+        422,
+        "INVALID_DEVICE_ID",
+        "Pi sources require deviceId to be a non-empty string"
+      );
+    }
+    if (
+      typeof e.bindingVersion !== "number" ||
+      !Number.isInteger(e.bindingVersion) ||
+      e.bindingVersion < 1
+    ) {
+      throw new IngestError(
+        422,
+        "INVALID_BINDING_VERSION",
+        "bindingVersion must be an integer >= 1"
+      );
+    }
+    if (
+      e.localAlertMs !== null &&
+      (typeof e.localAlertMs !== "number" ||
+        !Number.isFinite(e.localAlertMs) ||
+        e.localAlertMs < 0)
+    ) {
+      throw new IngestError(
+        422,
+        "INVALID_LOCAL_ALERT_MS",
+        "localAlertMs must be null or a finite non-negative number"
+      );
+    }
   }
 
   if (typeof e.modelVersion !== "string" || !e.modelVersion.trim()) {
@@ -265,16 +379,6 @@ export function validateInspectionEvent(event: unknown): InspectionEvent {
     );
   }
 
-  if (
-    e.localAlertMs !== null &&
-    (typeof e.localAlertMs !== "number" || !Number.isFinite(e.localAlertMs) || e.localAlertMs < 0)
-  ) {
-    throw new IngestError(
-      422,
-      "INVALID_LOCAL_ALERT_MS",
-      "localAlertMs must be null or a finite non-negative number"
-    );
-  }
 
   if (e.outcome !== "ok" && e.outcome !== "defect" && e.outcome !== "unknown") {
     throw new IngestError(422, "INVALID_OUTCOME", "outcome must be 'ok', 'defect', or 'unknown'");
@@ -597,22 +701,43 @@ export async function ingestInspection(
   actor: Actor
 ): Promise<IngestResult> {
   // 1. Authorize Actor
-  if (actor.type === "device") {
-    if (actor.deviceId !== event.deviceId) {
-      throw new IngestError(
-        403,
-        "DEVICE_MISMATCH",
-        "Authenticated device token does not match event.deviceId"
-      );
-    }
-  } else if (actor.type === "user") {
-    const isTestMode = process.env.SIGAP_TEST_MODE === "1";
-    if (!isTestMode && actor.role !== "supervisor") {
+  const isBrowserEvent =
+    event.captureSource === "browser-upload" || event.captureSource === "browser-webcam";
+
+  if (isBrowserEvent) {
+    if (actor.type !== "user") {
       throw new IngestError(
         403,
         "FORBIDDEN",
-        "Operational ingestion requires a valid authenticated device token"
+        "Device actor cannot ingest browser provenance"
       );
+    }
+    const isTestMode = process.env.SIGAP_TEST_MODE === "1";
+    if (!isTestMode && actor.role !== "operator" && actor.role !== "supervisor") {
+      throw new IngestError(
+        403,
+        "FORBIDDEN",
+        "Browser inspection requires an operator or supervisor user session"
+      );
+    }
+  } else {
+    if (actor.type === "device") {
+      if (actor.deviceId !== event.deviceId) {
+        throw new IngestError(
+          403,
+          "DEVICE_MISMATCH",
+          "Authenticated device token does not match event.deviceId"
+        );
+      }
+    } else if (actor.type === "user") {
+      const isTestMode = process.env.SIGAP_TEST_MODE === "1";
+      if (!isTestMode && actor.role !== "supervisor") {
+        throw new IngestError(
+          403,
+          "FORBIDDEN",
+          "Operational ingestion requires a valid authenticated device token"
+        );
+      }
     }
   }
 
@@ -625,13 +750,7 @@ export async function ingestInspection(
   });
 
   if (existingEvent) {
-    const storedHash = existingEvent.payloadHash;
-    const isIdentical =
-      storedHash === payloadHash ||
-      (existingEvent.imageSha256?.toLowerCase() === event.frame.sha256.toLowerCase() &&
-        existingEvent.batchId === event.batchId &&
-        existingEvent.itemId === event.itemId);
-
+    const isIdentical = isDuplicateInspection(existingEvent, event, payloadHash);
     if (isIdentical) {
       return {
         eventId: event.eventId,
@@ -641,7 +760,7 @@ export async function ingestInspection(
         batchVersion: existingEvent.batch.version,
         caseEpoch: existingEvent.caseEpoch,
         imageSha256: existingEvent.imageSha256 || event.frame.sha256,
-        payloadHash: storedHash || payloadHash,
+        payloadHash: existingEvent.payloadHash || payloadHash,
       };
     } else {
       throw new IngestError(
@@ -701,7 +820,7 @@ export async function ingestInspection(
 
       // Recheck device binding inside transaction under lock
       if (actor.type === "device") {
-        const device = await tx.device.findUnique({ where: { id: event.deviceId } });
+        const device = await tx.device.findUnique({ where: { id: event.deviceId as string } });
         if (!device || !device.enabled) {
           throw new IngestError(
             403,
@@ -731,12 +850,7 @@ export async function ingestInspection(
         include: { workflowRun: true },
       });
       if (raceEvent) {
-        const storedHash = raceEvent.payloadHash;
-        const isIdentical =
-          storedHash === payloadHash ||
-          (raceEvent.imageSha256?.toLowerCase() === event.frame.sha256.toLowerCase() &&
-            raceEvent.batchId === event.batchId &&
-            raceEvent.itemId === event.itemId);
+        const isIdentical = isDuplicateInspection(raceEvent, event, payloadHash);
         if (isIdentical) {
           return {
             inspection: raceEvent,
@@ -781,7 +895,7 @@ export async function ingestInspection(
           capturedAt: new Date(event.capturedAt),
           receivedAt: new Date(),
           captureSource: event.captureSource,
-          inferenceLocation: "pi",
+          inferenceLocation: event.inferenceLocation,
           modelVersion: event.modelVersion,
           inferenceMs: event.inferenceMs,
           classificationMs: event.classificationMs,
@@ -794,7 +908,12 @@ export async function ingestInspection(
             : undefined,
           confidence: event.confidence,
           defectDetected: event.outcome === "defect",
-          defectClass: event.outcome === "defect" ? "defect" : "OK",
+          defectClass:
+            event.outcome === "defect"
+              ? "defect"
+              : event.outcome === "unknown"
+              ? "unknown"
+              : "OK",
           status:
             event.outcome === "defect"
               ? "Ditahan"
@@ -940,12 +1059,7 @@ export async function ingestInspection(
         include: { workflowRun: true, batch: true },
       });
       if (racedEvent) {
-        const storedHash = racedEvent.payloadHash;
-        const isIdentical =
-          storedHash === payloadHash ||
-          (racedEvent.imageSha256?.toLowerCase() === event.frame.sha256.toLowerCase() &&
-            racedEvent.batchId === event.batchId &&
-            racedEvent.itemId === event.itemId);
+        const isIdentical = isDuplicateInspection(racedEvent, event, payloadHash);
         if (isIdentical) {
           return {
             eventId: event.eventId,
@@ -955,7 +1069,7 @@ export async function ingestInspection(
             batchVersion: racedEvent.batch.version,
             caseEpoch: racedEvent.caseEpoch,
             imageSha256: racedEvent.imageSha256 || event.frame.sha256,
-            payloadHash: storedHash || payloadHash,
+            payloadHash: racedEvent.payloadHash || payloadHash,
           };
         }
         throw new IngestError(

@@ -551,7 +551,7 @@ d-day/
 │
 └── docs/
     ├── SIGAP-Master-Context.md   # ← This file — Single Source of Truth
-    ├── wiring-diagram.svg        # GPIO wiring diagram (see Section 11)
+    ├── wiring-diagram.md         # Canonical GPIO & hardware wiring guide (see Section 11)
     └── archive/                  # Archived drafts
 ```
 
@@ -624,24 +624,26 @@ Detail langkah-demi-langkah (SAHI, box clustering, NCNN export, loss reweighting
 | Component | Spec | Connection |
 |---|---|---|
 | **Raspberry Pi 4** | 4 GB RAM, Raspberry Pi OS (64-bit) | Host device |
-| **USB Webcam** | 640×480, `/dev/video0` | USB-A port |
+| **5V Cooling Fan** | 5V DC Pi case fan (thermal control) | Pin 4 (5V DC) & Pin 6 (GND) |
+| **USB Webcam** | 640×480, `/dev/video0` | USB-A port (USB 3.0 blue port) |
 | **Red LED** | Standard 2V forward voltage | BCM 17 (physical pin 11) via 330Ω |
 | **Yellow LED** | Standard 2V forward voltage | BCM 27 (physical pin 13) via 330Ω |
 | **Green LED** | Standard 2V forward voltage | BCM 22 (physical pin 15) via 330Ω |
 | **Active Buzzer module** | 3.3V logic level | BCM 18 (physical pin 12) |
-| **GND** | Common ground rail | Physical pins 6, 9, 14, 20, 25, 30, 34, 39 |
+| **IoT Common Ground** | Common ground rail (LEDs & Buzzer) | Physical pin 14 (primary); pin 9 (alternate) |
 | **5V Power Supply** | ≥3A recommended | Pi USB-C |
 
 ### 11.2 GPIO Pin Assignments
 
 | BCM Pin | Physical Pin | Function | Signal |
 |---|---|---|---|
+| — | Pin 4 | 5V Power | 5V DC power for cooling fan (+) |
+| — | Pin 6 | GND (Fan) | Return ground dedicated to cooling fan (−) |
 | GPIO 17 | Pin 11 | Red LED | HIGH = defect detected |
 | GPIO 18 | Pin 12 | Buzzer | HIGH = active buzzer on; or PWM 2kHz 50% for passive type |
 | GPIO 27 | Pin 13 | Yellow LED | HIGH = inspection in progress / unknown |
+| — | Pin 14 | GND (IoT Rail) | Common ground return for LEDs and Buzzer (alt: Pin 9) |
 | GPIO 22 | Pin 15 | Green LED | HIGH = product OK, passed |
-| GND | Pin 6 | Common ground | — |
-
 ### 11.3 Resistor Rationale
 
 330Ω chosen for LEDs: at 3.3V GPIO with a standard 2.0V LED forward voltage:  
@@ -661,7 +663,7 @@ red_led = LED(17); yellow_led = LED(27); green_led = LED(22)
 buzzer = Buzzer(18)
 ```
 
-See `ai_models/edge_inference_worker.py` for production usage and `d-day/docs/wiring-diagram.svg` for the physical wiring diagram.
+See `ai_models/edge_inference_worker.py` for production usage and `d-day/docs/wiring-diagram.md` for the canonical GPIO and hardware wiring guide.
 
 ---
 
@@ -719,7 +721,7 @@ Key deliverables:
 - `ai_models/train_yolov8_detection.py` — v2 detector training (Step 2)
 - `ai_models/model-manifest.json` — SHA-256 + thresholds updated post-training
 - `ai_models/evaluate_runtime.py` — all 4 gates passing or honestly reported
-- `docs/wiring-diagram.svg` — physical GPIO wiring
+- `docs/wiring-diagram.md` — canonical GPIO & hardware wiring guide
 - `ai_models/AI_IMPROVEMENT_ROADMAP.md` — Technical findings on Pi 4 CPU quantization & mAP/latency improvement roadmap
 
 ### Role 2 — Web Engineer

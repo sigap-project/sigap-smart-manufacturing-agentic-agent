@@ -104,6 +104,18 @@ npx tsx scripts/test-phase-06-gate.ts
 **Prerequisites:** `DATABASE_URL`, `INTERNAL_API_KEY`
 **PASS criteria:** `[PASS] geometry`, `[PASS] telemetry`, `[PASS] trace_reconciliation` semua muncul.
 
+
+---
+
+### `test-browser-inspection.ts` — Browser Ingestion & Vision Runtime Gate
+Memvalidasi endpoint `POST /api/inspection/analyze`: browser provenance (`browser-upload` dan `browser-webcam`), server inference location, null deviceId, idempotency pada exact replay (200) vs conflict (409), session + CSRF auth checks, serta penolakan browser provenance pada endpoint internal Pi (403).
+
+**Usage:**
+```bash
+npx tsx scripts/test-browser-inspection.ts
+```
+**Prerequisites:** `DATABASE_URL`, `SIGAP_SESSION_SECRET`, `SIGAP_USERS_JSON`, server Next.js aktif pada `SIGAP_BASE_URL` (default `http://localhost:3000`)
+**PASS criteria:** Semua 7 check `[PASS]`, termasuk deduplication, rejections, non-Pi provenance persistence, dan automatic cleanup.
 ---
 
 ## `tools/` — Video Asset Utilities

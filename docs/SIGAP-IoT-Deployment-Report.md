@@ -255,7 +255,7 @@ The station is ready for manual webcam captures, subject to the recorded batch r
 
 The original release remains at `/home/dti/sigap/releases/20261028T151512408429Z` for audit. Its canonicalization defect makes it unsuitable for rollback against the current backend. If startup fails, stop the worker, preserve external queue/latch state and sidecars, and deploy a verified compatible release. Never delete state, falsify model identity, or bypass authorization to make a check pass.
 
-Connecting hardware later requires wiring confirmation and separate actuation approval. Use the [project wiring diagram](wiring-diagram.svg); intended wiring is not proof of actual connections.
+Connecting hardware later requires wiring confirmation and separate actuation approval. Use the [project wiring guide](wiring-diagram.md); intended wiring is not proof of actual connections.
 
 ## Related implementation and operations references
 

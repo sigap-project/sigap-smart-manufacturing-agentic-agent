@@ -62,8 +62,11 @@ AI QUALITY DEMONSTRATION GATES VERIFICATION (120 SAMPLES)
    Target: <= 10.0% | Status: [PASS]
 3. Supported Unknown Rate:             2.68% (95% CI: [0.0%, 5.7%])
    Target: <= 15.0% | Status: [PASS]
-4. Localization Coverage:              100.0% (40/40 defective items localized)
-   Target: Defect identification | Status: [PASS]
+4. Box Precision at IoU >= 0.5:        58.0% (105/181 boxes matched)
+   Target: >= 80.0% | Status: [FAIL]
+   Box Recall at IoU >= 0.5:           32.8% (105/320 GT boxes found)
+   Box F1:                             41.9%
+   Localization Coverage:              100.0% (40/40 defective items)
 
 Classifier + Detector End-to-End Latency (Soak 200 Iterations, 2 Threads):
   p50: 136.6ms | p95: 159.7ms | p99: 264.2ms
@@ -71,6 +74,8 @@ Classifier + Detector End-to-End Latency (Soak 200 Iterations, 2 Threads):
 ===============================================================================
 CORE AI QUALITY & SAFETY GATES PASSED!
 ```
+
+> **Koreksi 2026-10-29:** Angka box di atas diukur ulang setelah GT evaluasi dilengkapi (8 cacat per citra, sebelumnya 2) dan matching dibuat one-to-one. Lihat `AI_IMPROVEMENT_ROADMAP.md` → *Temuan Audit*. Skrip training detektor v3 sudah disiapkan.
 
 ---
 
@@ -164,7 +169,7 @@ Jalankan **KEDUA MODEL SECARA BERANTAI** di edge camera worker (`ai_models/edge_
 
 ---
 
-> **IoT Wiring**: See `d-day/docs/wiring-diagram.svg` for GPIO pin wiring spec (BCM 17/27/22/18, 330Ω resistors, active buzzer).
+> **IoT Wiring**: See `d-day/docs/wiring-diagram.md` for the canonical GPIO and hardware wiring guide (BCM 17/27/22/18, 330Ω resistors, active buzzer, Pin 4/6 fan, Pin 14 IoT ground).
 
 ## 🚀 6. Cara Menjalankan Edge Worker (`edge_inference_worker.py`)
 

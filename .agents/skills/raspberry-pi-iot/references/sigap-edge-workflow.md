@@ -123,16 +123,19 @@ An `unknown` / `low_confidence` result requires review even when a legacy UI bad
 
 ## Confirm physical wiring before enabling outputs
 
-Use `docs/wiring-diagram.svg` and section 11 of `docs/SIGAP-Master-Context.md` for intended project wiring:
+Use `docs/wiring-diagram.md` alongside section 11 of `docs/SIGAP-Master-Context.md` for intended project wiring:
 
-| Function | BCM GPIO | Physical pin |
-|---|---|---|
-| Red LED | 17 | 11 |
-| Yellow LED | 27 | 13 |
-| Green LED | 22 | 15 |
-| Buzzer | 18 | 12 |
+| Function | BCM GPIO | Physical pin | Notes |
+|---|---|---|---|
+| Cooling Fan (+) | — | 4 | 5V DC power bus for case fan |
+| Cooling Fan (−) | — | 6 | Dedicated fan return ground |
+| Red LED | 17 | 11 | Defect alert via 330 Ω |
+| Yellow LED | 27 | 13 | Review / in-progress via 330 Ω |
+| Green LED | 22 | 15 | Passed / OK via 330 Ω |
+| Buzzer | 18 | 12 | Active or 2kHz PWM audible alarm |
+| IoT Common Ground | — | 14 | Negative breadboard rail (alt: Pin 9) |
 
-LEDs require series resistors; the project specifies 330 Ω. Use common ground and compatible buzzer drive circuitry. GPIO is 3.3 V and is not 5 V tolerant. The documented Pi 4, 64-bit OS, and USB webcam are intended hardware, not observed properties of the replacement board. Confirm actual board, wiring, backend, permissions, and operator authorization before GPIO smoke or live camera capture. Simulated mode proves no physical output behavior.
+LEDs require series resistors; the project specifies 330 Ω. The cooling fan occupies Pin 4 (5V) and Pin 6 (GND); indicator returns connect to Pin 14 (or Pin 9). Use common ground and compatible buzzer drive circuitry. GPIO is 3.3 V and is not 5 V tolerant. The documented Pi 4, 64-bit OS, and USB webcam are intended hardware, not observed properties of the replacement board. Confirm actual board, wiring, backend, permissions, and operator authorization before GPIO smoke or live camera capture. Simulated mode proves no physical output behavior.
 
 ## Deploy a release with an interactive terminal
 

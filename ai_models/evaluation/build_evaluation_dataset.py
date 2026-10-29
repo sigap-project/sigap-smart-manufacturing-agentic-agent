@@ -91,8 +91,14 @@ def main():
         # Box coordinates mapped from base defect location [268, 20, 52, 38] in 512x512
         boxes = []
         base_defects = [
-            (268.0, 20.0, 52.0, 38.0),
-            (346.0, 316.0, 36.0, 56.0),
+            (268.0, 20.0, 52.0, 38.0),   # top rim burr
+            (346.0, 316.0, 36.0, 56.0),  # inner-ring pinholes
+            (60.0, 66.0, 52.0, 64.0),    # upper-left fin + flash
+            (22.0, 206.0, 20.0, 72.0),   # left rim burrs
+            (390.0, 86.0, 36.0, 42.0),   # upper-right flash
+            (430.0, 134.0, 18.0, 20.0),  # right rim blob
+            (448.0, 200.0, 20.0, 40.0),  # right rim spur
+            (438.0, 318.0, 20.0, 30.0),  # lower-right flash
         ]
         boxes = []
         if i <= 40:

@@ -114,6 +114,7 @@ def main():
     localization_covered = 0
     matching_boxes_count = 0
     total_pred_boxes = 0
+    total_gt_boxes = 0
 
     latencies_cls = []
     latencies_det = []
@@ -179,14 +180,14 @@ def main():
                     "height": (gb["height"] / h) * 100.0,
                 })
 
-            for pb in boxes:
+            # Greedy one-to-one matching by score: each GT box can be claimed once
+            total_gt_boxes += len(gt_pct_boxes)
+            unmatched_gt = list(gt_pct_boxes)
+            for pb in sorted(boxes, key=lambda b: b["confidence"], reverse=True):
                 total_pred_boxes += 1
-                matched = False
-                for gb in gt_pct_boxes:
-                    if compute_iou(pb, gb) >= 0.5:
-                        matched = True
-                        break
-                if matched:
+                ious = [compute_iou(pb, gb) for gb in unmatched_gt]
+                if ious and max(ious) >= 0.5:
+                    unmatched_gt.pop(ious.index(max(ious)))
                     matching_boxes_count += 1
 
     # Quality Gate Computations
@@ -203,6 +204,8 @@ def main():
     unknown_rate = (supported_unknowns / total_supported) if total_supported > 0 else 0.0
 
     box_precision = (matching_boxes_count / total_pred_boxes) if total_pred_boxes > 0 else 1.0
+    box_recall = (matching_boxes_count / total_gt_boxes) if total_gt_boxes > 0 else 1.0
+    box_f1 = (2 * box_precision * box_recall / (box_precision + box_recall)) if (box_precision + box_recall) > 0 else 0.0
     loc_coverage = (localization_covered / localization_attempted) if localization_attempted > 0 else 1.0
 
     # Display 3-Way Confusion Matrix
@@ -250,6 +253,8 @@ def main():
 
     print(f"4. Box Precision at IoU >= 0.5:        {box_precision * 100.0:.1f}% ({matching_boxes_count}/{total_pred_boxes} boxes matched)")
     print(f"   Target: >= 80.0% | Status: {'[PASS]' if gate_box else '[FAIL]'}")
+    print(f"   Box Recall at IoU >= 0.5:           {box_recall * 100.0:.1f}% ({matching_boxes_count}/{total_gt_boxes} GT boxes found)")
+    print(f"   Box F1:                             {box_f1 * 100.0:.1f}%")
     print(f"   Localization Coverage:              {loc_coverage * 100.0:.1f}% ({localization_covered}/{localization_attempted} defective items)")
 
     # Latency Benchmark

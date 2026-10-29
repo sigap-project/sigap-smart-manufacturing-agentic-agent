@@ -33,6 +33,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+.claude/
 *.swo
 
 # Temporary scratch test files & media storage
