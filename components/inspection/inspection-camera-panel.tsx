@@ -53,7 +53,7 @@ interface InspectionDisplayResult {
 interface RequestIdentity {
   eventId: string;
   batchId: string;
-  itemId: string;
+  itemId?: string;
   capturedAt: string;
   captureSource: "browser-upload" | "browser-webcam";
   jpegBase64: string;
@@ -384,11 +384,8 @@ export function InspectionCameraPanel({
     if (!batchId) {
       return "Select an active batch to analyze";
     }
-    if (!itemId || !itemId.trim()) {
-      return "Enter a Workpiece Item ID to analyze";
-    }
     return null;
-  }, [canAnalyze, batchId, itemId]);
+  }, [canAnalyze, batchId]);
 
   const unmetReason = getUnmetPrerequisite();
   const isReadyToAnalyze = !unmetReason;
@@ -489,14 +486,15 @@ export function InspectionCameraPanel({
       if (
         !reqPayload ||
         reqPayload.batchId !== batchId ||
-        reqPayload.itemId !== itemId.trim() ||
+        (reqPayload.itemId ?? "") !== itemId.trim() ||
         reqPayload.captureSource !== source ||
         reqPayload.jpegBase64 !== jpegBase64
       ) {
         reqPayload = {
           eventId: newEventId(),
           batchId: batchId!,
-          itemId: itemId.trim(),
+          itemId: itemId.trim() || undefined, // empty = server auto-assigns
+
           capturedAt: new Date().toISOString(),
           captureSource: source,
           jpegBase64,

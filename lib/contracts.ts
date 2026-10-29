@@ -115,7 +115,7 @@ export interface InspectionView {
 export interface BrowserInspectionRequest {
   eventId: string;
   batchId: string;
-  itemId: string;
+  itemId?: string; // omit to let the server assign "<lotId>-NNN"
   capturedAt: string;
   captureSource: "browser-upload" | "browser-webcam";
   jpegBase64: string;

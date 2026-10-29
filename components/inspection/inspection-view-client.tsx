@@ -173,12 +173,12 @@ export function InspectionViewClient({
             {/* Item ID Input */}
             <div>
               <label htmlFor="item-id-input" className="block text-xs font-semibold text-slate-700 mb-1">
-                Workpiece Item ID <span className="text-rose-500">*</span>
+                Workpiece Item ID <span className="text-slate-400 font-normal">(optional)</span>
               </label>
               <input
                 id="item-id-input"
                 type="text"
-                placeholder="e.g. IMP-001, CAST-8842"
+                placeholder={`Auto-assigned (${currentLotId}-001…)`}
                 value={itemId}
                 maxLength={64}
                 onChange={(e) => {
@@ -189,7 +189,7 @@ export function InspectionViewClient({
                 className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs bg-white text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                Each workpiece requires a unique identifier within its lot batch.
+                Leave blank to auto-assign the next ID in this lot, or enter a barcode/serial to override.
               </p>
             </div>
           </div>

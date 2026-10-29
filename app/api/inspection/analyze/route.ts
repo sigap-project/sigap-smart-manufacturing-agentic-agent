@@ -156,12 +156,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (typeof req.itemId !== "string" || !req.itemId.trim() || req.itemId.length > 64) {
+  // itemId is optional: when omitted the server assigns the next ID in the lot
+  const requestedItemId = typeof req.itemId === "string" ? req.itemId.trim() : "";
+  if (
+    req.itemId !== undefined &&
+    req.itemId !== null &&
+    (typeof req.itemId !== "string" || req.itemId.length > 64)
+  ) {
     return NextResponse.json(
       {
         success: false,
         code: "INVALID_ANALYSIS_REQUEST",
-        error: "itemId must be a non-empty string <= 64 characters",
+        error: "itemId must be a string <= 64 characters when provided",
       },
       { status: 422 }
     );
@@ -275,7 +281,8 @@ export async function POST(request: NextRequest) {
       const matchingHash =
         existingEvent.imageSha256?.toLowerCase() === computedImageSha256.toLowerCase();
       const matchingBatch = existingEvent.batchId === req.batchId;
-      const matchingItem = existingEvent.itemId === req.itemId;
+      // A retry without an explicit itemId matches whatever ID was auto-assigned first time
+      const matchingItem = !requestedItemId || existingEvent.itemId === requestedItemId;
       const matchingSource = existingEvent.captureSource === req.captureSource;
       const existingCapturedAt = existingEvent.capturedAt
         ? new Date(existingEvent.capturedAt).toISOString()
@@ -322,11 +329,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 9. Pre-inference Check for (batchId, itemId) already inspected
+    // 9. Auto-assign "<lotId>-NNN" when no itemId was given, then check (batchId, itemId) is unused
+    let itemId = requestedItemId;
+    if (!itemId) {
+      let seq = (await prisma.inspection.count({ where: { batchId: req.batchId } })) + 1;
+      do {
+        itemId = `${batch.lotId}-${String(seq++).padStart(3, "0")}`;
+      } while (
+        await prisma.inspection.findFirst({
+          where: { batchId: req.batchId, itemId },
+          select: { id: true },
+        })
+      );
+    }
+
     const existingItem = await prisma.inspection.findFirst({
       where: {
         batchId: req.batchId,
-        itemId: req.itemId,
+        itemId,
       },
     });
 
@@ -335,7 +355,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           code: "ITEM_ALREADY_INSPECTED",
-          error: `Item '${req.itemId}' has already been inspected in batch '${req.batchId}' (inspection ${existingItem.id})`,
+          error: `Item '${itemId}' has already been inspected in batch '${req.batchId}' (inspection ${existingItem.id})`,
           details: { existingInspectionId: existingItem.id },
         },
         { status: 409 }
@@ -352,7 +372,7 @@ export async function POST(request: NextRequest) {
       deviceId: null,
       batchId: req.batchId,
       bindingVersion: 1,
-      itemId: req.itemId,
+      itemId,
       capturedAt: new Date(req.capturedAt).toISOString(),
       captureSource: req.captureSource as "browser-upload" | "browser-webcam",
       inferenceLocation: "server",
