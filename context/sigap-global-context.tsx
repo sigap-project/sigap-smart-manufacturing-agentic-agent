@@ -64,6 +64,20 @@ export interface IngestInspectionPayload {
   }>;
 }
 
+export interface BatchDecision {
+  version: number;
+  reason: string;
+  csrfToken: string | null;
+}
+
+export interface MutationResult {
+  ok: boolean;
+  status?: number;
+  message?: string;
+  code?: string;
+  error?: string;
+}
+
 interface SigapGlobalContextType {
   inspections: InspectionRecord[];
   batches: BatchItem[];
@@ -76,8 +90,13 @@ interface SigapGlobalContextType {
   setSystemState: (state: SystemStateType, durationMs?: number) => void;
   applyInspectionSnapshot: (record: IngestInspectionPayload | InspectionRecord) => void;
   ingestInspection: (payload: IngestInspectionPayload) => void;
-  approveBatch: (batchId: string) => Promise<boolean>;
-  rejectBatch: (batchId: string) => Promise<boolean>;
+  approveBatch: (batchId: string, decision: BatchDecision) => Promise<MutationResult>;
+  rejectBatch: (batchId: string, decision: BatchDecision) => Promise<MutationResult>;
+  reviewInspection: (
+    inspectionId: string,
+    reviewOutcome: "confirmed_ok" | "confirmed_defect",
+    decision: BatchDecision
+  ) => Promise<MutationResult>;
   createDispatch: (item: DispatchItem) => Promise<void>;
   saveSettings: (newSettings: SettingsState) => Promise<void>;
   markNotificationAsRead: (id: string) => void;
@@ -225,52 +244,67 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
     [triggerSystemState, refreshServerState]
   );
 
-  const approveBatch = useCallback(
-    async (batchId: string): Promise<boolean> => {
+  // Governed supervisor mutation: session cookie + CSRF + optimistic batch version.
+  // Always refreshes so the next attempt carries the current version.
+  const governedPatch = useCallback(
+    async (url: string, body: Record<string, unknown>, csrfToken: string | null): Promise<MutationResult> => {
       try {
-        const res = await fetch(`/api/batches/${encodeURIComponent(batchId)}/approve`, {
+        const res = await fetch(url, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+          },
+          body: JSON.stringify(body),
         });
-
-        if (res.ok) {
-          await refreshServerState();
-          return true;
-        } else {
-          const err = await res.json().catch(() => ({}));
-          console.error(`[SigapGlobal] Approve batch failed (${res.status}):`, err.error);
-          return false;
-        }
+        const json = await res.json().catch(() => ({}));
+        await refreshServerState();
+        if (res.ok && json.success) return { ok: true, message: json.message };
+        return {
+          ok: false,
+          status: res.status,
+          code: json.code,
+          error: json.error || `Request failed (${res.status})`,
+        };
       } catch (err) {
-        console.error("[SigapGlobal] Approve batch network error:", err);
-        return false;
+        return { ok: false, error: err instanceof Error ? err.message : "Network error" };
       }
     },
     [refreshServerState]
   );
 
-  const rejectBatch = useCallback(
-    async (batchId: string): Promise<boolean> => {
-      try {
-        const res = await fetch(`/api/batches/${encodeURIComponent(batchId)}/reject`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-        });
+  const approveBatch = useCallback(
+    (batchId: string, { version, reason, csrfToken }: BatchDecision) =>
+      governedPatch(
+        `/api/batches/${encodeURIComponent(batchId)}/approve`,
+        { expectedBatchVersion: version, reason },
+        csrfToken
+      ),
+    [governedPatch]
+  );
 
-        if (res.ok) {
-          await refreshServerState();
-          return true;
-        } else {
-          const err = await res.json().catch(() => ({}));
-          console.error(`[SigapGlobal] Reject batch failed (${res.status}):`, err.error);
-          return false;
-        }
-      } catch (err) {
-        console.error("[SigapGlobal] Reject batch network error:", err);
-        return false;
-      }
-    },
-    [refreshServerState]
+  const rejectBatch = useCallback(
+    (batchId: string, { version, reason, csrfToken }: BatchDecision) =>
+      governedPatch(
+        `/api/batches/${encodeURIComponent(batchId)}/reject`,
+        { expectedBatchVersion: version, reason },
+        csrfToken
+      ),
+    [governedPatch]
+  );
+
+  const reviewInspection = useCallback(
+    (
+      inspectionId: string,
+      reviewOutcome: "confirmed_ok" | "confirmed_defect",
+      { version, reason, csrfToken }: BatchDecision
+    ) =>
+      governedPatch(
+        `/api/inspections/${encodeURIComponent(inspectionId)}/review`,
+        { reviewOutcome, reason, expectedBatchVersion: version },
+        csrfToken
+      ),
+    [governedPatch]
   );
 
   const createDispatch = useCallback(
@@ -354,6 +388,7 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
       ingestInspection: applyInspectionSnapshot,
       approveBatch,
       rejectBatch,
+      reviewInspection,
       createDispatch,
       saveSettings,
       markNotificationAsRead,
@@ -373,6 +408,7 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
       applyInspectionSnapshot,
       approveBatch,
       rejectBatch,
+      reviewInspection,
       createDispatch,
       saveSettings,
       markNotificationAsRead,

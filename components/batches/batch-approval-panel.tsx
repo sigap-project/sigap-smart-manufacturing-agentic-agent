@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import {
   Check,
-  X,
   Clock,
   ArrowRight,
 } from "lucide-react";
@@ -11,15 +10,11 @@ import { BatchItem } from "./types";
 
 interface BatchApprovalPanelProps {
   pendingBatches: BatchItem[];
-  onApprove: (batchId: string) => void;
-  onReject: (batchId: string) => void;
   onInspectBatch: (batch: BatchItem) => void;
 }
 
 export function BatchApprovalPanel({
   pendingBatches,
-  onApprove,
-  onReject,
   onInspectBatch,
 }: BatchApprovalPanelProps) {
   // Live SLA timers simulation: track countdown seconds for each batch
@@ -177,28 +172,15 @@ export function BatchApprovalPanel({
                   </div>
                 </div>
 
-                {/* Two Action Buttons: "Hold / Reject" (Pastel Rose) and "Approve & Release" (Primary Dark Slate) */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  {/* Reject / Hold Button */}
-                  <button
-                    onClick={() => onReject(batch.id)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200/80 hover:bg-rose-100 transition-all duration-200 cursor-pointer shadow-xs"
-                    title="Hold lot to Quarantine Zone and trigger SAP QM ticket"
-                  >
-                    <X className="w-3.5 h-3.5 stroke-[2]" />
-                    <span>Hold / Reject</span>
-                  </button>
-
-                  {/* Approve Button */}
-                  <button
-                    onClick={() => onApprove(batch.id)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all duration-200 cursor-pointer"
-                    title="Approve batch and release lot for downstream assembly/shipping"
-                  >
-                    <Check className="w-3.5 h-3.5 stroke-[2]" />
-                    <span>Approve &amp; Release</span>
-                  </button>
-                </div>
+                {/* Decisions need a written reason and suspect review, so they happen in the drawer */}
+                <button
+                  onClick={() => onInspectBatch(batch)}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all duration-200 cursor-pointer"
+                  title="Review suspect inspections, then release or reject this lot"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[2]" />
+                  <span>Review &amp; Decide</span>
+                </button>
               </div>
             );
           })

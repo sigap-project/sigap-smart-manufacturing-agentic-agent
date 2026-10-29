@@ -107,6 +107,16 @@ function normalizeCanvasToJpeg(
   };
 }
 
+/** crypto.randomUUID only exists in secure contexts (HTTPS/localhost); fall back for LAN http. */
+function newEventId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 async function normalizeFile(file: File): Promise<NormalizedImage> {
   const { promise: dataUrlPromise, resolve: resolveDataUrl, reject: rejectDataUrl } =
     Promise.withResolvers<string>();
@@ -132,6 +142,41 @@ async function normalizeFile(file: File): Promise<NormalizedImage> {
   ctx.drawImage(img, 0, 0);
 
   return normalizeCanvasToJpeg(canvas, img.naturalWidth, img.naturalHeight);
+}
+
+function SubmitButton({
+  disabled,
+  isAnalyzing,
+  onClick,
+}: {
+  disabled: boolean;
+  isAnalyzing: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all ${
+        disabled
+          ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+          : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+      }`}
+    >
+      {isAnalyzing && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+      <span>{isAnalyzing ? "Analyzing…" : "Submit for Analysis"}</span>
+    </button>
+  );
+}
+
+function UnmetNotice({ reason }: { reason: string }) {
+  return (
+    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5 flex items-center gap-2">
+      <HelpCircle className="w-4 h-4 shrink-0 text-amber-600" />
+      <span>{reason}</span>
+    </p>
+  );
 }
 
 export function InspectionCameraPanel({
@@ -161,6 +206,7 @@ export function InspectionCameraPanel({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [webcamSnapshot, setWebcamSnapshot] = useState<NormalizedImage | null>(null);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   // Analysis & Submission State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -187,9 +233,28 @@ export function InspectionCameraPanel({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    setStream(null);
     setCameraStatus("idle");
     setIsVideoReady(false);
   }, []);
+
+  // Attach the stream once the <video> element is mounted (it renders only after a stream exists)
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !stream) return;
+    v.srcObject = stream;
+    const onReady = () => {
+      setIsVideoReady(true);
+      setCameraStatus("live");
+      v.play().catch(() => {});
+    };
+    if (v.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      onReady();
+      return;
+    }
+    v.addEventListener("loadedmetadata", onReady, { once: true });
+    return () => v.removeEventListener("loadedmetadata", onReady);
+  }, [stream]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -204,7 +269,7 @@ export function InspectionCameraPanel({
   // Handle Tab Switch
   const handleTabSwitch = (tab: "upload" | "webcam") => {
     if (isAnalyzing) return;
-    if (tab === "upload" && cameraStatus === "live") {
+    if (tab === "upload") {
       stopCameraStream();
     }
     setActiveTab(tab);
@@ -314,30 +379,30 @@ export function InspectionCameraPanel({
     onAnalyzingChange(true);
     setAnalysisError(null);
 
-    // Reuse request identity on retry or create new
-    let reqPayload = requestIdentityRef.current;
-    if (
-      !reqPayload ||
-      reqPayload.batchId !== batchId ||
-      reqPayload.itemId !== itemId.trim() ||
-      reqPayload.captureSource !== source ||
-      reqPayload.jpegBase64 !== jpegBase64
-    ) {
-      reqPayload = {
-        eventId: crypto.randomUUID(),
-        batchId: batchId!,
-        itemId: itemId.trim(),
-        capturedAt: new Date().toISOString(),
-        captureSource: source,
-        jpegBase64,
-      };
-      requestIdentityRef.current = reqPayload;
-    }
-
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
+      // Reuse request identity on retry or create new
+      let reqPayload = requestIdentityRef.current;
+      if (
+        !reqPayload ||
+        reqPayload.batchId !== batchId ||
+        reqPayload.itemId !== itemId.trim() ||
+        reqPayload.captureSource !== source ||
+        reqPayload.jpegBase64 !== jpegBase64
+      ) {
+        reqPayload = {
+          eventId: newEventId(),
+          batchId: batchId!,
+          itemId: itemId.trim(),
+          capturedAt: new Date().toISOString(),
+          captureSource: source,
+          jpegBase64,
+        };
+        requestIdentityRef.current = reqPayload;
+      }
+
       const response = await fetch("/api/inspection/analyze", {
         method: "POST",
         headers: {
@@ -421,15 +486,7 @@ export function InspectionCameraPanel({
       }
 
       mediaStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          if (acquisitionTokenRef.current === token) {
-            setIsVideoReady(true);
-            setCameraStatus("live");
-          }
-        };
-      }
+      setStream(stream);
     } catch (err: unknown) {
       if (acquisitionTokenRef.current !== token) return;
       setCameraStatus("error");
@@ -446,9 +503,9 @@ export function InspectionCameraPanel({
     }
   };
 
-  // Capture Picture from Video Feed
-  const handleTakePicture = async () => {
-    if (!videoRef.current || !isReadyToAnalyze || isAnalyzing) return;
+  // Capture a still from the video feed; analysis runs only when the operator submits it
+  const handleTakePicture = () => {
+    if (!videoRef.current || isAnalyzing) return;
     const v = videoRef.current;
     if (v.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || v.videoWidth <= 0 || v.videoHeight <= 0) {
       return;
@@ -467,24 +524,22 @@ export function InspectionCameraPanel({
     ctx.drawImage(v, 0, 0, v.videoWidth, v.videoHeight);
 
     try {
-      const normalized = normalizeCanvasToJpeg(canvas, v.videoWidth, v.videoHeight);
-      setWebcamSnapshot(normalized);
-      await executeAnalysis("browser-webcam", normalized.jpegBase64);
+      setWebcamSnapshot(normalizeCanvasToJpeg(canvas, v.videoWidth, v.videoHeight));
+      stopCameraStream();
     } catch (err) {
       setAnalysisError(err instanceof Error ? err.message : "Failed to process snapshot");
     }
   };
 
-  // Take Another Picture (return to live feed)
-  const handleTakeAnotherPicture = () => {
+  // Retake (discard still, return to live feed)
+  const handleRetake = () => {
     if (isAnalyzing) return;
     setWebcamSnapshot(null);
     setLastResult(null);
     setAnalysisError(null);
+    requestIdentityRef.current = null;
     onInputChange();
-    if (cameraStatus === "idle") {
-      handleStartCamera();
-    }
+    handleStartCamera();
   };
 
   return (
@@ -631,10 +686,20 @@ export function InspectionCameraPanel({
               </div>
             ) : (
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Choose an image to upload"
+                onClick={() => !isAnalyzing && fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && !isAnalyzing) {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`w-full h-64 sm:h-80 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-6 text-center ${
+                className={`w-full h-64 sm:h-80 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-6 text-center cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   isDragOver
                     ? "border-blue-500 bg-blue-50/50"
                     : uploadState === "error"
@@ -649,14 +714,9 @@ export function InspectionCameraPanel({
                 <p className="text-xs text-slate-500 mb-4 max-w-sm">
                   Drag and drop a JPG, PNG or WebP here
                 </p>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
-                >
+                <span className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors">
                   Choose Image
-                </button>
+                </span>
                 <span className="text-[11px] text-slate-400 mt-3">One image, up to 10 MiB</span>
               </div>
             )}
@@ -690,30 +750,14 @@ export function InspectionCameraPanel({
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => normalizedUpload && executeAnalysis("browser-upload", normalizedUpload.jpegBase64)}
-                  disabled={uploadState !== "ready" || !isReadyToAnalyze || isAnalyzing}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all ${
-                    uploadState === "ready" && isReadyToAnalyze && !isAnalyzing
-                      ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                      : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-                  }`}
-                >
-                  {isAnalyzing && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{isAnalyzing ? "Analyzing…" : "Analyze Image"}</span>
-                </button>
-              </div>
+              <SubmitButton
+                disabled={uploadState !== "ready" || !isReadyToAnalyze || isAnalyzing}
+                isAnalyzing={isAnalyzing}
+                onClick={() => normalizedUpload && executeAnalysis("browser-upload", normalizedUpload.jpegBase64)}
+              />
             </div>
 
-            {/* Unmet prerequisite notice */}
-            {uploadState === "ready" && unmetReason && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 shrink-0 text-amber-600" />
-                <span>{unmetReason}</span>
-              </p>
-            )}
+            {uploadState === "ready" && unmetReason && <UnmetNotice reason={unmetReason} />}
           </div>
         )}
 
@@ -780,21 +824,26 @@ export function InspectionCameraPanel({
                     })}
                 </svg>
               </div>
-            ) : cameraStatus === "live" ? (
-              // Live Video Feed (Plain, no overlays)
-              <div
-                className="w-full relative bg-black rounded-xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center"
-                style={{ aspectRatio: "16 / 9", maxHeight: "560px" }}
-              >
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : cameraStatus === "starting" ? (
+            ) : (
+              <>
+              {/* Live Video Feed (plain, no overlays). Mounted as soon as a stream exists so the ref is available. */}
+              {stream && (
+                <div
+                  className={`w-full relative bg-black rounded-xl overflow-hidden border border-slate-200 shadow-inner items-center justify-center ${
+                    cameraStatus === "live" ? "flex" : "hidden"
+                  }`}
+                  style={{ aspectRatio: "16 / 9", maxHeight: "560px" }}
+                >
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+              {cameraStatus === "live" ? null : cameraStatus === "starting" ? (
               <div
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2.5 text-slate-500"
                 style={{ aspectRatio: "16 / 9", maxHeight: "560px" }}
@@ -851,6 +900,8 @@ export function InspectionCameraPanel({
                   Start Camera
                 </button>
               </div>
+              )}
+              </>
             )}
 
             {/* Webcam Action Controls */}
@@ -869,47 +920,43 @@ export function InspectionCameraPanel({
                 {webcamSnapshot && (
                   <button
                     type="button"
-                    onClick={handleTakeAnotherPicture}
+                    onClick={handleRetake}
                     disabled={isAnalyzing}
                     className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
                   >
-                    Take Another Picture
+                    Retake
                   </button>
                 )}
               </div>
 
               <div className="flex items-center gap-3">
                 {cameraStatus === "live" && !webcamSnapshot && (
-                  <div className="flex items-center gap-3">
-                    {unmetReason && (
-                      <span className="text-xs text-amber-700 font-medium truncate max-w-xs">
-                        {unmetReason}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleTakePicture}
-                      disabled={!isVideoReady || !isReadyToAnalyze || isAnalyzing}
-                      className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all ${
-                        isVideoReady && isReadyToAnalyze && !isAnalyzing
-                          ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                          : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-                      }`}
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      <span>Take Picture</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTakePicture}
+                    disabled={!isVideoReady || isAnalyzing}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all ${
+                      isVideoReady && !isAnalyzing
+                        ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                        : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                    }`}
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Take Picture</span>
+                  </button>
                 )}
 
-                {isAnalyzing && (
-                  <span className="text-xs text-blue-700 font-medium flex items-center gap-1.5">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Analyzing picture…</span>
-                  </span>
+                {webcamSnapshot && (
+                  <SubmitButton
+                    disabled={!isReadyToAnalyze || isAnalyzing || lastResult !== null}
+                    isAnalyzing={isAnalyzing}
+                    onClick={() => executeAnalysis("browser-webcam", webcamSnapshot.jpegBase64)}
+                  />
                 )}
               </div>
             </div>
+
+            {webcamSnapshot && unmetReason && <UnmetNotice reason={unmetReason} />}
           </div>
         )}
 

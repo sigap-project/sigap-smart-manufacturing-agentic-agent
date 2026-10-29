@@ -1,132 +1,50 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Layers, Sparkles, CheckCircle2, ShieldAlert, Loader2 } from "lucide-react";
+import { Layers, CheckCircle2, AlertCircle } from "lucide-react";
 import { BatchStatCards } from "@/components/batches/batch-stat-cards";
 import { BatchFilterBar } from "@/components/batches/batch-filter-bar";
 import { BatchGridBoard } from "@/components/batches/batch-grid-board";
 import { BatchApprovalPanel } from "@/components/batches/batch-approval-panel";
 import { BatchDetailDrawer } from "@/components/batches/batch-detail-drawer";
-import { BatchesSkeleton } from "@/components/batches/batches-skeleton";
-import {
-  BatchItem,
-  BatchStatus,
-  BatchZone,
-  INITIAL_BATCHES,
-} from "@/components/batches/types";
+import { InlineLoginBanner } from "@/components/auth/inline-login-banner";
+import { BatchStatus, BatchZone } from "@/components/batches/types";
 import { useSigapEvents } from "@/hooks/useSigapEvents";
-import { useSigapGlobal } from "@/context/sigap-global-context";
+import { useSigapSession } from "@/hooks/useSigapSession";
+import { useSigapGlobal, type MutationResult } from "@/context/sigap-global-context";
 
 export default function BatchBoardPage() {
-  const { batches: globalBatches, approveBatch: globalApprove, rejectBatch: globalReject } = useSigapGlobal();
-  const [batches, setBatches] = useState<BatchItem[]>(globalBatches);
-  const [isLoading, setIsLoading] = useState(false);
+  // Server-authoritative list: the global context polls /api/batches and follows SSE
+  const { batches } = useSigapGlobal();
+  const session = useSigapSession();
+  const canDecide = session.actor?.role === "supervisor";
   const [activeZone, setActiveZone] = useState<BatchZone>("all");
   const [activeStatus, setActiveStatus] = useState<BatchStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [approvalModeOnly, setApprovalModeOnly] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState<BatchItem | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (globalBatches && globalBatches.length > 0) {
-      setBatches(globalBatches);
-    }
-  }, [globalBatches]);
+  // Keep the drawer bound to the latest server copy of the selected lot
+  const selectedBatch = useMemo(
+    () => batches.find((b) => b.id === selectedBatchId) || null,
+    [batches, selectedBatchId]
+  );
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
+  const { isConnected } = useSigapEvents({});
 
-  // Dengarkan pembaruan real-time via SSE
-  const { isConnected } = useSigapEvents({
-    onBatchStatusChanged: (updatedBatch) => {
-      const normalizedStatus =
-        updatedBatch.status === "pending_review" ? "pending" : updatedBatch.status;
-      const sanitizedBatch = { ...updatedBatch, status: normalizedStatus };
-
-      setBatches((prev) => {
-        const index = prev.findIndex(
-          (b) => b.id === sanitizedBatch.id || b.id === sanitizedBatch.lotId
-        );
-        if (index >= 0) {
-          const updated = [...prev];
-          updated[index] = { ...updated[index], ...sanitizedBatch };
-          return updated;
-        } else {
-          return [sanitizedBatch, ...prev];
-        }
-      });
-      showToast(`Batch ${sanitizedBatch.lotId || sanitizedBatch.id} status updated live (${sanitizedBatch.status}).`);
-    },
-  });
-
-  // Fetch batches from PostgreSQL API
-  useEffect(() => {
-    async function fetchBatches() {
-      try {
-        const res = await fetch("/api/batches");
-        const json = await res.json();
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-          const sanitized = json.data.map((b: any) => ({
-            ...b,
-            status: b.status === "pending_review" ? "pending" : b.status || "pending",
-          }));
-          setBatches(sanitized);
-        } else {
-          setBatches(INITIAL_BATCHES);
-        }
-      } catch (err) {
-        console.warn("Failed to fetch live batches from server:", err);
-        setBatches(INITIAL_BATCHES);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchBatches();
-  }, []);
-
-  // Handlers for Human Approval Actions
-  const handleApprove = async (batchId: string) => {
-    globalApprove(batchId);
-    try {
-      const res = await fetch(`/api/batches/${encodeURIComponent(batchId)}/approve`, {
-        method: "PATCH",
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        setBatches((prev) =>
-          prev.map((b) => (b.id === batchId ? json.data : b))
-        );
-        showToast(json.message || `Batch ${batchId} successfully APPROVED & RELEASED for assembly.`);
-        return;
-      }
-    } catch (err) {
-      console.warn("Failed to sync approval to database:", err);
-    }
-    showToast(`Batch ${batchId} successfully APPROVED & RELEASED for assembly.`);
-  };
-
-  const handleReject = async (batchId: string) => {
-    globalReject(batchId);
-    try {
-      const res = await fetch(`/api/batches/${encodeURIComponent(batchId)}/reject`, {
-        method: "PATCH",
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        setBatches((prev) =>
-          prev.map((b) => (b.id === batchId ? json.data : b))
-        );
-        showToast(json.message || `Batch ${batchId} HELD in Quarantine Zone.`);
-        return;
-      }
-    } catch (err) {
-      console.warn("Failed to sync rejection to database:", err);
-    }
-    showToast(`Batch ${batchId} HELD in Quarantine Zone. Quality notification ticket dispatched to SAP QM.`);
+  const handleResult = (result: MutationResult) => {
+    if (result.status === 401) session.expire();
+    const text = result.ok
+      ? result.message || "Done."
+      : result.code === "VERSION_CONFLICT"
+      ? "This lot changed since you opened it. Data refreshed, please try again."
+      : result.error || "Request failed.";
+    setToast({ ok: result.ok, text });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
   };
 
   // Filtered batches calculation
@@ -158,24 +76,28 @@ export default function BatchBoardPage() {
     });
   }, [batches, activeZone, activeStatus, approvalModeOnly, searchQuery]);
 
-  // Batches needing human decision (pending or high escalation held)
-  const pendingApprovalBatches = useMemo(() => {
-    return batches.filter(
-      (b) => b.status === "pending" || (b.status === "held" && (b.escalationScore ?? 0) >= 0.7)
-    );
-  }, [batches]);
-
-  if (isLoading && batches.length === 0) {
-    return <BatchesSkeleton />;
-  }
+  // Batches needing a human decision: undecided or held by an inspection
+  const pendingApprovalBatches = useMemo(
+    () => batches.filter((b) => b.status === "pending" || b.status === "held"),
+    [batches]
+  );
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12 animate-in fade-in duration-200">
-      {/* Toast Notification Banner */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 px-4 py-3 rounded-xl bg-white border border-slate-200/80 text-slate-800 text-xs shadow-lg flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{toastMessage}</span>
+      {/* Toast Notification Banner (reflects the real server result) */}
+      {toast && (
+        <div
+          role="status"
+          className={`fixed top-20 right-6 z-[60] max-w-sm px-4 py-3 rounded-xl bg-white border text-xs shadow-lg flex items-start gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200 ${
+            toast.ok ? "border-slate-200/80 text-slate-800" : "border-rose-200 text-rose-800"
+          }`}
+        >
+          {toast.ok ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          )}
+          <span>{toast.text}</span>
         </div>
       )}
 
@@ -204,12 +126,6 @@ export default function BatchBoardPage() {
 
         {/* Action Status Pills */}
         <div className="flex items-center gap-2.5 shrink-0 text-xs text-slate-600">
-          {isLoading && (
-            <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Syncing DB...</span>
-            </div>
-          )}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-xs font-medium">
             <span className="text-slate-400">SLA Queue:</span>
             <span className="text-amber-700 font-semibold">
@@ -225,6 +141,12 @@ export default function BatchBoardPage() {
           </div>
         </div>
       </motion.div>
+
+      <InlineLoginBanner
+        session={session}
+        description="Sign in as a supervisor to review inspections and release or reject lots."
+        roleNotice={canDecide ? null : "Only supervisors can release or reject lots."}
+      />
 
       {/* Tahap 2: TOP: Stat Row (5 compact cards matching Dashboard style, 150ms - 350ms) */}
       <BatchStatCards batches={batches} />
@@ -270,11 +192,20 @@ export default function BatchBoardPage() {
             </span>
           </div>
 
-          <BatchGridBoard
-            batches={filteredBatches}
-            selectedBatch={selectedBatch}
-            onSelectBatch={(batch) => setSelectedBatch(batch)}
-          />
+          {batches.length === 0 ? (
+            <div className="p-10 rounded-2xl bg-white border border-dashed border-slate-200 text-center">
+              <p className="text-sm font-semibold text-slate-800">No batches in the database yet</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Seed the database (<code>npm run db:seed</code>) or create a batch through <code>POST /api/batches</code>.
+              </p>
+            </div>
+          ) : (
+            <BatchGridBoard
+              batches={filteredBatches}
+              selectedBatch={selectedBatch}
+              onSelectBatch={(batch) => setSelectedBatchId(batch.id)}
+            />
+          )}
         </motion.div>
 
         {/* Tahap 4: RIGHT COLUMN (30-35% on XL): "Menunggu Persetujuan" Panel (550ms - 750ms) */}
@@ -287,9 +218,7 @@ export default function BatchBoardPage() {
         >
           <BatchApprovalPanel
             pendingBatches={pendingApprovalBatches}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onInspectBatch={(batch) => setSelectedBatch(batch)}
+            onInspectBatch={(batch) => setSelectedBatchId(batch.id)}
           />
         </motion.div>
       </div>
@@ -297,9 +226,10 @@ export default function BatchBoardPage() {
       {/* Slide-over Drawer for Selected Batch Detail */}
       <BatchDetailDrawer
         batch={selectedBatch}
-        onClose={() => setSelectedBatch(null)}
-        onApprove={handleApprove}
-        onReject={handleReject}
+        onClose={() => setSelectedBatchId(null)}
+        canDecide={canDecide}
+        csrfToken={session.csrfToken}
+        onResult={handleResult}
       />
     </div>
   );

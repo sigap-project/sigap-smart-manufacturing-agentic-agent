@@ -3,11 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  ShieldAlert,
-  AlertTriangle,
-  Zap,
-} from "lucide-react";
+import { AlertTriangle, Zap } from "lucide-react";
+import { InlineLoginBanner } from "@/components/auth/inline-login-banner";
+import { useSigapSession } from "@/hooks/useSigapSession";
 import { InspectionCameraPanel } from "@/components/inspection/inspection-camera-panel";
 import { InspectionEventsList } from "@/components/inspection/inspection-events-list";
 import { InspectionAgentTrace } from "@/components/inspection/inspection-agent-trace";
@@ -23,11 +21,6 @@ interface InspectionViewClientProps {
   escalationScore: number | null;
 }
 
-interface SessionActor {
-  id: string;
-  role: string;
-}
-
 export function InspectionViewClient({
   initialBatchId,
   activeLot,
@@ -36,13 +29,8 @@ export function InspectionViewClient({
 }: InspectionViewClientProps) {
   const { batches, inspections, applyInspectionSnapshot } = useSigapGlobal();
 
-  // Authentication State
-  const [sessionActor, setSessionActor] = useState<SessionActor | null>(null);
-  const [csrfToken, setCsrfToken] = useState<string | null>(null);
-  const [loginUserId, setLoginUserId] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginBusy, setLoginBusy] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const session = useSigapSession();
+  const { actor: sessionActor, csrfToken } = session;
 
   // Batch & Workpiece Selection State
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(initialBatchId);
@@ -51,30 +39,6 @@ export function InspectionViewClient({
 
   // Selected / Analyzed Inspection State
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
-
-  // Fetch Session on Mount
-  const fetchSession = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/session");
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          setSessionActor(json.data.actor);
-          setCsrfToken(json.data.csrfToken);
-        }
-      } else {
-        setSessionActor(null);
-        setCsrfToken(null);
-      }
-    } catch {
-      setSessionActor(null);
-      setCsrfToken(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
 
   // Sync selectedBatchId with available batches when initialBatchId wasn't found
   useEffect(() => {
@@ -106,41 +70,6 @@ export function InspectionViewClient({
   const canAnalyze = Boolean(
     sessionActor && (sessionActor.role === "operator" || sessionActor.role === "supervisor")
   );
-
-  // Inline Login Handler
-  const handleInlineLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!loginUserId || !loginPassword || loginBusy) return;
-
-    setLoginBusy(true);
-    setLoginError(null);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: loginUserId.trim(), password: loginPassword }),
-      });
-
-      const json = await res.json();
-      if (res.ok && json.success && json.data) {
-        setSessionActor(json.data.actor);
-        setCsrfToken(json.data.csrfToken);
-        setLoginPassword("");
-        setLoginError(null);
-      } else {
-        setLoginError(json.error || "Invalid user ID or password.");
-      }
-    } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "Failed to sign in");
-    } finally {
-      setLoginBusy(false);
-    }
-  };
-
-  const handleSessionExpired = useCallback(() => {
-    setSessionActor(null);
-    setCsrfToken(null);
-  }, []);
 
   const handleInputChange = useCallback(() => {
     setSelectedInspectionId(null);
@@ -200,66 +129,11 @@ export function InspectionViewClient({
         {/* LEFT COLUMN (60%): Context Selector & Inspection Panel */}
         <div className="lg:col-span-7 xl:col-span-7 space-y-4">
           {/* Inline Auth / Session Banner */}
-          {!sessionActor ? (
-            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-700" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                    Operator Authentication Required
-                  </span>
-                </div>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  Sign in with operator or supervisor credentials to analyze castings.
-                </p>
-                {loginError && <p className="text-xs font-semibold text-rose-600 mt-1">{loginError}</p>}
-              </div>
-
-              <form onSubmit={handleInlineLogin} className="flex flex-wrap items-center gap-2 shrink-0">
-                <input
-                  type="text"
-                  placeholder="User ID"
-                  aria-label="User ID"
-                  value={loginUserId}
-                  onChange={(e) => setLoginUserId(e.target.value)}
-                  className="w-28 px-2.5 py-1.5 rounded-lg border border-amber-300 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  disabled={loginBusy}
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  aria-label="Password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-28 px-2.5 py-1.5 rounded-lg border border-amber-300 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  disabled={loginBusy}
-                />
-                <button
-                  type="submit"
-                  disabled={loginBusy || !loginUserId || !loginPassword}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
-                >
-                  {loginBusy ? "Signing in…" : "Sign In"}
-                </button>
-              </form>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-slate-600">Active session:</span>
-                <span className="font-semibold text-slate-900">{sessionActor.id}</span>
-                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold uppercase">
-                  {sessionActor.role}
-                </span>
-              </div>
-              {!canAnalyze && (
-                <span className="text-amber-700 text-[11px] font-medium">
-                  Viewer role cannot run server analysis.
-                </span>
-              )}
-            </div>
-          )}
+          <InlineLoginBanner
+            session={session}
+            description="Sign in with operator or supervisor credentials to analyze castings."
+            roleNotice={canAnalyze ? null : "Viewer role cannot run server analysis."}
+          />
 
           {/* Batch Selector & Item ID Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
@@ -330,7 +204,7 @@ export function InspectionViewClient({
             canAnalyze={canAnalyze}
             onAnalysisComplete={handleAnalysisComplete}
             onInputChange={handleInputChange}
-            onSessionExpired={handleSessionExpired}
+            onSessionExpired={session.expire}
             onAnalyzingChange={setIsAnalyzing}
           />
         </div>

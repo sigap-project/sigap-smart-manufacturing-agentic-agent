@@ -67,15 +67,16 @@ export const sigapStore = {
         OR: [{ id: idOrLot }, { lotId: idOrLot }],
       },
       include: {
+        // Suspect inspections only: these gate supervisor release and need review
         inspections: {
-          take: 10,
+          where: { OR: [{ outcome: "defect" }, { outcome: "unknown" }, { defectDetected: true }] },
           orderBy: { receivedAt: "desc" },
         },
       },
     });
 
     if (!batch) return null;
-    return formatBatchRecord(batch);
+    return formatBatchRecord({ ...batch, inspections: batch.inspections.map(formatInspectionRecord) });
   },
 
   async createBatch(payload: {

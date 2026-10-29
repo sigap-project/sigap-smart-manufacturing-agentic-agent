@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -9,24 +10,75 @@ import {
   Scan,
   CheckCircle2,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { BatchItem } from "./types";
+import type { InspectionRecord } from "@/components/history/types";
+import { useSigapGlobal, type MutationResult } from "@/context/sigap-global-context";
 
 interface BatchDetailDrawerProps {
   batch: BatchItem | null;
   onClose: () => void;
-  onApprove: (batchId: string) => void;
-  onReject: (batchId: string) => void;
+  /** True only for a signed-in supervisor; the server enforces this too. */
+  canDecide: boolean;
+  csrfToken: string | null;
+  onResult: (result: MutationResult) => void;
 }
 
 export function BatchDetailDrawer({
   batch,
   onClose,
-  onApprove,
-  onReject,
+  canDecide,
+  csrfToken,
+  onResult,
 }: BatchDetailDrawerProps) {
+  const { approveBatch, rejectBatch, reviewInspection } = useSigapGlobal();
+  const [detail, setDetail] = useState<BatchItem | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const batchKey = batch ? batch.batchId || batch.id : null;
+
+  // Fresh server copy: carries the current version and this lot's suspect inspections
+  const loadDetail = useCallback(async () => {
+    if (!batchKey) return;
+    try {
+      const res = await fetch(`/api/batches/${encodeURIComponent(batchKey)}`);
+      const json = await res.json();
+      if (json.success) setDetail(json.data);
+    } catch {
+      // Keep last known detail; actions still fail safely on a stale version
+    }
+  }, [batchKey]);
+
+  useEffect(() => {
+    setDetail(null);
+    setReason("");
+    loadDetail();
+  }, [loadDetail]);
+
   if (!batch) return null;
+
+  const current = detail || batch;
+  const suspects: InspectionRecord[] = (detail?.inspections || []).filter(
+    (i: InspectionRecord) => i.caseEpoch === detail?.caseEpoch
+  );
+  const unresolved = suspects.filter((i) => i.reviewOutcome !== "confirmed_ok").length;
+  const canSubmit = canDecide && !busy && detail !== null && reason.trim().length > 0;
+
+  const run = async (action: () => Promise<MutationResult>, closeOnSuccess: boolean) => {
+    setBusy(true);
+    const result = await action();
+    setBusy(false);
+    onResult(result);
+    if (result.ok && closeOnSuccess) {
+      onClose();
+      return;
+    }
+    await loadDetail();
+  };
+
+  const decision = () => ({ version: detail?.version ?? 0, reason: reason.trim(), csrfToken });
 
   return (
     <AnimatePresence>
@@ -194,6 +246,75 @@ export function BatchDetailDrawer({
               </div>
             )}
 
+            {/* Suspect Inspections: must all be confirmed OK before release */}
+            <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-200/80">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-xs font-semibold text-slate-800">Suspect Inspections (current case)</span>
+                {detail === null ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                ) : (
+                  <span
+                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                      unresolved > 0
+                        ? "bg-amber-50 text-amber-700 border-amber-200/80"
+                        : "bg-emerald-50 text-emerald-700 border-emerald-200/80"
+                    }`}
+                  >
+                    {unresolved > 0 ? `${unresolved} need review` : "All cleared"}
+                  </span>
+                )}
+              </div>
+
+              {detail !== null && suspects.length === 0 && (
+                <p className="text-xs text-slate-500">No defect or unknown inspections in this case.</p>
+              )}
+
+              <div className="space-y-2">
+                {suspects.map((ins) => (
+                  <div key={ins.id} className="flex items-center gap-3 p-2 rounded-lg bg-white border border-slate-200/80">
+                    {ins.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={ins.imageUrl}
+                        alt={`Inspection ${ins.itemId || ins.id}`}
+                        className="w-12 h-12 rounded-md object-cover bg-slate-100 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-md bg-slate-100 shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-slate-800 truncate">{ins.itemId || ins.id}</p>
+                      <p className="text-[11px] text-slate-500">
+                        <span className="capitalize">{ins.outcome}</span>
+                        {ins.confidence !== null && ` • ${ins.confidence}%`}
+                        {ins.reviewOutcome && (
+                          <span className={ins.reviewOutcome === "confirmed_ok" ? "text-emerald-700" : "text-rose-700"}>
+                            {" "}• {ins.reviewOutcome.replace("_", " ")}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button
+                        disabled={!canSubmit || ins.reviewOutcome === "confirmed_ok"}
+                        onClick={() => run(() => reviewInspection(ins.id, "confirmed_ok", decision()), false)}
+                        className="px-2 py-1 rounded-md text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/80 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Confirm OK
+                      </button>
+                      <button
+                        disabled={!canSubmit || ins.reviewOutcome === "confirmed_defect"}
+                        onClick={() => run(() => reviewInspection(ins.id, "confirmed_defect", decision()), false)}
+                        className="px-2 py-1 rounded-md text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200/80 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Confirm Defect
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Action Link to Inspection Station */}
             <div className="pt-1">
               <Link
@@ -207,28 +328,42 @@ export function BatchDetailDrawer({
             </div>
           </div>
 
-          {/* Footer Quick Actions */}
-          <div className="p-4 border-t border-slate-100 bg-white grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => {
-                onReject(batch.id);
-                onClose();
-              }}
-              className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200/80 hover:bg-rose-100 transition-colors cursor-pointer shadow-xs"
-            >
-              <XCircle className="w-4 h-4" />
-              <span>Hold Lot (Quarantine)</span>
-            </button>
-            <button
-              onClick={() => {
-                onApprove(batch.id);
-                onClose();
-              }}
-              className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-colors cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Approve Release</span>
-            </button>
+          {/* Footer: Supervisor Decision (reason is recorded in the audit trail) */}
+          <div className="p-4 border-t border-slate-100 bg-white space-y-2.5">
+            {canDecide ? (
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Reason for this decision (required)"
+                aria-label="Decision reason"
+                rows={2}
+                disabled={busy}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 resize-none select-text focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            ) : (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+                Sign in as a supervisor to review inspections and release or reject this lot.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                disabled={!canSubmit}
+                onClick={() => run(() => rejectBatch(current.id, decision()), true)}
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200/80 hover:bg-rose-100 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>Reject Lot (Quarantine)</span>
+              </button>
+              <button
+                disabled={!canSubmit || unresolved > 0}
+                title={unresolved > 0 ? "Confirm every suspect inspection as OK first" : undefined}
+                onClick={() => run(() => approveBatch(current.id, decision()), true)}
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                <span>Approve Release</span>
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>

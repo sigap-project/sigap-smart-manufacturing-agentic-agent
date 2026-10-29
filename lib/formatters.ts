@@ -157,6 +157,8 @@ export function formatBatchRecord(raw: unknown): BatchItem {
     line: String(item.line || "Line #01 (Conveyor Cam-01)"),
     inspector: "Agent Vision Bedrock",
     pendingApproval: Boolean(item.pendingApproval),
+    version: typeof item.version === "number" ? item.version : 0,
+    caseEpoch: typeof item.caseEpoch === "number" ? item.caseEpoch : 1,
     inspections: Array.isArray(item.inspections) ? (item.inspections as any) : [],
     dispatchRecords: Array.isArray(item.dispatchRecords) ? (item.dispatchRecords as any) : [],
   };
