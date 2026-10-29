@@ -11,7 +11,10 @@ import { FooterSection } from "@/components/sections/footer-section";
 export default function HomePage() {
   const router = useRouter();
 
-  const handleOpenDashboard = () => {
+  // Demo buttons sign the visitor in as supervisor first; if that is disabled or fails,
+  // the dashboard's inline sign-in banners still work.
+  const handleOpenDashboard = async () => {
+    await fetch("/api/auth/demo", { method: "POST" }).catch(() => {});
     router.push("/dashboard");
   };
 

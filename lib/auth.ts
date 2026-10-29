@@ -42,6 +42,12 @@ function getUsers(): UserConfig[] {
   return [];
 }
 
+/** Passwordless demo sign-in target. Disabled with SIGAP_DEMO_LOGIN=off. */
+export function getDemoSupervisor(): UserConfig | null {
+  if (process.env.SIGAP_DEMO_LOGIN === "off") return null;
+  return getUsers().find((u) => u.role === "supervisor") ?? null;
+}
+
 export function authenticateUser(userId: string, password: string): UserConfig | null {
   const users = getUsers();
   const user = users.find((u) => u.userId === userId);
