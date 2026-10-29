@@ -48,3 +48,6 @@ __pycache__/
 *.db
 data/evidence/
 *.zip
+
+# Local training/eval datasets (large, not versioned)
+ai_models/dataset/

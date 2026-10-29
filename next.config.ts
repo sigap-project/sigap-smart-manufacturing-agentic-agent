@@ -19,13 +19,15 @@ const nextConfig: NextConfig = {
       "./ai_models/model-manifest.json",
       "./ai_models/sigap-casting-yolov8-cls.onnx",
       "./ai_models/sigap-casting-yolov8-detect.onnx",
-      "./node_modules/onnxruntime-node/**/*",
     ],
   },
   outputFileTracingExcludes: {
     "*": [
       "node_modules/ffmpeg-static/**/*",
       "node_modules/prisma/**/*",
+      "node_modules/onnxruntime-node/bin/napi-v6/darwin/**/*",
+      "node_modules/onnxruntime-node/bin/napi-v6/win32/**/*",
+      "node_modules/onnxruntime-node/bin/napi-v6/linux/arm64/**/*",
     ],
   },
   images: {
