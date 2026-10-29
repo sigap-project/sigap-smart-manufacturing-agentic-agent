@@ -9,7 +9,7 @@
 |---|---|---|---|
 | **Web & Dashboard UI** | AWS Amplify Hosting (`ap-southeast-2`) | [https://aws-sap.dsjuc7fhaopci.amplifyapp.com](https://aws-sap.dsjuc7fhaopci.amplifyapp.com) | ✅ Live (Branch `aws-sap`, Job 3 SUCCEED) |
 | **Background Worker** | SAP BTP Cloud Foundry (`ap10`) | App `sigap-workflow-remontada-rasa-mangga` (org `SEAIO_aws-sap-hackathon-si4ykj9d`, space `hackathon-remontada-rasa-mangga`) | ✅ Running (`1/1` instance, 1024M quota) |
-| **Database** | AWS RDS PostgreSQL (`ap-southeast-2`) | `sigap-postgres.c6i8syeuq32k.ap-southeast-2.rds.amazonaws.com` (`db.t4g.micro`, 20 GB) | ✅ Active (Prisma 6 ORM, conn limit: 3 on worker) |
+| **Database** | AWS RDS PostgreSQL (`ap-southeast-2`) | `sigap-postgres.cnoos4y24n7i.ap-southeast-2.rds.amazonaws.com` (`db.t4g.micro`, 20 GB) | ✅ Active (Prisma 6 ORM, conn limit: 3 on worker) |
 | **Evidence Store** | AWS S3 (`ap-southeast-2`) | Bucket `sigap-inspection-frames` | ✅ Active (SHA-256 content verification) |
 | **Governed AI** | AWS Bedrock (`us-east-1`) | `amazon.nova-lite-v1:0` (`SIGAP_BEDROCK_MAX_TOKENS=600`) | ✅ Active (Output truncated stop-reason protection) |
 | **SAP AI Core Hub** | SAP Generative AI Hub (`ap10`) | Deployment `d1a82575de60e02a` (`gpt-5.4`, resource group `default`) | ✅ Verified (Dual-adapter, keybroker JSON support) |
@@ -143,6 +143,8 @@ Buka file `.env` dan masukkan connection string database PostgreSQL Anda:
 DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-cool-mountain-xxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 NODE_ENV="development"
 INTERNAL_API_KEY="sigap-internal-dev-key-2026"
+# Opsional: nonaktifkan tombol "Demo Supervisor" (login supervisor tanpa password) di beranda
+# SIGAP_DEMO_LOGIN="off"
 ```
 
 ### 4. Setup Database & Seeding Data
