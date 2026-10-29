@@ -459,33 +459,26 @@ export const sigapStore = {
   // 5. DASHBOARD STATS (Aggregated from Real PostgreSQL Data)
   // ---------------------------------------------------------------------------
   async getDashboardStats() {
-    const [
-      totalInspections,
-      defectCount,
-      unknownCount,
-      totalBatches,
-      heldBatchesCount,
-      pendingBatchesCount,
-      rejectedBatchesCount,
-      dispatchesCount,
-      latestBatch,
-    ] = await Promise.all([
-      prisma.inspection.count(),
-      prisma.inspection.count({
-        where: {
-          OR: [{ outcome: "defect" }, { defectDetected: true }],
-        },
-      }),
-      prisma.inspection.count({
-        where: { outcome: "unknown" },
-      }),
-      prisma.batch.count(),
-      prisma.batch.count({ where: { status: "held" } }),
-      prisma.batch.count({ where: { status: "pending" } }),
-      prisma.batch.count({ where: { status: "rejected" } }),
+    const [inspectionCounts, batchGroups, dispatchesCount, latestBatch] = await Promise.all([
+      prisma.$queryRaw<{ total: bigint; defects: bigint; unknown: bigint }[]>`
+        SELECT COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE outcome = 'defect' OR "defectDetected" = true) AS defects,
+               COUNT(*) FILTER (WHERE outcome = 'unknown') AS unknown
+        FROM "Inspection"`,
+      prisma.batch.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.dispatchRecord.count(),
       prisma.batch.findFirst({ orderBy: { createdAt: "desc" } }),
     ]);
+
+    const totalInspections = Number(inspectionCounts[0]?.total ?? 0);
+    const defectCount = Number(inspectionCounts[0]?.defects ?? 0);
+    const unknownCount = Number(inspectionCounts[0]?.unknown ?? 0);
+    const batchesByStatus = (status: string) =>
+      batchGroups.find((g) => g.status === status)?._count._all ?? 0;
+    const totalBatches = batchGroups.reduce((sum, g) => sum + g._count._all, 0);
+    const heldBatchesCount = batchesByStatus("held");
+    const pendingBatchesCount = batchesByStatus("pending");
+    const rejectedBatchesCount = batchesByStatus("rejected");
 
     const defectRate =
       totalInspections > 0

@@ -146,56 +146,91 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
     []
   );
 
-  // Authoritative server hydration
-  const refreshServerState = useCallback(async () => {
-    try {
-      const [batchesRes, inspectionsRes, dispatchesRes, statsRes, settingsRes] =
-        await Promise.allSettled([
-          fetch("/api/batches").then((r) => r.json()),
-          fetch("/api/inspections?limit=20").then((r) => r.json()),
-          fetch("/api/dispatch?limit=20").then((r) => r.json()),
-          fetch("/api/dashboard/stats").then((r) => r.json()),
-          fetch("/api/settings").then((r) => r.json()),
-        ]);
-
-      if (batchesRes.status === "fulfilled" && batchesRes.value.success) {
-        setBatches(batchesRes.value.data || []);
-      }
-      if (inspectionsRes.status === "fulfilled" && inspectionsRes.value.success) {
-        setInspections(inspectionsRes.value.data || []);
-      }
-      if (dispatchesRes.status === "fulfilled" && dispatchesRes.value.success) {
-        setDispatches(dispatchesRes.value.data || []);
-      }
-      if (settingsRes.status === "fulfilled" && settingsRes.value.success) {
-        setSettings(settingsRes.value.data || DEFAULT_SETTINGS);
-      }
-      if (statsRes.status === "fulfilled" && statsRes.value.success) {
-        const s = statsRes.value.data;
-        const total = s.totalInspections || 0;
-        const defects = s.defectCount || 0;
-        setStats({
-          totalInspections: total,
-          passedUnits: Math.max(0, total - defects),
-          defectUnits: defects,
-          defectRate: s.defectRate || 0.0,
-          batchesHeldCount: s.batchesHeldCount || 0,
-          activeLot: s.activeLotId || "N/A",
-          activePart: "Submersible Pump Impeller Casting",
-          escalationScore: typeof s.escalationScore === "number" ? s.escalationScore : 0.0,
-        });
-      }
-    } catch (err) {
-      console.warn("[SigapGlobal] Server state sync error:", err);
+  // Authoritative server hydration, split by how fast each slice changes.
+  // Every request is a database query on a small shared RDS, so polling stays lean.
+  const refreshLive = useCallback(async () => {
+    const [batchesRes, inspectionsRes] = await Promise.allSettled([
+      fetch("/api/batches").then((r) => r.json()),
+      fetch("/api/inspections?limit=20").then((r) => r.json()),
+    ]);
+    if (batchesRes.status === "fulfilled" && batchesRes.value.success) {
+      setBatches(batchesRes.value.data || []);
+    }
+    if (inspectionsRes.status === "fulfilled" && inspectionsRes.value.success) {
+      setInspections(inspectionsRes.value.data || []);
     }
   }, []);
 
-  // Initial server state hydration on mount
+  const refreshSlow = useCallback(async () => {
+    const [dispatchesRes, statsRes, settingsRes] = await Promise.allSettled([
+      fetch("/api/dispatch?limit=20").then((r) => r.json()),
+      fetch("/api/dashboard/stats").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()),
+    ]);
+    if (dispatchesRes.status === "fulfilled" && dispatchesRes.value.success) {
+      setDispatches(dispatchesRes.value.data || []);
+    }
+    if (settingsRes.status === "fulfilled" && settingsRes.value.success) {
+      setSettings(settingsRes.value.data || DEFAULT_SETTINGS);
+    }
+    if (statsRes.status === "fulfilled" && statsRes.value.success) {
+      const s = statsRes.value.data;
+      const total = s.totalInspections || 0;
+      const defects = s.defectCount || 0;
+      setStats({
+        totalInspections: total,
+        passedUnits: Math.max(0, total - defects),
+        defectUnits: defects,
+        defectRate: s.defectRate || 0.0,
+        batchesHeldCount: s.batchesHeldCount || 0,
+        activeLot: s.activeLotId || "N/A",
+        activePart: "Submersible Pump Impeller Casting",
+        escalationScore: typeof s.escalationScore === "number" ? s.escalationScore : 0.0,
+      });
+    }
+  }, []);
+
+  // Full refresh after mutations and events
+  const refreshServerState = useCallback(async () => {
+    try {
+      await Promise.all([refreshLive(), refreshSlow()]);
+    } catch (err) {
+      console.warn("[SigapGlobal] Server state sync error:", err);
+    }
+  }, [refreshLive, refreshSlow]);
+
+  // Hydrate on mount, then poll only while the tab is visible and the last poll has finished
   useEffect(() => {
     refreshServerState();
-    const interval = setInterval(refreshServerState, 5000);
-    return () => clearInterval(interval);
-  }, [refreshServerState]);
+
+    // One in-flight flag per job, so a slow request never stacks up behind itself
+    const makeTick = (job: () => Promise<void>) => {
+      let busy = false;
+      return async () => {
+        if (busy || document.visibilityState !== "visible") return;
+        busy = true;
+        try {
+          await job();
+        } catch (err) {
+          console.warn("[SigapGlobal] Poll error:", err);
+        } finally {
+          busy = false;
+        }
+      };
+    };
+    const tickLive = makeTick(refreshLive);
+    const live = setInterval(tickLive, 10_000);
+    const slow = setInterval(makeTick(refreshSlow), 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void tickLive();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(live);
+      clearInterval(slow);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refreshServerState, refreshLive, refreshSlow]);
 
   // Apply inspection snapshot from server or verified edge
   const applyInspectionSnapshot = useCallback(

@@ -121,8 +121,16 @@ export function InspectionAgentTrace({
       }
     };
 
+    // The agent run finishes within a minute; poll only while visible, then stop
+    const startedAt = Date.now();
     fetchLogs();
-    const interval = setInterval(fetchLogs, 2000);
+    const interval = setInterval(() => {
+      if (Date.now() - startedAt > 60_000) {
+        clearInterval(interval);
+        return;
+      }
+      if (document.visibilityState === "visible") fetchLogs();
+    }, 3000);
     return () => {
       active = false;
       clearInterval(interval);
