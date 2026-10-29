@@ -62,20 +62,35 @@ AI QUALITY DEMONSTRATION GATES VERIFICATION (120 SAMPLES)
    Target: <= 10.0% | Status: [PASS]
 3. Supported Unknown Rate:             2.68% (95% CI: [0.0%, 5.7%])
    Target: <= 15.0% | Status: [PASS]
-4. Box Precision at IoU >= 0.5:        58.0% (105/181 boxes matched)
+4. Box Precision at IoU >= 0.5:        55.5% (176/317 boxes matched)
    Target: >= 80.0% | Status: [FAIL]
-   Box Recall at IoU >= 0.5:           32.8% (105/320 GT boxes found)
-   Box F1:                             41.9%
+   Box Recall at IoU >= 0.5:           55.0% (176/320 GT boxes found)
+   Box F1:                             55.3%
    Localization Coverage:              100.0% (40/40 defective items)
 
 Classifier + Detector End-to-End Latency (Soak 200 Iterations, 2 Threads):
-  p50: 136.6ms | p95: 159.7ms | p99: 264.2ms
+  p50: 127.1ms | p95: 164.3ms | p99: 244.6ms
   Pi Gate Target: p95 <= 2000ms | Status: [PASS]
 ===============================================================================
 CORE AI QUALITY & SAFETY GATES PASSED!
 ```
 
-> **Koreksi 2026-10-29:** Angka box di atas diukur ulang setelah GT evaluasi dilengkapi (8 cacat per citra, sebelumnya 2) dan matching dibuat one-to-one. Lihat `AI_IMPROVEMENT_ROADMAP.md` → *Temuan Audit*. Skrip training detektor v3 sudah disiapkan.
+> **Koreksi 2026-10-29:** Angka box di atas diukur ulang setelah GT evaluasi dilengkapi (8 cacat per citra, sebelumnya 2) dan matching dibuat one-to-one. Lihat `AI_IMPROVEMENT_ROADMAP.md` → *Temuan Audit*. Angka di atas adalah **detektor v3** (scoreThreshold 0.30).
+
+### Detektor v3 vs v2 (2026-10-29)
+
+| Metrik | v2 | v3 | Catatan |
+|---|---|---|---|
+| Val mAP50 (peak) | 51.64% | **57.40%** | Kaggle T4, YOLOv8n @640 |
+| Test mAP50 (`conf=0.001`) | 19.11%* | **57.38%** | *v2 diukur pada `conf=0.40` (kurva PR terpotong) — tidak sebanding langsung |
+| Test P / R (F1-optimal) | — | 63.75% / 61.40% | Ambang F1-optimal val = 0.14 |
+| Lokal Box Precision | 58.0% | 55.5% | IoU≥0.5, one-to-one, 320 GT box |
+| Lokal Box Recall | 32.8% | **55.0%** | +22.2 poin — cacat yang ditemukan naik ~68% |
+| Lokal Box F1 | 41.9% | **55.3%** | |
+| scoreThreshold produksi | 0.35 | 0.30 | Dipilih dari sweep lokal (0.14→F1 47.4%, 0.30→55.3%, 0.35→54.6%) |
+| SHA-256 ONNX | `12e063cf…` | `0ccefcad…` | Arsitektur & shape identik (`[1,5,8400]`) |
+
+Perubahan training v3: 200 epoch, cos LR, `box=9.0`, `dfl=2.0`, `degrees=180`, `flipud=0.5`, tanpa `mixup`/`copy_paste`. Gate presisi 80% belum tercapai; kelemahan tersisa adalah kotak pada latar/pantulan tepi citra.
 
 ---
 

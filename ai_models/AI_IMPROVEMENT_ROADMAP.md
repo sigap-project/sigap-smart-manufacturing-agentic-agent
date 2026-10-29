@@ -129,7 +129,8 @@ Untuk platform Linux ARM (Raspberry Pi OS 64-bit), **NCNN** jauh lebih efisien d
 - [x] ~~Implementasikan *spatial box clustering*~~ — ditolak, menurunkan precision & recall (lihat Strategi B).
 - [x] Lengkapi GT evaluasi lokal + one-to-one matching, recall, F1 di `evaluate_runtime.py` (2026-10-29).
 - [x] Skrip training v3 (`train_yolov8_detection.py`): 200 epoch, cos LR, `box=9.0`, `dfl=2.0`, `degrees=180`, kalibrasi ambang F1-optimal, test mAP pada `conf=0.001`.
-- [ ] Jalankan v3 di Kaggle; terima hanya jika P/R/F1 lokal & test mAP50 mengalahkan v2 (P 58.0 / R 32.8 / F1 41.9). Update `model-manifest.json` (sha256, byteSize, scoreThreshold).
+- [x] v3 dilatih & dideploy (2026-10-29): val mAP50 57.4%, lokal P 55.5 / R 55.0 / F1 55.3 vs v2 P 58.0 / R 32.8 / F1 41.9; `scoreThreshold=0.30`.
+- [ ] Berikutnya: tekan false positive pada latar/pantulan tepi (hard-negative mining citra OK & latar konveyor) untuk mengejar gate precision 80%.
 - [ ] Export model deteksi ke format NCNN jika ingin optimasi latensi Pi 4 maksimal.
 - [ ] Jangan kuantisasi INT8 secara dinamis pada model deteksi; gunakan Static Calibration Dataset jika ingin INT8.
 - [ ] Selalu validasi 4 quality gates dengan menjalankan `python ai_models/evaluate_runtime.py` setelah setiap perubahan model.

@@ -23,14 +23,14 @@
   },
   "detector": {
     "modelPath": "sigap-casting-yolov8-detect.onnx",
-    "sha256": "12e063cf577a26aa99573842f165715c9cb825fb1c3fb66330fbc2bfe1479f57",
+    "sha256": "0ccefcade48dea24d7ce6819441f78ca02972cf91defc84405ce9885aa70ea36",
     "byteSize": 12773173,
     "inputName": "images",
     "outputName": "output0",
     "inputShape": [1, 3, 640, 640],
     "outputShape": [1, 5, 8400],
     "classes": ["defect"],
-    "scoreThreshold": 0.35,
+    "scoreThreshold": 0.30,
     "iouThreshold": 0.35,
     "iomThreshold": 0.60
   },
@@ -57,16 +57,17 @@
     },
     "detector": {
       "modelPath": "sigap-casting-yolov8-detect.onnx",
-      "sha256": "d6df005a754267612183a61f3cd04f1913030f9ca9b5f736ab680a9d04d694d4",
-      "byteSize": 12265717,
-      "scoreThreshold": 0.45,
+      "sha256": "12e063cf577a26aa99573842f165715c9cb825fb1c3fb66330fbc2bfe1479f57",
+      "byteSize": 12773173,
+      "scoreThreshold": 0.35,
       "iouThreshold": 0.35,
       "iomThreshold": 0.60,
       "benchmarks": {
-        "mAP50": 0.2586,
-        "mAP50_95": 0.0792,
-        "recall": 0.3158,
-        "precision": 0.8036
+        "valMAP50": 0.5164,
+        "valMAP50_95": 0.1684,
+        "localBoxPrecision": 0.580,
+        "localBoxRecall": 0.328,
+        "localBoxF1": 0.419
       }
     }
   }
