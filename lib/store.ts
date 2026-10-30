@@ -441,6 +441,10 @@ export const sigapStore = {
         ...(typeof partial.approvalTimeout === "number"
           ? { approvalSlaMinutes: partial.approvalTimeout }
           : {}),
+        ...(partial.customerProfile === "domestic_grade_ab" ||
+        partial.customerProfile === "export_zero_defect"
+          ? { customerProfile: partial.customerProfile }
+          : {}),
       },
       create: {
         id: "default",
@@ -449,6 +453,7 @@ export const sigapStore = {
         escalationCountTrigger: partial.triggerCount ?? 3,
         autoDispatchMode: partial.autoDispatchMode ?? "human_approval",
         approvalSlaMinutes: partial.approvalTimeout ?? 15,
+        customerProfile: partial.customerProfile ?? "domestic_grade_ab",
       },
     });
 
@@ -543,6 +548,12 @@ export const sigapStore = {
       defectCount,
       unknownCount,
       defectRate,
+      // Six Sigma view, one defect opportunity per inspected unit (Six Sigma target: 3.4)
+      dpmo: totalInspections > 0 ? Math.round((defectCount / totalInspections) * 1_000_000) : 0,
+      firstPassYieldPct:
+        totalInspections > 0
+          ? Number((((totalInspections - defectCount - unknownCount) / totalInspections) * 100).toFixed(1))
+          : 0,
       batchesHeldCount: heldBatchesCount,
       dispatchesCount,
       activeLotId: latestBatch?.lotId || "N/A",

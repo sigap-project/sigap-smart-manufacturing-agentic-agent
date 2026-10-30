@@ -12,6 +12,7 @@ export interface StageTrace {
   tag: string;
   tagColor: string;
   content: string;
+  evidence?: string;
   metric: string;
   status?: string;
   timestamp?: string;
@@ -32,6 +33,7 @@ export function InspectionAgentTrace({
 }: InspectionAgentTraceProps) {
   const [traces, setTraces] = useState<StageTrace[]>(initialTraces || []);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [liveProvider, setLiveProvider] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialTraces && initialTraces.length > 0) {
@@ -71,7 +73,14 @@ export function InspectionAgentTrace({
         stage,
         tag,
         tagColor,
-        content: t.detail || t.content || (t.decision ? `Decision: ${t.decision}` : "Evidence recorded."),
+        content:
+          t.decision ||
+          t.content ||
+          (t.kind === "model_usage" ? "Model turn completed." : "Evidence recorded."),
+        evidence:
+          t.output && typeof t.output === "object"
+            ? JSON.stringify(t.output, null, 2)
+            : undefined,
         metric,
         status: t.status || "pending",
         // `timestamp` is a pre-formatted WIB string; parse the ISO field instead
@@ -101,6 +110,7 @@ export function InspectionAgentTrace({
     if (!inspectionId) return;
 
     let active = true;
+    let finished = false;
     const fetchLogs = async () => {
       try {
         const res = await fetch(
@@ -111,6 +121,13 @@ export function InspectionAgentTrace({
           if (json.success) {
             if (Array.isArray(json.data) && json.data.length > 0) {
               updateTracesFromData(json.data);
+              const usage = json.data.find((l: any) => l.kind === "model_usage")?.output;
+              if (usage?.modelId) setLiveProvider(`${usage.provider} · ${usage.modelId}`);
+              // Terminal: worker wrote a final decision row (kind "decision") or failed
+              finished = json.data.some(
+                (l: any) =>
+                  (l.stage === "DECISION" && l.kind === "decision") || l.status === "failed"
+              );
             } else {
               setTraces([]);
             }
@@ -121,11 +138,12 @@ export function InspectionAgentTrace({
       }
     };
 
-    // The agent run finishes within a minute; poll only while visible, then stop
+    // Worker runs on a separate host (BTP CF), so poll until the run reaches a terminal row.
+    // Hard stop after 10 min to avoid polling forever on a stuck run.
     const startedAt = Date.now();
     fetchLogs();
     const interval = setInterval(() => {
-      if (Date.now() - startedAt > 60_000) {
+      if (finished || Date.now() - startedAt > 600_000) {
         clearInterval(interval);
         return;
       }
@@ -138,7 +156,7 @@ export function InspectionAgentTrace({
   }, [inspectionId]);
 
   return (
-    <div className="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-200">
+    <div className="min-w-0 overflow-hidden rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-200">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 pb-3 border-b border-slate-100">
         <div className="min-w-0">
@@ -147,7 +165,7 @@ export function InspectionAgentTrace({
               Agent Reasoning Trace
             </h3>
             <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/70 font-semibold shrink-0">
-              {provider}
+              {liveProvider || provider}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5 truncate">
@@ -185,7 +203,7 @@ export function InspectionAgentTrace({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: index * 0.05 }}
-              className="p-3.5 rounded-xl border border-slate-200/70 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-colors"
+              className="min-w-0 overflow-hidden p-3.5 rounded-xl border border-slate-200/70 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-colors"
             >
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <div className="flex items-center gap-2">
@@ -206,9 +224,20 @@ export function InspectionAgentTrace({
                 )}
               </div>
 
-              <p className="text-xs text-slate-700 leading-relaxed font-sans mb-1.5">
+              <p className="text-xs text-slate-700 leading-relaxed font-sans mb-1.5 break-words [overflow-wrap:anywhere]">
                 {trace.content}
               </p>
+
+              {trace.evidence && (
+                <details className="mb-1.5 group">
+                  <summary className="cursor-pointer text-[11px] font-mono text-slate-500 hover:text-slate-700">
+                    Evidence
+                  </summary>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-slate-100 p-2 text-[11px] leading-snug font-mono text-slate-700 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                    {trace.evidence}
+                  </pre>
+                </details>
+              )}
 
               <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1 border-t border-slate-100">
                 <span>{trace.metric}</span>

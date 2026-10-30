@@ -51,6 +51,27 @@ export function getManifestCanonicalHash(): string {
   return cachedManifestHash;
 }
 
+/**
+ * Snapshot the operator-selected customer quality profile into the run's policy,
+ * so the worker (separate process) reasons with the trigger/disposition in force at capture time.
+ */
+async function withActiveCustomerProfile(policy: unknown): Promise<unknown> {
+  const base = policy as { customerProfiles?: Record<string, { escalationDefectTrigger?: number }> };
+  const setting = await prisma.setting.findUnique({
+    where: { id: "default" },
+    select: { customerProfile: true },
+  });
+  const key = setting?.customerProfile ?? "domestic_grade_ab";
+  const profile = base.customerProfiles?.[key];
+  if (!profile) return policy;
+  return {
+    ...base,
+    activeProfile: { key, ...profile },
+    escalationDefectTrigger:
+      profile.escalationDefectTrigger ?? (base as { escalationDefectTrigger?: number }).escalationDefectTrigger,
+  };
+}
+
 let cachedPolicy: unknown = null;
 function getQualityPolicySync(): unknown {
   if (cachedPolicy) return cachedPolicy;
@@ -804,7 +825,7 @@ export async function ingestInspection(
   // 5. Transactionally insert Inspection, WorkflowRun, update Batch, insert DETECT AgentLog
   const inspectionId = `INS-${Date.now().toString().slice(-6)}-${crypto.randomBytes(2).toString("hex")}`;
   const runId = `RUN-${Date.now().toString().slice(-6)}-${crypto.randomBytes(2).toString("hex")}`;
-  const policy = getQualityPolicySync();
+  const policy = await withActiveCustomerProfile(getQualityPolicySync());
 
   try {
     const result = await prisma.$transaction(async (tx) => {

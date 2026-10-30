@@ -223,6 +223,8 @@ export function formatSettings(setting: any): SettingsState & { id: string; upda
     autoDispatchMode:
       (setting.autoDispatchMode as "autonomous" | "human_approval") || "autonomous",
     approvalTimeout: setting.approvalSlaMinutes ?? 15,
+    customerProfile:
+      setting.customerProfile === "export_zero_defect" ? "export_zero_defect" : "domestic_grade_ab",
 
     autoExportCsv: setting.autoExportCsv ?? true,
     logRetention: String(setting.logRetentionDays ?? 30) as "7" | "14" | "30",

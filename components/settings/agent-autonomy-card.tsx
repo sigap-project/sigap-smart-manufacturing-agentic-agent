@@ -157,6 +157,29 @@ export function AgentAutonomyCard({
           </div>
         </div>
 
+        {/* Customer Quality Profile: drives policy trigger + disposition */}
+        <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-0.5 min-w-0">
+            <label htmlFor="customer-profile" className="text-xs font-semibold text-slate-900">
+              Customer Quality Profile
+            </label>
+            <span className="text-[11px] text-slate-500 block">
+              Export customers demand zero defects (hold on first defect, scrap). Domestic customers accept Grade A/B with rework below the escalation trigger.
+            </span>
+          </div>
+          <select
+            id="customer-profile"
+            value={settings.customerProfile}
+            onChange={(e) =>
+              onChange("customerProfile", e.target.value as SettingsState["customerProfile"])
+            }
+            className="px-3 py-1.5 text-xs font-semibold text-slate-900 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          >
+            <option value="domestic_grade_ab">Domestic (Grade A/B)</option>
+            <option value="export_zero_defect">Export (Zero Defect)</option>
+          </select>
+        </div>
+
         {/* Stepper Input: Approval SLA Timeout */}
         <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">

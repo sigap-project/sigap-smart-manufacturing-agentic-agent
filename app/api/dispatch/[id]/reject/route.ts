@@ -134,6 +134,7 @@ export async function PATCH(
                 stage: "DISPATCH",
                 kind: "decision",
                 status: "completed",
+                decision: `Supervisor ${actor.id} rejected ${dispatch.actionType}: ${reason}. No SAP action executed.`,
                 input: { actionKey: dispatch.actionKey, rejectedBy: actor.id, reason },
                 output: { status: "rejected", revision: updated.revision },
                 latencyMs: 0,

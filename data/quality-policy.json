@@ -28,6 +28,20 @@
       "description": "Halt active manufacturing production order on conveyor assembly line"
     }
   ],
+  "customerProfiles": {
+    "domestic_grade_ab": {
+      "label": "Domestic (Grade A/B)",
+      "escalationDefectTrigger": 3,
+      "belowTrigger": "GRADE_B_REWORK",
+      "atTrigger": "REJECT_SCRAP"
+    },
+    "export_zero_defect": {
+      "label": "Export (Zero Defect)",
+      "escalationDefectTrigger": 1,
+      "belowTrigger": "REJECT_SCRAP",
+      "atTrigger": "REJECT_SCRAP"
+    }
+  },
   "supplierHistory": {
     "PT Krakatau Scrap Ind.": {
       "rating": "B+",

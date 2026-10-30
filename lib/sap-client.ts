@@ -131,6 +131,7 @@ export async function dispatchToSap(payload: SapDispatchPayload): Promise<SapDis
         Authorization: `Bearer ${process.env.INTERNAL_API_KEY || "sigap-internal-dev-key-2026"}`,
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (res.status === 409) {
@@ -186,6 +187,7 @@ export async function readBackFromSap(
       headers: {
         Authorization: `Bearer ${process.env.INTERNAL_API_KEY || "sigap-internal-dev-key-2026"}`,
       },
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (res.status === 404) {

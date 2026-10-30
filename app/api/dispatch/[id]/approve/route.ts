@@ -114,8 +114,19 @@ export async function PATCH(
           };
         }
 
-        // Recompute eligibility check: ensure defects in window still satisfy threshold
-        const windowMs = 8 * 60 * 1000;
+        // Recompute eligibility against the policy snapshot the proposal was made under
+        const run = dispatch.runId
+          ? await tx.workflowRun.findUnique({
+              where: { id: dispatch.runId },
+              select: { inspectionId: true, policySnapshot: true },
+            })
+          : null;
+        const policy = (run?.policySnapshot ?? {}) as {
+          slidingWindowMinutes?: number;
+          escalationDefectTrigger?: number;
+        };
+        const trigger = policy.escalationDefectTrigger ?? 3;
+        const windowMs = (policy.slidingWindowMinutes ?? 8) * 60 * 1000;
         const now = Date.now();
         const windowInspections = await tx.inspection.findMany({
           where: {
@@ -138,12 +149,12 @@ export async function PATCH(
         const defectCount = effectiveDefects.size;
         if (
           (dispatch.actionType === "HOLD_MATERIAL_LOT" || dispatch.actionType === "HOLD_WORK_ORDER") &&
-          defectCount < 3
+          defectCount < trigger
         ) {
           return {
             error: "PROPOSAL_INELIGIBLE",
             status: 409,
-            message: `Action '${dispatch.actionType}' is no longer eligible: defect count is ${defectCount} (requires 3).`,
+            message: `Action '${dispatch.actionType}' is no longer eligible: defect count is ${defectCount} (requires ${trigger}).`,
           };
         }
 
@@ -160,10 +171,6 @@ export async function PATCH(
 
         // Record trace in AgentLog
         if (dispatch.runId) {
-          const run = await tx.workflowRun.findUnique({
-            where: { id: dispatch.runId },
-            select: { inspectionId: true },
-          });
           if (run?.inspectionId) {
             await tx.agentLog.create({
               data: {
@@ -175,6 +182,7 @@ export async function PATCH(
                 stage: "DISPATCH",
                 kind: "approval",
                 status: "completed",
+                decision: `Supervisor ${actor.id} approved ${dispatch.actionType} (${defectCount} of ${trigger} defects in window); queued for SAP dispatch.`,
                 input: { actionKey: dispatch.actionKey, approvedBy: actor.id, reason },
                 output: { status: "queued", revision: updated.revision },
                 latencyMs: 0,

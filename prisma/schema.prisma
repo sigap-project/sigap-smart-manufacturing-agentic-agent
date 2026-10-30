@@ -262,6 +262,7 @@ model Setting {
   autoStoreEnabled             Boolean  @default(true) // auto-store to Batch Board
   autoDispatchMode             String   @default("autonomous") // "autonomous" | "human_approval"
   approvalSlaMinutes           Int      @default(15)   // SLA timeout minutes
+  customerProfile              String   @default("domestic_grade_ab") // key into quality-policy.json customerProfiles
   mockMode                     Boolean  @default(true) // Mock hardware toggle
   cameraSource                 String   @default("mock") // "mock" | "rtsp"
   rtspUrl                      String?  @default("rtsp://192.168.1.120:8554/live/station-01")

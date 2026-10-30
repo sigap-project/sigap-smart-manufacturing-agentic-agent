@@ -16,7 +16,7 @@ Layanan AI Anda dirancang berjalan sebagai **proses/layanan independen yang terp
 > **Tidak Memerlukan Akses Database Langsung:**
 > Layanan AI **TIDAK PERLU** memiliki kredensial atau koneksi langsung ke PostgreSQL/Neon DB. Seluruh operasi penulisan data, pembaruan batch, audit logging, serta pembaruan antarmuka web dilakukan secara otomatis oleh platform web SIGAP melalui dua endpoint REST HTTP internal berikut:
 > 1. `POST /api/internal/inspection-result`
-> 2. `POST /api/internal/agent-decision`
+> 2. ~~`POST /api/internal/agent-decision`~~ — **not implemented.** Reasoning steps are written by the workflow worker (`scripts/workflow-worker.ts` → `lib/quality-agent.ts`) into `AgentLog`; read them via `GET /api/agent/logs?inspectionId=`. Section 5 below is historical. The live ingestion contract is `validateInspectionEvent` in `lib/contracts.ts` and requires a per-device bearer token.
 
 Setiap kali data dikirim ke endpoint tersebut:
 1. SIGAP mencatat data secara transaksional ke database Neon PostgreSQL.
@@ -151,6 +151,9 @@ curl -X POST http://localhost:3000/api/internal/inspection-result \
 ## 5. Spesifikasi Endpoint 2: Jejak Keputusan Penalaran Agen
 
 ### `POST /api/internal/agent-decision`
+
+> [!WARNING]
+> Historical design only — this route does not exist. See the note in Section 1.
 
 Dipanggil oleh **Agent Orchestration Service** (AWS Bedrock / LangGraph) setiap kali satu fase penalaran selesai dihitung (*multi-step reasoning pipeline*).
 

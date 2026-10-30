@@ -94,8 +94,10 @@ export async function GET(request: NextRequest) {
         title: `${l.stage || l.stepName} Phase`,
         detail:
           l.decision ||
-          (l.output && typeof l.output === "object"
-            ? JSON.stringify(l.output)
+          (l.kind === "model_usage"
+            ? "Model turn completed."
+            : l.output && typeof l.output === "object"
+            ? JSON.stringify(l.output, null, 2)
             : "Agent deduction step completed."),
         inspection: l.inspection,
       };

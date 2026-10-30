@@ -11,7 +11,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { InspectionRecord } from "./types";
+import { useEffect, useState } from "react";
+import { InspectionRecord, ReasoningStep } from "./types";
 
 interface HistoryDetailModalProps {
   record: InspectionRecord | null;
@@ -22,7 +23,37 @@ export function HistoryDetailModal({
   record,
   onClose,
 }: HistoryDetailModalProps) {
+  const [loggedSteps, setLoggedSteps] = useState<ReasoningStep[]>([]);
+  const needsLogs = !!record && record.reasoningSteps.length === 0;
+
+  // Real inspections keep their trace in AgentLog, not in reasoningSteps
+  useEffect(() => {
+    setLoggedSteps([]);
+    if (!record || !needsLogs) return;
+    let active = true;
+    fetch(`/api/agent/logs?inspectionId=${encodeURIComponent(record.id)}&limit=100`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (!active || !json?.success || !Array.isArray(json.data)) return;
+        setLoggedSteps(
+          json.data.map((l: any) => ({
+            step: l.step,
+            phase: l.stage,
+            title: l.kind === "model_usage" ? "Model turn" : l.title,
+            detail: l.detail,
+            latency: l.latency,
+          }))
+        );
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [record, needsLogs]);
+
   if (!record) return null;
+
+  const steps = needsLogs ? loggedSteps : record.reasoningSteps;
 
   const isOk = record.defectClass === "OK" || record.defectClass === "ok";
 
@@ -140,7 +171,10 @@ export function HistoryDetailModal({
               </div>
 
               <div className="space-y-2">
-                {record.reasoningSteps.map((s, idx) => (
+                {steps.length === 0 && (
+                  <p className="text-xs text-slate-400 font-mono">No reasoning trace recorded.</p>
+                )}
+                {steps.map((s, idx) => (
                   <div
                     key={idx}
                     className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-start gap-3"
@@ -160,7 +194,7 @@ export function HistoryDetailModal({
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">
+                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                         {s.detail}
                       </p>
                     </div>

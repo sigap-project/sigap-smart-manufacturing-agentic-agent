@@ -210,7 +210,7 @@ export function InspectionViewClient({
         </div>
 
         {/* RIGHT COLUMN (40%): Stacked Events, Trace, and Escalation Gauge */}
-        <div className="lg:col-span-5 xl:col-span-5 space-y-6">
+        <div className="min-w-0 lg:col-span-5 xl:col-span-5 space-y-6">
           {/* Recent Events List */}
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.98 }}

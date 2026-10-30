@@ -15,6 +15,7 @@ export interface SettingsState {
   autoSaveBatchBoard: boolean;
   autoDispatchMode: "autonomous" | "human_approval";
   approvalTimeout: number; // in minutes
+  customerProfile: "domestic_grade_ab" | "export_zero_defect";
 
   // Section 4: Export & Log
   autoExportCsv: boolean;
@@ -48,6 +49,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   autoSaveBatchBoard: true,
   autoDispatchMode: "autonomous",
   approvalTimeout: 15,
+  customerProfile: "domestic_grade_ab",
 
   autoExportCsv: true,
   logRetention: "30",

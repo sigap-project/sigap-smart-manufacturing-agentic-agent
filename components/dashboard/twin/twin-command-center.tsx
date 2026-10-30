@@ -197,6 +197,8 @@ export function TwinCommandCenter({ stats }: TwinCommandCenterProps) {
             totalInspections={activeStats?.totalInspections}
             activeLotId={activeStats?.activeLot || activeStats?.activeLotId}
             defectRate={activeStats?.defectRate}
+            dpmo={activeStats?.dpmo}
+            firstPassYieldPct={activeStats?.firstPassYieldPct}
             batchesHeldCount={activeStats?.batchesHeldCount}
             heldDefectPcs={activeStats?.defectUnits ?? activeStats?.heldDefectPcs}
             dispatchesCount={activeStats?.dispatchesCount}

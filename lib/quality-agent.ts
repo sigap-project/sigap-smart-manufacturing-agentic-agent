@@ -30,6 +30,13 @@ interface QualityPolicy {
     description: string;
   }>;
   supplierHistory: Record<string, unknown>;
+  // Merged at ingestion from Setting.customerProfile (see lib/inspection-service.ts)
+  activeProfile?: {
+    key: string;
+    label: string;
+    belowTrigger: string;
+    atTrigger: string;
+  };
 }
 
 async function loadPolicy(): Promise<QualityPolicy> {
@@ -37,6 +44,15 @@ async function loadPolicy(): Promise<QualityPolicy> {
   const raw = await fs.readFile(policyPath, "utf-8");
   return JSON.parse(raw) as QualityPolicy;
 }
+
+// Fixed pipeline step number per stage; `sequence` still orders rows within a run.
+const STAGE_STEP: Record<string, string> = {
+  DETECT: "01",
+  MEMORY: "02",
+  FORMULA: "03",
+  DECISION: "04",
+  DISPATCH: "05",
+};
 
 function getAIAdapter(): AIProviderAdapter {
   const provider = (process.env.SIGAP_AI_PROVIDER || "bedrock").toLowerCase();
@@ -111,9 +127,11 @@ export async function runQualityWorkflow(runId: string): Promise<void> {
         stage: "FORMULA",
         kind: "decision",
         status: "completed",
+        decision: `0 of ${policy.escalationDefectTrigger} defects in the last ${policy.slidingWindowMinutes} min; threshold not breached.`,
         output: {
-          distinctDefectsInWindow: 0,
-          threshold: policy.escalationDefectTrigger,
+          defectCountInWindow: 0,
+          escalationDefectTrigger: policy.escalationDefectTrigger,
+          slidingWindowMinutes: policy.slidingWindowMinutes,
           thresholdBreached: false,
         },
       },
@@ -173,10 +191,12 @@ export async function runQualityWorkflow(runId: string): Promise<void> {
         stage: "FORMULA",
         kind: "decision",
         status: "skipped",
+        decision: "Unknown outcome: deterministic review path; ERP proposals blocked.",
         output: {
-          distinctDefectsInWindow: 0,
+          defectCountInWindow: 0,
+          escalationDefectTrigger: policy.escalationDefectTrigger,
+          slidingWindowMinutes: policy.slidingWindowMinutes,
           thresholdBreached: false,
-          note: "Unknown outcomes use deterministic review path; ERP proposals blocked.",
         },
       },
     });
@@ -256,6 +276,11 @@ export async function runQualityWorkflow(runId: string): Promise<void> {
   const distinctDefectiveItemIds = Array.from(effectiveDefectItemIds);
   const defectCountInWindow = distinctDefectiveItemIds.length;
   const thresholdBreached = defectCountInWindow >= (policy.escalationDefectTrigger || 3);
+  const disposition = policy.activeProfile
+    ? thresholdBreached
+      ? policy.activeProfile.atTrigger
+      : policy.activeProfile.belowTrigger
+    : null;
 
   // Check out-of-order requeue: if a late event affects a newer workflow in this case
   const newerWorkflows = await prisma.workflowRun.findMany({
@@ -337,9 +362,10 @@ export async function runQualityWorkflow(runId: string): Promise<void> {
 Your duty: Review verified optical casting defects, retrieve factual inspection context, verify deterministic policy thresholds, and propose governed ERP actions.
 Rules:
 1. Always call get_inspection_context and get_quality_policy first before proposing any action.
-2. For 1 or 2 distinct defects in window, you may propose only CREATE_QUALITY_NOTIFICATION.
-3. For 3 or more distinct defects in window, propose CREATE_QUALITY_NOTIFICATION, HOLD_MATERIAL_LOT, and HOLD_WORK_ORDER when respective targets exist.
-4. Never execute actions directly; all proposals require supervisor authorization.`;
+2. If get_quality_policy reports thresholdBreached=false, you may propose only CREATE_QUALITY_NOTIFICATION.
+3. If thresholdBreached=true (defectCountInWindow >= escalationDefectTrigger; the trigger depends on the customer profile), propose CREATE_QUALITY_NOTIFICATION, HOLD_MATERIAL_LOT, and HOLD_WORK_ORDER when respective targets exist.
+4. Never execute actions directly; all proposals require supervisor authorization.
+5. Before every tool call, write one short sentence of reasoning. After your last tool result, write a one-sentence conclusion citing the defect count, the policy trigger, and the action taken.`;
 
   const messages: AgentTurnMessage[] = [
     {
@@ -370,7 +396,7 @@ Rules:
           inspectionId: inspection.id,
           runId: run.id,
           sequence: currentSequence++,
-          step: String(currentSequence).padStart(2, "0"),
+          step: STAGE_STEP.DECISION,
           stepName: "DECISION",
           stage: "DECISION",
           kind: "error",
@@ -405,6 +431,10 @@ Rules:
         stage: "DECISION",
         kind: "model_usage",
         status: "completed",
+        // Nova wraps text in <thinking>/<conclusion> tags; keep the prose only
+        decision:
+          turnResult.summary?.replace(/<\/?(thinking|conclusion)>/g, " ").replace(/\s+/g, " ").trim() ||
+          null,
         output: {
           provider: adapter.providerName,
           modelId: adapter.modelId,
@@ -467,6 +497,8 @@ Rules:
           allowedActions: allowedActionsList,
           thresholdBreached,
           defectCountInWindow,
+          customerProfile: policy.activeProfile?.label ?? null,
+          disposition,
         };
       } else if (toolCall.name === "get_supplier_history") {
         stageName = "MEMORY";
@@ -644,6 +676,31 @@ Rules:
         };
       }
 
+      // Human-readable, code-generated explanation (independent of LLM text)
+      const trigger = policy.escalationDefectTrigger ?? 3;
+      const windowMin = policy.slidingWindowMinutes ?? 8;
+      let explanation: string;
+      if (isError) {
+        explanation = `Blocked: ${(resultData.message as string) || (resultData.error as string) || "tool call failed"}`;
+      } else if (toolCall.name === "get_inspection_context") {
+        explanation = `${defectCountInWindow} distinct defective item(s) in the last ${windowMin} min for ${batch.materialNumber || batch.lotId}${batch.supplierName ? ` (${batch.supplierName})` : ""}.`;
+      } else if (toolCall.name === "get_quality_policy") {
+        const profilePrefix = policy.activeProfile ? `${policy.activeProfile.label}: ` : "";
+        const dispositionSuffix = disposition ? ` Disposition: ${disposition}.` : "";
+        explanation = thresholdBreached
+          ? `${profilePrefix}${defectCountInWindow} of ${trigger} defects: threshold breached; lot/work-order holds allowed.${dispositionSuffix}`
+          : `${profilePrefix}${defectCountInWindow} of ${trigger} defects: threshold not breached; only a quality notification is allowed, holds blocked.${dispositionSuffix}`;
+      } else if (toolCall.name === "get_supplier_history") {
+        explanation = `Supplier history for ${batch.supplierName || "unknown supplier"} (synthetic scenario data).`;
+      } else if (toolCall.name === "propose_quality_action") {
+        const type = String(toolCall.input.actionType);
+        explanation = resultData.alreadyExists
+          ? `${type} already proposed for this case (${resultData.dispatchId}, status ${resultData.status}); reused existing dispatch.`
+          : `Proposed ${type} (${resultData.dispatchId}); ${resultData.requiresSupervisorApproval ? "awaiting supervisor approval" : "no approval needed"}.`;
+      } else {
+        explanation = `Tool ${toolCall.name} executed.`;
+      }
+
       // Record tool execution in AgentLog
       await prisma.agentLog.create({
         data: {
@@ -651,9 +708,10 @@ Rules:
           runId: run.id,
           sequence: currentSequence++,
           toolCallId: toolCall.id,
-          step: String(currentSequence).padStart(2, "0"),
+          step: STAGE_STEP[stageName],
           stepName: stageName,
           stage: stageName,
+          decision: explanation,
           kind: isError ? "error" : "tool_result",
           status: isError ? "failed" : "completed",
           input: toolCall.input as Prisma.InputJsonValue,
@@ -683,6 +741,21 @@ Rules:
   } else if (proposedActionTypes.length > 0) {
     finalStatus = "awaiting_approval";
   }
+
+  await prisma.agentLog.create({
+    data: {
+      inspectionId: inspection.id,
+      runId: run.id,
+      sequence: currentSequence++,
+      step: STAGE_STEP.DECISION,
+      stepName: "DECISION",
+      stage: "DECISION",
+      kind: "decision",
+      status: "completed",
+      decision: `Run outcome: ${finalStatus} (${defectCountInWindow} of ${policy.escalationDefectTrigger ?? 3} defects, ${proposedActionTypes.length} action(s) proposed${disposition ? `, disposition ${disposition}` : ""}).`,
+      output: { finalStatus, proposedActions: proposedActionTypes, defectCountInWindow, disposition },
+    },
+  });
 
   await prisma.workflowRun.update({
     where: { id: run.id },

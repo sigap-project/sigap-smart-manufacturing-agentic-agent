@@ -18,6 +18,8 @@ interface TwinProductionCardProps {
   batchesHeldCount?: number;
   heldDefectPcs?: number;
   dispatchesCount?: number;
+  dpmo?: number;
+  firstPassYieldPct?: number;
 }
 
 export function TwinProductionCard({
@@ -27,6 +29,8 @@ export function TwinProductionCard({
   batchesHeldCount = 3,
   heldDefectPcs = 36,
   dispatchesCount = 18,
+  dpmo,
+  firstPassYieldPct,
 }: TwinProductionCardProps) {
   return (
     <div className="flex flex-col gap-2.5">
@@ -88,11 +92,14 @@ export function TwinProductionCard({
             </p>
           </div>
           <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-100">
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-              TREND
+            <p
+              className="text-[10px] text-slate-400 font-medium uppercase tracking-wider"
+              title="Defects per million units (1 opportunity/unit). Six Sigma target: 3.4"
+            >
+              DPMO
             </p>
-            <p className="text-[11px] font-bold text-emerald-600 mt-0.5">
-              +12.4%
+            <p className="text-[11px] font-bold text-slate-800 mt-0.5 tabular-nums">
+              {dpmo !== undefined ? dpmo.toLocaleString("en-US") : "—"}
             </p>
           </div>
         </div>
@@ -126,7 +133,11 @@ export function TwinProductionCard({
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium pt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>Normal • Below 1.5% threshold</span>
+            <span>
+              {firstPassYieldPct !== undefined
+                ? `First-pass yield ${firstPassYieldPct}% • Six Sigma target 3.4 DPMO`
+                : "Normal • Below 1.5% threshold"}
+            </span>
           </div>
         </motion.div>
 
