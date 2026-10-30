@@ -51,3 +51,6 @@ data/evidence/
 
 # Local training/eval datasets (large, not versioned)
 ai_models/dataset/
+
+# Local video production workspace
+video/
