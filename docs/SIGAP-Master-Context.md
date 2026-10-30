@@ -3,7 +3,7 @@
 
 > **Konteks**: AI Agentic Hackathon SOKRATES × BINUS Alam Sutera 2026 | Track: Intelligence Manufacturing  
 > **Deadline proposal**: 10 September 2026 | **Demo Day**: 31 Oktober 2026 @ BINUS Alam Sutera  
-> **Git baseline**: commit `6f37d85` (branch `aws-sap`, 30 Oct 2026) — this document reflects the actual codebase at that point.
+> **Git baseline**: commit `5599657` (branch `aws-sap`, 30 Oct 2026) — this document reflects the actual codebase at that point.
 
 ---
 
@@ -92,14 +92,14 @@ Berbeda dari dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambil
 
 **Pipeline order: Classifier first, then Detector.** This is architecturally critical — see Section 10 for rationale.
 
-| Stage | Model | Benchmark (v1, audited) | Role |
+| Stage | Model (in production) | Benchmark (audited) | Role |
 |---|---|---|---|
-| **Stage 1: Classifier** | `sigap-casting-yolov8-cls.onnx` (YOLOv8n-cls, 1.44M params) | **Binary accuracy: 99.72%**, Defect recall: **100.00%** (0 escapes / 451 defect samples), False alarms: 2 / 264 OK, Latency: **0.80ms** | Primary pass/hold gate. If classifier says OK → pass. If classifier says defect → hold and run detector for localization. |
-| **Stage 2: Detector** | `sigap-casting-yolov8-detect.onnx` (YOLOv8n, 3.01M params) | **mAP50: 25.86%** (audited), mAP50-95: 7.92%, Recall: 31.58%, Precision: 80.36%, Latency: **5.20ms** | Localization only — runs downstream of classifier on confirmed/unknown defect frames. Adds bounding box coordinates for UI overlay. mAP50 is a localization metric, not a pass/fail gate. |
-| **Combined Pipeline** | Two-stage cascade | Total latency: ~6ms (classifier + detector) | Classifier recall = 100% is the primary safety evidence. Detector localization enriches UI. |
+| **Stage 1: Classifier** | `sigap-casting-yolov8-cls.onnx` **v2** (YOLOv8n-cls, 1.44M params, 300×300) | **Binary accuracy: 99.86%**, Defect recall: **100.00%** (0 escapes / 452 defect samples), False alarms: 1 / 263 OK. Thresholds defect 0.80 / ok 0.95 | Primary pass/hold gate. If classifier says OK → pass. If classifier says defect → hold and run detector for localization. |
+| **Stage 2: Detector** | `sigap-casting-yolov8-detect.onnx` **v3** (YOLOv8n, 3.01M params, 640×640) | Val **mAP50: 57.40%**; test mAP50 57.38% (`conf=0.001`). Local eval @ scoreThreshold **0.30**: box precision 55.5%, recall 55.0%, F1 55.3% (IoU≥0.5, one-to-one, 320 GT boxes) | Localization only — runs downstream of classifier on confirmed/unknown defect frames. Adds bounding box coordinates for UI overlay. mAP50 is a localization metric, not a pass/fail gate. |
+| **Combined Pipeline** | Two-stage cascade | End-to-end p95 **164 ms** on dev PC CPU (2 threads, 200 iterations); not yet measured on Pi 4 | Classifier recall = 100% is the primary safety evidence. Detector localization enriches UI. |
 
-> **v2 models in training** (stronger augmentation, more epochs) — see Section 12 for improvement targets and `ai_models/model-manifest.json` for thresholds.  
-> **Removed claims**: ~~"mAP50: 55.05%"~~ (was stale draft figure), ~~">150 FPS"~~ (throughput figure from GPU benchmark, not applicable to Pi4 CPU deployment).
+> Thresholds and SHA-256 live in `ai_models/model-manifest.json` (canonical modelVersion `4c762ef2…`). Pi and server must deploy the same manifest; mismatches are rejected with 409 `MODEL_VERSION_MISMATCH`.  
+> **Removed claims**: ~~"mAP50: 55.05%"~~ (was stale draft figure), ~~">150 FPS"~~ and ~~"~6ms total"~~ (GPU benchmark figures, not applicable to Pi4 CPU deployment).
 
 ### 4.4 AWS Cloud Layer
 | Service | Fungsi |
@@ -159,17 +159,23 @@ Berbeda dari dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambil
      • disposition: below trigger / at trigger, per profile
   Step 5 (DISPATCH): Propose ERP actions
   │
-  ▼ All ERP actions require supervisor approval
+  ├─ autoDispatchMode = "autonomous" → DispatchRecord created as "queued"
+  │    (approvedBy "Autonomous Policy Engine"), executed immediately
+  │
+  ▼ autoDispatchMode = "human_approval" → supervisor approval required
 [Human Approval Checkpoint]
   │ WorkflowRun status → "awaiting_approval"
-  │ Supervisor: POST /api/dispatch/:id/approve (role: supervisor)
+  │ Supervisor: PATCH|POST /api/dispatch/:id/approve (role: supervisor)
   │ Optimistic locking: batchVersion must match current
   │ SLA: approvalSlaMinutes (default 15) before escalation
+  │ On approve, the route runs processNextDispatch() inline, so the SAP
+  │   ticket comes back in the same response (skipped when SIGAP_TEST_MODE=1)
   ▼
 [SAP Mock Dispatch — DispatchRecord per action]
   │ actionKey = batchId + ":" + caseEpoch + ":" + actionType (idempotency)
   │ payloadHash stored for read-back verification
   │ SimulatorRecord persists ERP state
+  │ Worker writes a step "05" DISPATCH AgentLog row with the verified SAP ticket
   ▼
 [Feedback Loop]
   → AgentLog steps written per reasoning trace
@@ -178,15 +184,16 @@ Berbeda dari dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambil
 ```
 
 ### Decision Window & Trigger Rules
-- **Window**: 8-minute sliding window based on `capturedAt` (capture timestamp, not receivedAt)
+- **Window**: sliding window based on `capturedAt` (capture timestamp, not receivedAt). Length = Settings `escalationWindowMinutes` (default **8**), copied into `policySnapshot.slidingWindowMinutes` at ingestion
 - **Trigger 1** (≥ 1 distinct defective product): → `CREATE_QUALITY_NOTIFICATION`
-- **Trigger 2** (≥ `escalationDefectTrigger` distinct defective products; **3** for Domestic, **1** for Export, see §5.1): → additionally eligible for `HOLD_MATERIAL_LOT` + `HOLD_WORK_ORDER`
+- **Trigger 2** (≥ `escalationDefectTrigger` distinct defective products; Domestic = Settings `escalationCountTrigger` (default **3**), Export = fixed **1**, see §5.1): → additionally eligible for `HOLD_MATERIAL_LOT` + `HOLD_WORK_ORDER`
 - The approve route re-checks eligibility against the run's `policySnapshot` (not a hard-coded 3)
-- **All actions require supervisor approval** (configurable; `autoDispatchMode: "autonomous" | "human_approval"` in Settings)
-- **No "Full Auto" autonomous dispatch** in the governance model — all ERP mutations require human confirmation
+- **Dispatch mode** (`autoDispatchMode` in Settings, snapshotted per run):
+  - `human_approval` (UI default since `5599657`): every ERP action waits as `pending_approval` for a supervisor
+  - `autonomous`: actions are created `queued` and executed right away by `processNextDispatch()`, with no supervisor click. The trace still records every step, and the threshold rules above still apply
+- Note: the Prisma schema default is still `"autonomous"`; the settings UI and `data/quality-policy.json` default to `human_approval`. The live RDS `Setting` row is `human_approval` (checked 30 Oct 2026)
 
-> **Removed**: ~~Escalation Score formula (E≥0.70)~~ — replaced by defect count trigger logic above. As of `6f37d85` the UI no longer displays an escalation score anywhere (gauge, drawer, dispatch modal, approval panel).  
-> **Removed**: ~~"Mode A: Full Auto"~~ — autonomous SAP dispatch without approval has been removed from the governance model.
+> **Removed**: ~~Escalation Score formula (E≥0.70)~~ — replaced by defect count trigger logic above. As of `6f37d85` the UI no longer displays an escalation score anywhere (gauge, drawer, dispatch modal, approval panel).
 
 ### 5.1 Customer Quality Profiles
 
@@ -194,19 +201,19 @@ Added after the industry interview with Pak Soegiarto (CEO, Suma Plafon): QC sta
 
 | Profile key | Label | `escalationDefectTrigger` | Disposition below trigger | Disposition at trigger |
 |---|---|---|---|---|
-| `domestic_grade_ab` (default) | Domestic (Grade A/B) | 3 | `GRADE_B_REWORK` | `REJECT_SCRAP` |
+| `domestic_grade_ab` (default) | Domestic (Grade A/B) | 3 (overridden by Settings `escalationCountTrigger`) | `GRADE_B_REWORK` | `REJECT_SCRAP` |
 | `export_zero_defect` | Export (Zero Defect) | 1 | `REJECT_SCRAP` | `REJECT_SCRAP` |
 
 - Source: `data/quality-policy.json` → `customerProfiles`.
 - Selected in **Settings → Agent Autonomy → Customer Quality Profile** (`Setting.customerProfile`).
-- At ingestion, `lib/inspection-service.ts` (`withActiveCustomerProfile`) merges the active profile into `WorkflowRun.policySnapshot` (`activeProfile`, overriding `escalationDefectTrigger`). The worker reasons with the profile in force at capture time.
+- At ingestion, `lib/inspection-service.ts` (`withActiveCustomerProfile`) merges the active profile and the live Settings (window, trigger, dispatch mode, SLA) into `WorkflowRun.policySnapshot` (`activeProfile`, `escalationDefectTrigger`, `slidingWindowMinutes`, `defaultAutoDispatchMode`, `approvalSlaMinutes`). The worker reasons with the settings in force at capture time.
 - `get_quality_policy` returns `customerProfile` and `disposition`; the FORMULA explanation reads e.g. *"Export (Zero Defect): 1 of 1 defects: threshold breached; lot/work-order holds allowed. Disposition: REJECT_SCRAP."*
 
 ---
 
 ## 6. Data Models
 
-Synced with `d-day/prisma/schema.prisma` as of commit `b0de4c6`.
+Synced with `d-day/prisma/schema.prisma` as of commit `5599657` (8 models).
 
 ### 6.1 `Batch` — Manufacturing Lot & Escalation Status
 ```typescript
@@ -391,11 +398,11 @@ Synced with `d-day/prisma/schema.prisma` as of commit `b0de4c6`.
 ```typescript
 {
   id: "default"           // single row per deployment
-  detectionConfidenceThreshold: number  // 50.0–95.0%, default 85.0
+  detectionConfidenceThreshold: number  // 50.0–95.0%, default 85.0. In /api/inspection/analyze, a value ≠ 85 replaces both classifier thresholds (defect & ok) with value/100; at 85 the manifest thresholds (0.80/0.95) apply
   escalationWindowMinutes: number       // default 8 (minutes)
   escalationCountTrigger: number        // default 3 (distinct defective products)
   autoStoreEnabled: boolean             // default true
-  autoDispatchMode: "autonomous" | "human_approval"  // default "autonomous"
+  autoDispatchMode: "autonomous" | "human_approval"  // schema default "autonomous"; UI default "human_approval"
   approvalSlaMinutes: number            // default 15
   customerProfile: "domestic_grade_ab" | "export_zero_defect"  // default "domestic_grade_ab", see §5.1
   mockMode: boolean
@@ -439,15 +446,25 @@ See `lib/contracts.ts` for full `InspectionEvent` schema. Key fields:
 
 | Method | Endpoint | Deskripsi |
 |---|---|---|
-| GET | `/api/inspections?batchId=&status=&limit=` | List inspection events |
+| POST | `/api/inspection/analyze` | Browser/webcam inspection: server-side ONNX inference (`lib/vision-runtime.ts`) then the same ingestion as the Pi |
+| GET / POST | `/api/inspections?batchId=&status=&limit=` | List inspection events / create one |
 | GET | `/api/inspections/:id` | Detail + reasoning trace |
-| GET | `/api/batches?status=&zone=` | List batch quarantine board |
+| GET | `/api/inspections/:id/image` | Evidence frame (presigned/local) |
+| PATCH | `/api/inspections/:id/review` | Operator review of an inspection |
+| GET / POST | `/api/batches?status=&zone=` | List batch quarantine board / create batch |
+| GET | `/api/batches/:id` | Batch detail |
 | PATCH | `/api/batches/:id/approve` | Human approval (role: supervisor, requires batchVersion) |
 | PATCH | `/api/batches/:id/reject` | Human reject |
 | GET | `/api/dispatch?status=&consumer=` | List dispatch records |
 | POST | `/api/dispatch` | Manual dispatch trigger |
-| PATCH | `/api/dispatch/:id/approve` | Approve pending dispatch |
+| GET | `/api/dispatch/:id` | Dispatch detail |
+| PATCH / POST | `/api/dispatch/:id/approve` | Approve pending dispatch and execute it inline |
+| PATCH | `/api/dispatch/:id/reject` | Reject pending dispatch |
 | GET | `/api/agent/logs?inspectionId=` | Reasoning trace audit |
+| GET / PATCH | `/api/devices/:id`, `/api/devices/:id/binding` | Edge device detail / batch binding |
+| POST / GET | `/api/internal/devices/:id/heartbeat`, `/status` | Pi heartbeat and status (Bearer auth) |
+| GET | `/api/internal/runtime-status` | Server vision runtime status |
+| POST / GET | `/api/auth/{login,logout,demo,session}` | Session auth |
 | GET | `/api/settings` | Get current settings |
 | PUT | `/api/settings` | Update settings |
 | GET | `/api/dashboard/stats` | Dashboard statistics: `totalInspections`, `defectRate`, `dpmo`, `firstPassYieldPct`, `defectTrend {hourly (12h), daily (7d), WIB}`, `defectDisposition` (lots by status) |
@@ -545,16 +562,22 @@ d-day/
 │   ├── model-manifest.json       # ← ONLY file read by ProductionRuntime for model paths/thresholds
 │   ├── train_casting_classification.py  # Classifier training (YOLOv8n-cls v2)
 │   ├── train_yolov8_detection.py        # Detector training (YOLOv8n/s v2)
+│   ├── AI_IMPROVEMENT_ROADMAP.md # Audit findings & next steps (hard-negative mining)
 │   ├── edge_inference_worker.py  # Pi4 inference loop (classifier → detector → POST)
 │   ├── vision_runtime.py         # ProductionRuntime ONNX wrapper
-│   └── evaluate_runtime.py       # Quality gate evaluator (4 gates)
+│   ├── evaluate_runtime.py       # Quality gate evaluator (4 gates + box recall/F1)
+│   └── evaluation/               # 120-sample held-out set (320 GT boxes), builder & reports
 │
 ├── lib/
 │   ├── contracts.ts              # InspectionEvent schema v1 (shared wire interface)
+│   ├── inspection-service.ts     # Ingestion: dedup, batch counters, policySnapshot, WorkflowRun
+│   ├── vision-runtime.ts         # Server-side ONNX runtime (onnxruntime-node), parity with vision_runtime.py
 │   ├── aws-bedrock.ts            # Amazon Nova Lite ConverseCommand + fallback
-│   ├── aws-s3.ts / evidence-store.ts  # S3 upload & presigned URLs
+│   ├── sap-ai-core.ts            # Secondary provider (SAP Generative AI Hub)
+│   ├── evidence-store.ts         # S3 upload & presigned URLs
 │   ├── sap-client.ts             # OData client (mock & BTP-ready)
 │   ├── quality-agent.ts          # Bedrock reasoning orchestrator
+│   ├── store.ts / formatters.ts  # Read/write helpers + API response shaping
 │   ├── auth.ts                   # Bearer token validation
 │   ├── events.ts                 # SSE EventEmitter bus
 │   └── prisma.ts                 # Prisma client singleton
@@ -573,10 +596,13 @@ d-day/
 │   ├── test-phase-02-03-gate.py  # Pi vision runtime gate
 │   ├── test-phase-04-gate.ts     # Approval HTTP boundaries gate
 │   ├── test-phase-06-gate.ts     # UI evidence gate
+│   ├── test-browser-inspection.ts # /api/inspection/analyze end-to-end check
 │   └── tools/                    # Video asset utilities
 │
 └── docs/
     ├── SIGAP-Master-Context.md   # ← This file — Single Source of Truth
+    ├── AI-ENGINEER-HANDOFF.md    # Handoff notes for the AI engineer
+    ├── SIGAP-IoT-Deployment-Report.md # Pi deployment report
     ├── wiring-diagram.md         # Canonical GPIO & hardware wiring guide (see Section 11)
     └── archive/                  # Archived drafts
 ```
@@ -616,6 +642,23 @@ Arsitektur dua model di SIGAP **bukan kebetulan atau kompromi**, melainkan desai
 | **Ukuran File ONNX** | 5.5 MB | **5.51 MB** | 11.7 MB | **12.18 MB** | Bobot ringan untuk RAM Pi 4 |
 | **SHA-256 Checksum** | `a4b7744f...` | `81767930c8d8b1f59feacd60094e45c36f7d9cb8d463f4c05f8dd858e937b682` | `d6df005a...` | `12e063cf577a26aa99573842f165715c9cb825fb1c3fb66330fbc2bfe1479f57` | Diverifikasi via manifest |
 
+> Classifier v2 masih model produksi. **Detektor v2 sudah digantikan v3** (lihat 10.2b). Angka "Precision 80.56%" v2 diukur pada `conf=0.35` dengan GT evaluasi yang belum lengkap; setelah audit 29 Okt, precision lokal v2 = 58.0%.
+
+### 10.2b Detektor v3 (produksi sejak 29 Okt 2026)
+
+| Metrik | v2 | **v3 (`detect.onnx`)** | Catatan |
+|---|---|---|---|
+| Val mAP50 (peak) | 51.64% | **57.40%** | Kaggle T4, YOLOv8n @640 |
+| Test mAP50 (`conf=0.001`) | 19.11%* | **57.38%** | *v2 diukur pada `conf=0.40`, tidak sebanding langsung |
+| Test P / R (F1-optimal 0.14) | — | 63.75% / 61.40% | |
+| Lokal Box Precision | 58.0% | 55.5% | IoU≥0.5, one-to-one, 320 GT box |
+| Lokal Box Recall | 32.8% | **55.0%** | cacat yang ditemukan naik ~68% |
+| Lokal Box F1 | 41.9% | **55.3%** | |
+| scoreThreshold produksi | 0.35 | **0.30** | dipilih dari sweep lokal |
+| SHA-256 | `12e063cf…` | `0ccefcade48dea24d7ce6819441f78ca02972cf91defc84405ce9885aa70ea36` | shape identik `[1,5,8400]`, 12.77 MB |
+
+Training v3: 200 epoch, cos LR, `box=9.0`, `dfl=2.0`, `degrees=180`, `flipud=0.5`, tanpa `mixup`/`copy_paste`. Sisa false positive ada pada latar dan pantulan tepi citra → langkah berikutnya hard-negative mining (lihat roadmap).
+
 ---
 
 ### 10.3 Analisis Kuantisasi INT8 pada Raspberry Pi 4 (Tanpa Akselerator NPU)
@@ -640,7 +683,7 @@ Detail langkah-demi-langkah (SAHI, box clustering, NCNN export, loss reweighting
 
 ### 10.4 Manifest & Runtime
 
-`model-manifest.json` adalah **satu-satunya file konfigurasi** yang dibaca oleh `ProductionRuntime.__init__` di `vision_runtime.py`. Model v2 (`sigap-casting-yolov8-cls.onnx` dan `sigap-casting-yolov8-detect.onnx`) telah diintegrasikan sebagai model produksi resmi dengan SHA-256 dan ambang batas terverifikasi.
+`model-manifest.json` adalah **satu-satunya file konfigurasi** yang dibaca oleh `ProductionRuntime.__init__` di `vision_runtime.py` dan oleh `lib/vision-runtime.ts` di server. Model produksi: classifier **v2** + detektor **v3**, dengan SHA-256 dan ambang batas terverifikasi. `modelVersion` = SHA-256 manifest kanonis (`4c762ef2a0c3d2e1f5d9dd21b2dda9ff74e8ce7c7cce95047ac306ea2a67e6de`); `previousBaseline` menyimpan detektor v2 untuk perbandingan regresi.
 ---
 
 ## 11. IoT Hardware Specification
@@ -697,13 +740,15 @@ See `ai_models/edge_inference_worker.py` for production usage and `d-day/docs/wi
 
 Running: `python ai_models/evaluate_runtime.py --benchmark --samples 200 --threads 2`
 
-| Gate | Metric | Limit | v1 Measured | v2 Target |
-|---|---|---|---|---|
-| **Gate 1 (Escape Rate)** | Defect escape rate (FN/total defects) | ≤ 5.0% | **0.00%** ✅ | 0.00% (hard gate) |
-| **Gate 2 (False Alarm)** | False alarm rate (FP/total OK) | ≤ 10.0% | **0.00%** ✅ | 0.00% (improved threshold) |
-| **Gate 3 (Unknown Rate)** | Unknown classification rate | ≤ 15.0% | **0.00%** ✅ | 0.00% |
-| **Gate 4 (Box Precision)** | Detector box precision @ IoU≥0.5 | ≥ 80.0% | 45.9% ⚠️ OBSERVED | Target PASS with v2; acceptable OBSERVED if not met |
-| **Latency Gate** | p95 end-to-end on Pi4 CPU | ≤ 2000ms | — | Must pass for both YOLOv8n-v2 and any YOLOv8s candidate |
+Measured on the 120-sample held-out set (50 OK, 50 defect, 20 challenge; 320 GT boxes) with classifier v2 + detector v3 @ 0.30:
+
+| Gate | Metric | Limit | Measured (current) |
+|---|---|---|---|
+| **Gate 1 (Escape Rate)** | Defect escape rate (FN/total defects) | ≤ 5.0% | **0.00%** ✅ |
+| **Gate 2 (False Alarm)** | False alarm rate (FP/total OK) | ≤ 10.0% | **0.00%** ✅ |
+| **Gate 3 (Unknown Rate)** | Unknown classification rate | ≤ 15.0% | **2.68%** ✅ |
+| **Gate 4 (Box Precision)** | Detector box precision @ IoU≥0.5 (one-to-one) | ≥ 80.0% | **55.5%** ❌ (recall 55.0%, F1 55.3%; localization coverage 40/40) |
+| **Latency Gate** | p95 end-to-end | ≤ 2000ms | **164 ms** on dev PC CPU ✅; Pi 4 measurement still pending |
 
 Gates 1–3 are driven by the classifier and MUST pass. Gate 4 is a localization quality metric; failing it does not affect the safety guarantee (0 defect escapes) because the classifier is the primary decision gate.
 
@@ -725,7 +770,7 @@ Gates 1–3 are driven by the classifier and MUST pass. Gate 4 is a localization
    - **Beat profil pelanggan (Soegiarto)**: Settings → Customer Quality Profile → **Export (Zero Defect)** → scan 1 cacat → agent langsung mengusulkan QM + MM + PP, FORMULA menampilkan "1 of 1 … Disposition: REJECT_SCRAP". Kembalikan ke Domestic setelahnya.
 4. **(2:30–3:30)** Supervisor klik Approve → WorkflowRun `awaiting_approval → completed` → Dispatch tab menampilkan 3 DispatchRecord baru: `CREATE_QUALITY_NOTIFICATION`, `HOLD_MATERIAL_LOT`, `HOLD_WORK_ORDER`, semua status `verified`.
 5. **(3:30–4:00)** History tab: audit trail lengkap — setiap AgentLog step, payloadHash, caseEpoch, sapTicketId tercatat.
-6. **(4:00–5:00)** Tunjukkan Settings → switch ke `autonomous` mode → scan ulang → loop terjadi tanpa intervensi manusia. Green LED menyala untuk produk OK.
+6. **(4:00–5:00)** Tunjukkan Settings → switch ke `autonomous` mode → scan ulang → DispatchRecord langsung `queued` → `verified` tanpa klik supervisor (approvedBy "Autonomous Policy Engine"), dan trace menampilkan baris 05 DISPATCH dengan nomor tiket SAP. Kembalikan ke `human_approval` setelahnya. Green LED menyala untuk produk OK.
 7. Dashboard: First-Pass Yield, DPMO (target Six Sigma 3.4), tren cacat per jam/hari dan disposisi lot — semua dihitung langsung dari database (sebut sebagai *measured on prototype data*; data demo sengaja banyak cacat).
 
 ### Fallback
@@ -733,8 +778,9 @@ Rekam video skenario di atas H-3 sebelum Demo Day. Simpan di Laptop B. Jika kone
 
 ### Klaim yang TIDAK boleh dibuat di Demo
 - ~~"Total latency 6ms"~~ — 6ms adalah GPU/Kaggle benchmark, bukan Pi4 CPU latency
-- ~~"99.72% accuracy"~~ jika menggunakan v2 model yang belum diverifikasi (gunakan v1 figure dengan label "v1 baseline")
-- ~~"Autonomous SAP dispatch"~~ kecuali mode `autonomous` aktif dan supervisor hadir untuk konfirmasi
+- ~~"99.72% accuracy"~~ — itu angka v1; classifier produksi v2 = 99.86% (0 escape / 452)
+- ~~"Bounding box presisi 80%"~~ — presisi box detektor v3 = 55.5% (gate 4 belum lulus); sebut recall/F1 55% dan bahwa classifier yang menjadi gate keselamatan
+- ~~"Autonomous SAP dispatch"~~ kecuali mode `autonomous` benar-benar aktif di Settings (default UI = `human_approval`)
 - ~~"mAP50 55.05%"~~ — angka stale, tidak ada di codebase
 - ~~"OEE 89.4%"~~ — angka hard-coded lama, sudah dihapus dari UI; gunakan First-Pass Yield / DPMO yang terukur
 - ~~"Mendeteksi porositas internal" / "presisi mikron"~~ — kamera hanya melihat cacat permukaan (lihat §16)
@@ -778,14 +824,14 @@ Key deliverables:
 
 ---
 
-## 15. Cloud Deployment & Credit Protection Status (Audited Oct 28, 2026; redeployed Oct 30, 2026)
+## 15. Cloud Deployment & Credit Protection Status (Audited Oct 28, 2026; Amplify re-checked Oct 30, 2026)
 
 ### 15.1 Live Deployed Environment Matrix
 
 | Component | Environment | Host & Identifier | Operational State |
 |---|---|---|---|
-| **Amplify Web Platform** | AWS Amplify (`ap-southeast-2`) | App `dsjuc7fhaopci`, Branch `aws-sap` | ✅ **Live**: [https://aws-sap.dsjuc7fhaopci.amplifyapp.com](https://aws-sap.dsjuc7fhaopci.amplifyapp.com) (Job 25, commit `6f37d85`) |
-| **Background Worker** | SAP BTP Cloud Foundry (`ap10`) | App `sigap-workflow-remontada-rasa-mangga` in space `hackathon-remontada-rasa-mangga` | ✅ **Running**: `1/1` instance, 1024M quota (`npx prisma generate && npm run worker`), redeployed 30 Oct with commit `e772b20` |
+| **Amplify Web Platform** | AWS Amplify (`ap-southeast-2`) | App `dsjuc7fhaopci`, Branch `aws-sap` | ✅ **Live**: [https://aws-sap.dsjuc7fhaopci.amplifyapp.com](https://aws-sap.dsjuc7fhaopci.amplifyapp.com) (Job 27, commit `5599657`; auto-build on push to `aws-sap`) |
+| **Background Worker** | SAP BTP Cloud Foundry (`ap10`) | App `sigap-workflow-remontada-rasa-mangga` in space `hackathon-remontada-rasa-mangga` | ✅ **Running**: `1/1` instance, 1024M quota (`npx prisma generate && npm run worker`), redeployed 30 Oct 19:04 WIB with commit `5599657` (`cf push -f manifest-worker.yml`). ⚠️ Not auto-deployed: after any change to `lib/` or `scripts/workflow-worker.ts`, run `cf push -f manifest-worker.yml` manually |
 | **Relational Database** | AWS RDS PostgreSQL (`ap-southeast-2`) | Instance `sigap-postgres` (`db.t4g.micro`, single-AZ, 20 GB) | ✅ **Active**: Verified connection (`batchCount: 8`, worker connection limit = 3) |
 | **Evidence Vault** | AWS S3 (`ap-southeast-2`) | Bucket `sigap-inspection-frames` | ✅ **Active**: SHA-256 byte integrity verified |
 | **Governed AI Reasoning** | AWS Bedrock (`us-east-1`) | `amazon.nova-lite-v1:0` | ✅ **Active**: Strict output token cap (600) & truncation handling |
@@ -862,4 +908,4 @@ Key deliverables:
 
 ---
 
-*Last updated: commit `6f37d85` (30 Oct 2026) — explainable trace, customer quality profiles, live dashboard metrics; Amplify job 25 and BTP CF worker redeployed.*
+*Last updated: commit `5599657` (30 Oct 2026) — detector v3 in production, real autonomous dispatch mode + inline execution on approve, Settings window/trigger flow into policySnapshot, full API route list; Amplify job 27 live, BTP CF worker redeployed.*
