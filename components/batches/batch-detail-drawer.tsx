@@ -98,7 +98,7 @@ export function BatchDetailDrawer({
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 26, stiffness: 280 }}
-          className="relative w-full max-w-md h-full bg-white border-l border-slate-200/80 shadow-2xl flex flex-col z-10 select-none overflow-hidden"
+          className="relative w-full max-w-md h-full bg-white border-l border-slate-200/80 shadow-2xl flex flex-col z-10 overflow-hidden"
         >
           {/* Header */}
           <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white">

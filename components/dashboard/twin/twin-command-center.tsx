@@ -85,10 +85,10 @@ export function TwinCommandCenter({ stats }: TwinCommandCenterProps) {
   }, []);
 
   return (
-    <div className="w-full flex flex-col bg-[#E1E7ED] select-none" style={{ backgroundColor: "#E1E7ED" }}>
+    <div className="w-full flex flex-col bg-[#E1E7ED]" style={{ backgroundColor: "#E1E7ED" }}>
       {/* 1. SECTION 1: SPLIT HERO (Spline Kiri + Panel Kanan Solid) */}
       <section
-        className="flex flex-col lg:flex-row w-full bg-[#E1E7ED] select-none border-b border-slate-300/40 relative"
+        className="flex flex-col lg:flex-row w-full bg-[#E1E7ED] border-b border-slate-300/40 relative"
         style={{ backgroundColor: "#E1E7ED" }}
       >
         {/* KIRI: 3D Spline Canvas + Overlays (Title, Control Rail, 3D Badges, Bottom Bar) */}
@@ -207,7 +207,7 @@ export function TwinCommandCenter({ stats }: TwinCommandCenterProps) {
       {/* 2. SECTION 2: OPERATIONAL ANALYTICS (FlowDesk Light Canvas #F8F9FB) */}
       <section
         id="analytics-section"
-        className="w-full bg-[#F8F9FB] pt-10 pb-16 px-6 sm:px-8 border-t border-slate-200/80 select-none"
+        className="w-full bg-[#F8F9FB] pt-10 pb-16 px-6 sm:px-8 border-t border-slate-200/80"
         style={{ backgroundColor: "#F8F9FB" }}
       >
         <div className="max-w-[1720px] mx-auto space-y-6">

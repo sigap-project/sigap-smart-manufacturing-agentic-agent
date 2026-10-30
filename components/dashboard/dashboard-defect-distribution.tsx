@@ -294,7 +294,7 @@ export function DashboardDefectDistribution({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.65, delay: 0.44, ease: [0.16, 1, 0.3, 1] }}
       style={{ willChange: "transform, opacity" }}
-      className="rounded-2xl p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between select-none hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+      className="rounded-2xl p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
     >
       {/* Top Header */}
       <div className="flex items-center justify-between gap-3 mb-2">

@@ -160,7 +160,7 @@ export function HistoryTable({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider select-none">
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                   <th
                     onClick={() => handleSort("id")}
                     className="py-3 px-4 sm:px-6 cursor-pointer hover:text-slate-800 transition-colors"

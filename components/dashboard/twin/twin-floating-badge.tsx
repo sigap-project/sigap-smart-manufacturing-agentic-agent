@@ -53,7 +53,7 @@ export function TwinFloatingBadge({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25, delay }}
-      className={`absolute ${position} pointer-events-auto select-none`}
+      className={`absolute ${position} pointer-events-auto`}
     >
       <div
         className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur-md border shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition-all duration-200 ${

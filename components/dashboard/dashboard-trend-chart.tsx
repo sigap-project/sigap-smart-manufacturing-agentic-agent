@@ -104,7 +104,7 @@ export function DashboardTrendChart() {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.65, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
       style={{ willChange: "transform, opacity" }}
-      className="rounded-2xl p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between select-none"
+      className="rounded-2xl p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between"
     >
       {/* Chart Top Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">

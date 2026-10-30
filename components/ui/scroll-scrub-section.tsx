@@ -251,7 +251,7 @@ export function ScrollScrubSection({
       style={{ height: `${scrollHeightMultiplier * 100}vh` }}
     >
       {/* Pinned 100vw x 100vh Full-Bleed Sticky Frame */}
-      <div className="sticky top-0 left-0 w-full h-screen overflow-hidden bg-[#050505] select-none z-10">
+      <div className="sticky top-0 left-0 w-full h-screen overflow-hidden bg-[#050505] z-10">
         {/* Full-Bleed Edge-to-Edge Canvas */}
         <canvas
           ref={canvasRef}
@@ -270,10 +270,10 @@ export function ScrollScrubSection({
 
         {/* 1. TOP PINNED OVERLAY: Persistent Eyebrow Badge & Heading */}
         <div className="absolute top-8 sm:top-10 left-0 right-0 flex flex-col items-center text-center px-6 pointer-events-none z-20">
-          <span className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-emerald-400 font-semibold mb-2 drop-shadow-md">
+          <span className="pointer-events-auto font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-emerald-400 font-semibold mb-2 drop-shadow-md">
             {eyebrow}
           </span>
-          <h2 className="font-display text-lg sm:text-2xl font-bold text-white/90 tracking-tight drop-shadow-lg">
+          <h2 className="pointer-events-auto font-display text-lg sm:text-2xl font-bold text-white/90 tracking-tight drop-shadow-lg">
             {heading}
           </h2>
         </div>
@@ -287,7 +287,7 @@ export function ScrollScrubSection({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -18, scale: 0.98 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="max-w-4xl mx-auto flex flex-col items-center"
+              className="pointer-events-auto max-w-4xl mx-auto flex flex-col items-center"
             >
               {/* Bold Large Centered White Headline in Clash Display */}
               <h3 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white uppercase drop-shadow-[0_10px_35px_rgba(0,0,0,0.95)]">

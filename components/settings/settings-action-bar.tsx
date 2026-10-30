@@ -20,7 +20,7 @@ export function SettingsActionBar({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.66, ease: [0.16, 1, 0.3, 1] }}
       style={{ willChange: "transform, opacity" }}
-      className="sticky bottom-4 z-30 p-3.5 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 select-none"
+      className="sticky bottom-4 z-30 p-3.5 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3"
     >
       <div className="text-xs text-slate-500 hidden sm:block">
         Parameter updates synchronize immediately to active agent runtime.

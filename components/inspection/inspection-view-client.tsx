@@ -85,7 +85,7 @@ export function InspectionViewClient({
   );
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-12 select-none">
+    <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
@@ -245,7 +245,7 @@ export function InspectionViewClient({
                 partName={currentProductType}
               />
             ) : (
-              <div className="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center py-10 select-none">
+              <div className="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center py-10">
                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
                   <Zap className="w-5 h-5" />
                 </div>

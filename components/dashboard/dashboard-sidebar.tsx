@@ -43,7 +43,7 @@ export function DashboardSidebar({
   ];
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200/80 text-slate-700 select-none">
+    <div className="flex flex-col h-full bg-white border-r border-slate-200/80 text-slate-700">
       {/* Top Branding Section */}
       <motion.div
         initial={{ opacity: 0, y: -6 }}

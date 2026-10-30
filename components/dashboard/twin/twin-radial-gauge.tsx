@@ -64,7 +64,7 @@ export function TwinRadialGauge({
 
   return (
     <div
-      className="relative flex flex-col items-center justify-center select-none"
+      className="relative flex flex-col items-center justify-center"
       style={{ width: size, height: size * 0.85 }}
       suppressHydrationWarning
     >

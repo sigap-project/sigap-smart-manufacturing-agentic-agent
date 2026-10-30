@@ -51,7 +51,7 @@ export function InspectionEscalationGauge({
   const isLevel1 = currentScore < 0.40;
 
   return (
-    <div className="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] select-none hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+    <div className="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
       {/* Top Header: Title, Active Lot & Score Metric */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
         <div>

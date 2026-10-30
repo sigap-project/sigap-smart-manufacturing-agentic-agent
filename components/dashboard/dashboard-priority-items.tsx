@@ -86,7 +86,7 @@ export function DashboardPriorityItems() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.65, delay: 0.63, ease: [0.16, 1, 0.3, 1] }}
       style={{ willChange: "transform, opacity" }}
-      className="rounded-2xl p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between select-none hover:-translate-y-1 hover:shadow-md transition-all duration-200"
+      className="rounded-2xl p-6 bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-200"
     >
       {/* Header with Search and Filter (FlowDesk Recent Deals Style) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">

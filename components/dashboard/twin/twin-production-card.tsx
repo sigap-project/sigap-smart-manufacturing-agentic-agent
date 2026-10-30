@@ -29,7 +29,7 @@ export function TwinProductionCard({
   dispatchesCount = 18,
 }: TwinProductionCardProps) {
   return (
-    <div className="flex flex-col gap-2.5 select-none">
+    <div className="flex flex-col gap-2.5">
       {/* 1. Hero Production & OEE Radial Gauge Card (FlowDesk Minimalist Light Card) */}
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.97 }}

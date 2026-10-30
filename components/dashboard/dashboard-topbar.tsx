@@ -74,7 +74,7 @@ export function DashboardTopbar({
       className={
         className
           ? className
-          : "sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between select-none text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+          : "sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
       }
     >
       {/* Left: Mobile Hamburger + Current Plant/Line Context Selector */}

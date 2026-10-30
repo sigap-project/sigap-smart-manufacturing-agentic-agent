@@ -147,7 +147,7 @@ export function DispatchTable({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider select-none font-sans">
+            <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider font-sans">
               <th
                 onClick={() => handleSort("id")}
                 className="py-3.5 px-4 sm:px-6 cursor-pointer hover:text-slate-900 transition-colors"
