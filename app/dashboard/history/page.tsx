@@ -11,7 +11,6 @@ import {
   DefectClass,
   InspectionRecord,
   InspectionStatus,
-  INITIAL_INSPECTIONS,
 } from "@/components/history/types";
 import { useSigapGlobal } from "@/context/sigap-global-context";
 

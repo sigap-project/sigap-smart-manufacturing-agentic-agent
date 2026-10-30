@@ -23,12 +23,12 @@ interface TwinProductionCardProps {
 }
 
 export function TwinProductionCard({
-  totalInspections = 1428,
-  activeLotId = "#B-2026-0730",
-  defectRate = 0.56,
-  batchesHeldCount = 3,
-  heldDefectPcs = 36,
-  dispatchesCount = 18,
+  totalInspections = 0,
+  activeLotId = "N/A",
+  defectRate = 0,
+  batchesHeldCount = 0,
+  heldDefectPcs = 0,
+  dispatchesCount = 0,
   dpmo,
   firstPassYieldPct,
 }: TwinProductionCardProps) {
@@ -59,14 +59,14 @@ export function TwinProductionCard({
           </button>
         </div>
 
-        {/* Two-Tone Radial Gauge for OEE */}
+        {/* Radial Gauge: first-pass yield measured from inspection records */}
         <div className="flex items-center justify-center my-1">
           <TwinRadialGauge
-            value={89.4}
+            value={firstPassYieldPct ?? 0}
             size={148}
             strokeWidth={9}
-            label="OEE Efficiency"
-            sublabel="Target: 85.0%"
+            label="First-Pass Yield"
+            sublabel="OK / all inspections"
             accentColor="#10B981"
             trackColor="#F1F5F9"
             showTicks={true}
@@ -133,11 +133,7 @@ export function TwinProductionCard({
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium pt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>
-              {firstPassYieldPct !== undefined
-                ? `First-pass yield ${firstPassYieldPct}% • Six Sigma target 3.4 DPMO`
-                : "Normal • Below 1.5% threshold"}
-            </span>
+            <span>Defective / all inspections • Six Sigma target 3.4 DPMO</span>
           </div>
         </motion.div>
 
@@ -203,7 +199,7 @@ export function TwinProductionCard({
           </div>
           <div className="flex items-center gap-1.5 text-xs text-blue-700 font-medium pt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            <span>100% Synced OData QM/MM/PP</span>
+            <span>QM / MM / PP via SAP OData mock</span>
           </div>
         </motion.div>
       </div>

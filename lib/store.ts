@@ -464,7 +464,8 @@ export const sigapStore = {
   // 5. DASHBOARD STATS (Aggregated from Real PostgreSQL Data)
   // ---------------------------------------------------------------------------
   async getDashboardStats() {
-    const [inspectionCounts, batchGroups, dispatchesCount, latestBatch] = await Promise.all([
+    const [inspectionCounts, batchGroups, dispatchesCount, latestBatch, hourlyRows, dailyRows] =
+      await Promise.all([
       prisma.$queryRaw<{ total: bigint; defects: bigint; unknown: bigint }[]>`
         SELECT COUNT(*) AS total,
                COUNT(*) FILTER (WHERE outcome = 'defect' OR "defectDetected" = true) AS defects,
@@ -473,7 +474,57 @@ export const sigapStore = {
       prisma.batch.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.dispatchRecord.count(),
       prisma.batch.findFirst({ orderBy: { createdAt: "desc" } }),
+      prisma.$queryRaw<{ bucket: Date; total: bigint; defects: bigint }[]>`
+        SELECT date_trunc('hour', COALESCE("capturedAt", "receivedAt")) AS bucket,
+               COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE outcome = 'defect' OR "defectDetected" = true) AS defects
+        FROM "Inspection"
+        WHERE COALESCE("capturedAt", "receivedAt") >= NOW() - INTERVAL '12 hours'
+        GROUP BY 1`,
+      prisma.$queryRaw<{ bucket: Date; total: bigint; defects: bigint }[]>`
+        SELECT date_trunc('day', COALESCE("capturedAt", "receivedAt") + INTERVAL '7 hours') AS bucket,
+               COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE outcome = 'defect' OR "defectDetected" = true) AS defects
+        FROM "Inspection"
+        WHERE COALESCE("capturedAt", "receivedAt") >= NOW() - INTERVAL '7 days'
+        GROUP BY 1`,
     ]);
+
+    // Fill empty buckets so the chart shows a continuous axis (labels in WIB)
+    const fillBuckets = (
+      rows: { bucket: Date; total: bigint; defects: bigint }[],
+      count: number,
+      stepMs: number,
+      floor: (d: Date) => number,
+      label: (t: number) => string
+    ) => {
+      const byTime = new Map(rows.map((r) => [new Date(r.bucket).getTime(), r]));
+      const end = floor(new Date());
+      return Array.from({ length: count }, (_, i) => {
+        const t = end - (count - 1 - i) * stepMs;
+        const row = byTime.get(t);
+        return { label: label(t), total: Number(row?.total ?? 0), defects: Number(row?.defects ?? 0) };
+      });
+    };
+    const HOUR = 3_600_000;
+    const WIB = 7 * HOUR;
+    const defectTrend = {
+      hourly: fillBuckets(
+        hourlyRows,
+        12,
+        HOUR,
+        (d) => Math.floor(d.getTime() / HOUR) * HOUR,
+        (t) => `${String(new Date(t + WIB).getUTCHours()).padStart(2, "0")}:00`
+      ),
+      // Daily buckets are WIB calendar days (shifted +7h before date_trunc)
+      daily: fillBuckets(
+        dailyRows,
+        7,
+        24 * HOUR,
+        (d) => Math.floor((d.getTime() + WIB) / (24 * HOUR)) * 24 * HOUR,
+        (t) => new Date(t).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
+      ),
+    };
 
     const totalInspections = Number(inspectionCounts[0]?.total ?? 0);
     const defectCount = Number(inspectionCounts[0]?.defects ?? 0);
@@ -558,6 +609,7 @@ export const sigapStore = {
       dispatchesCount,
       activeLotId: latestBatch?.lotId || "N/A",
       defectDisposition,
+      defectTrend,
       totalBatches,
     };
   },

@@ -151,11 +151,11 @@ export function formatBatchRecord(raw: unknown): BatchItem {
     escalationScore: typeof item.escalationScore === "number" ? item.escalationScore : 0,
     timeAgo: formatTimeAgo(createdAt),
     createdAt: createdAt.toISOString(),
-    slaSeconds: typeof item.slaSeconds === "number" ? item.slaSeconds : (item.pendingApproval ? 780 : undefined),
+    slaSeconds: typeof item.slaSeconds === "number" ? item.slaSeconds : undefined,
     defectSummary: typeof item.defectSummary === "string" ? item.defectSummary : undefined,
-    supplierName: String(item.supplierName || "PT Krakatau Scrap Ind."),
-    line: String(item.line || "Line #01 (Conveyor Cam-01)"),
-    inspector: "Agent Vision Bedrock",
+    supplierName: String(item.supplierName || "—"),
+    line: String(item.line || "—"),
+    inspector: "SIGAP governed agent",
     pendingApproval: Boolean(item.pendingApproval),
     version: typeof item.version === "number" ? item.version : 0,
     caseEpoch: typeof item.caseEpoch === "number" ? item.caseEpoch : 1,
@@ -176,21 +176,30 @@ export function formatDispatchRecord(item: any): DispatchItem {
     : new Date();
   const formattedDate = formatTimestampWIB(dateObj);
 
+  // DB lifecycle status -> the three display states the dispatch UI understands
+  const raw = String(item.status || "").toLowerCase();
+  const status: DispatchItem["status"] =
+    raw === "pending_approval" || raw === "proposed" || raw === "pending approval"
+      ? "Pending Approval"
+      : raw === "rejected" || raw === "failed"
+      ? "Rejected"
+      : "Dispatched";
+
   return {
     id: item.id,
     consumer: item.consumer || "SAP QM",
-    batchId: item.batch?.lotId || item.batchId || item.lotId || "#B-2026-0730",
+    batchId: item.batch?.lotId || item.batchId || item.lotId || "—",
 
-    partName: item.partName || item.batch?.productType || item.productName || "Bracket Motor A7",
-    triggerReason: item.triggerReason || "Anomali terdeteksi",
-    status: item.status || "Dispatched",
-    sapTicketId: item.sapTicketId || `QM-${item.id?.slice(-5) || "00001"}`,
-    defectCode: item.defectCode || "DEF-OXID-01",
-    defectClass: item.defectClass || "Anomali Kualitas",
-    actionSummary: item.actionSummary || item.triggerReason || "Notifikasi sistem ke modul ERP.",
-    supplier: item.supplier || item.batch?.supplierName || "PT Krakatau Scrap Ind.",
-    escalationScore: typeof item.escalationScore === "number" ? item.escalationScore : 0.74,
-    approvedBy: item.approvedBy || "Autonomous Vision Agent",
+    partName: item.partName || item.batch?.productType || item.productName || "—",
+    triggerReason: item.triggerReason || "—",
+    status,
+    sapTicketId: item.sapTicketId || "—",
+    defectCode: item.defectCode || item.actionType || "—",
+    defectClass: item.defectClass || item.actionType || "—",
+    actionSummary: item.actionSummary || item.actionType || item.triggerReason || "—",
+    supplier: item.supplier || item.batch?.supplierName || "—",
+    escalationScore: typeof item.escalationScore === "number" ? item.escalationScore : 0,
+    approvedBy: item.approvedBy || (status === "Pending Approval" ? "Awaiting supervisor" : "—"),
     timestamp: formattedDate,
 
     rawDate: dateObj.toISOString(),

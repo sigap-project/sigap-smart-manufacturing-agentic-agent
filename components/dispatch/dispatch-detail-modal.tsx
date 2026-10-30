@@ -119,12 +119,6 @@ export function DispatchDetailModal({
                   </span>
                 </div>
 
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Escalation Risk Score:</span>
-                  <span className="font-mono font-bold text-amber-700">
-                    {dispatch.escalationScore.toFixed(2)}
-                  </span>
-                </div>
               </div>
             </div>
 

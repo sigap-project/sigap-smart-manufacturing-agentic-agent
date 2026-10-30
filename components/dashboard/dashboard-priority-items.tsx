@@ -4,79 +4,48 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter } from "lucide-react";
 import { AnimatedSelect } from "@/components/ui/animated-select";
+import { useSigapGlobal } from "@/context/sigap-global-context";
 
 export function DashboardPriorityItems() {
+  const { batches } = useSigapGlobal();
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   const filterOptions = [
-    { id: "all", label: "All Priority Lots" },
-    { id: "critical", label: "Critical Escalation" },
-    { id: "review", label: "Pending Review" },
-    { id: "auto", label: "Auto-Store" },
+    { id: "all", label: "All Open Lots" },
+    { id: "held", label: "Held / Quarantine" },
+    { id: "review", label: "Pending Approval" },
   ];
 
-  const priorityItems = [
-    {
-      lotId: "Lot #B-2026-0730",
-      partName: "Bracket Motor A7",
-      defectType: "Auto Quarantine • 45 pcs",
-      escalationScore: "0.74",
-      scoreColor: "text-rose-600",
-      badge: "Critical",
-      badgeColor: "bg-rose-50 text-rose-700 border-rose-200/70",
-      code: "A7",
-    },
-    {
-      lotId: "Lot #A-2026-0811",
-      partName: "Housing Gearbox R2",
-      defectType: "Pending Review • 28 pcs",
-      escalationScore: "0.68",
-      scoreColor: "text-amber-600",
-      badge: "Elevated",
-      badgeColor: "bg-amber-50 text-amber-700 border-amber-200/70",
-      code: "HG",
-    },
-    {
-      lotId: "Lot #C-2026-0902",
-      partName: "Manifold Exhaust 4-Cyl",
-      defectType: "QM Review • 16 pcs",
-      escalationScore: "0.55",
-      scoreColor: "text-blue-600",
-      badge: "Review QM",
-      badgeColor: "bg-blue-50 text-blue-700 border-blue-200/70",
-      code: "ME",
-    },
-    {
-      lotId: "Lot #B-2026-0728",
-      partName: "Flange Pipe High-Temp",
-      defectType: "Line Monitoring • 12 pcs",
-      escalationScore: "0.42",
-      scoreColor: "text-slate-600",
-      badge: "Moderate",
-      badgeColor: "bg-slate-100 text-slate-700 border-slate-200/70",
-      code: "FP",
-    },
-    {
-      lotId: "Lot #D-2026-0914",
-      partName: "Crankcase Valve Cap",
-      defectType: "Scrap Disposition • 8 pcs",
-      escalationScore: "0.38",
-      scoreColor: "text-emerald-700",
-      badge: "Auto-Store",
-      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200/70",
-      code: "CV",
-    },
-  ];
+  // Open lots from /api/batches, most defects first
+  const priorityItems = batches
+    .filter((b) => b.status === "held" || b.status === "pending" || b.status === "pending_review" || b.pendingApproval)
+    .sort((a, b) => b.defectCount - a.defectCount)
+    .slice(0, 5)
+    .map((b) => {
+      const held = b.status === "held";
+      return {
+        lotId: b.lotId || b.batchId || b.id,
+        partName: b.productName || b.productType || "Unknown part",
+        defectType: `${b.defectCount} defect(s) / ${b.inspectionCount ?? b.totalPcs} inspected`,
+        supplier: b.supplierName,
+        badge: b.pendingApproval ? "Pending Approval" : held ? "Held" : "Pending",
+        badgeColor: b.pendingApproval
+          ? "bg-amber-50 text-amber-700 border-amber-200/70"
+          : held
+          ? "bg-rose-50 text-rose-700 border-rose-200/70"
+          : "bg-slate-100 text-slate-700 border-slate-200/70",
+        code: (b.productName || b.lotId || "?").replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase(),
+        held,
+        pendingApproval: !!b.pendingApproval,
+      };
+    });
 
   const filteredItems = priorityItems.filter((item) => {
-    const matchesQuery =
-      item.partName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.lotId.toLowerCase().includes(searchQuery.toLowerCase());
-    if (!matchesQuery) return false;
-    if (filter === "critical") return item.badge === "Critical";
-    if (filter === "review") return item.badge === "Elevated" || item.badge === "Review QM";
-    if (filter === "auto") return item.badge === "Auto-Store";
+    const q = searchQuery.toLowerCase();
+    if (q && !item.partName.toLowerCase().includes(q) && !item.lotId.toLowerCase().includes(q)) return false;
+    if (filter === "held") return item.held;
+    if (filter === "review") return item.pendingApproval;
     return true;
   });
 
@@ -126,6 +95,9 @@ export function DashboardPriorityItems() {
 
       {/* Priority Items List (FlowDesk Clean Table Row Style) */}
       <div className="space-y-2.5">
+        {filteredItems.length === 0 && (
+          <p className="p-6 text-center text-xs text-slate-400 font-mono">No open lots.</p>
+        )}
         {filteredItems.map((item, idx) => (
           <motion.div
             key={item.lotId}
@@ -155,16 +127,13 @@ export function DashboardPriorityItems() {
               </div>
             </div>
 
-            {/* Right: Escalation Score Metric & Pastel Badge */}
+            {/* Right: Supplier & Status Badge */}
             <div className="flex flex-col items-end shrink-0 gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-medium text-slate-400">
-                  Score:
+              {item.supplier && (
+                <span className="text-[11px] font-medium text-slate-400 truncate max-w-[140px]">
+                  {item.supplier}
                 </span>
-                <span className={`text-xs sm:text-sm font-bold tabular-nums ${item.scoreColor}`}>
-                  {item.escalationScore}
-                </span>
-              </div>
+              )}
               <span
                 className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${item.badgeColor}`}
               >

@@ -7,7 +7,6 @@ import {
   ShieldAlert,
   CheckCircle2,
   XCircle,
-  TrendingUp,
 } from "lucide-react";
 import { BatchItem } from "./types";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
@@ -49,16 +48,14 @@ export function BatchStatCards({ batches }: BatchStatCardsProps) {
             <span className="text-xs text-slate-400 font-medium">Lots</span>
           </div>
           <p className="text-xs text-slate-500 truncate">
-            Shift #1 • 3 Conveyor Lines
+            All recorded lots
           </p>
         </div>
 
         <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
           <span className="flex items-center gap-1 font-medium text-slate-700">
-            <TrendingUp className="w-3 h-3 text-emerald-600" />
-            100% Tracked
+            From batch records
           </span>
-          <span className="text-slate-400 text-[11px]">Today</span>
         </div>
       </motion.div>
 

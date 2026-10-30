@@ -27,6 +27,11 @@ export interface GlobalStats {
   activeLot: string;
   activePart: string;
   escalationScore: number;
+  dpmo?: number;
+  firstPassYieldPct?: number;
+  dispatchesCount?: number;
+  defectDisposition?: unknown[];
+  defectTrend?: unknown;
 }
 
 export interface IngestInspectionPayload {
@@ -186,6 +191,11 @@ export function SigapGlobalProvider({ children }: { children: React.ReactNode })
         activeLot: s.activeLotId || "N/A",
         activePart: "Submersible Pump Impeller Casting",
         escalationScore: typeof s.escalationScore === "number" ? s.escalationScore : 0.0,
+        dpmo: s.dpmo,
+        firstPassYieldPct: s.firstPassYieldPct,
+        dispatchesCount: s.dispatchesCount,
+        defectDisposition: s.defectDisposition,
+        defectTrend: s.defectTrend,
       });
     }
   }, []);

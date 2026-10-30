@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
-import { AnimatedSelect } from "@/components/ui/animated-select";
 
 export interface DefectDispositionItem {
   name: string;
@@ -20,249 +18,25 @@ export interface DefectDispositionItem {
 
 interface DashboardDefectDistributionProps {
   disposition?: DefectDispositionItem[];
-  totalDefects?: number;
 }
-
-const DEFAULT_DISPOSITION: DefectDispositionItem[] = [
-  {
-    name: "Auto Quarantine",
-    desc: "SAP QM ticket issued, lot quarantined",
-    count: 36,
-    percent: 52.4,
-    color: "from-blue-600 to-blue-700",
-    dotColor: "bg-blue-600",
-    textColor: "text-blue-700",
-    stroke: "#3B82F6",
-    strokeDasharray: "230.47 439.82",
-    strokeDashoffset: "0",
-  },
-  {
-    name: "Pending Review",
-    desc: "Human-in-the-Loop SLA 10 min",
-    count: 8,
-    percent: 28.6,
-    color: "from-amber-500 to-amber-600",
-    dotColor: "bg-amber-500",
-    textColor: "text-amber-700",
-    stroke: "#F59E0B",
-    strokeDasharray: "125.79 439.82",
-    strokeDashoffset: "-230.47",
-  },
-  {
-    name: "Scrapped / Rejected",
-    desc: "Scrap disposition & remelt furnace",
-    count: 80,
-    percent: 19.0,
-    color: "from-purple-500 to-purple-600",
-    dotColor: "bg-purple-500",
-    textColor: "text-purple-700",
-    stroke: "#8B5CF6",
-    strokeDasharray: "83.56 439.82",
-    strokeDashoffset: "-356.26",
-  },
-];
 
 export function DashboardDefectDistribution({
   disposition,
-  totalDefects: propTotalDefects,
 }: DashboardDefectDistributionProps) {
-  const [filter, setFilter] = useState("today");
-
-  const filterOptions = [
-    { id: "today", label: "Today (Shift 1)" },
-    { id: "shift-2", label: "Shift 2 (Afternoon)" },
-    { id: "all-shifts", label: "All Shifts (Today)" },
-    { id: "7d", label: "Last 7 Days" },
-  ];
-
+  // Batch-status counts from /api/dashboard/stats (store.getDashboardStats)
   const nameMapping: Record<string, string> = {
-    "karantina otomatis": "Auto Quarantine",
+    "karantina terverifikasi": "Held / Quarantined",
     "pending konfirmasi": "Pending Review",
     "ditolak / afkir": "Scrapped / Rejected",
-    "ditolak": "Scrapped / Rejected",
   };
 
   const descMapping: Record<string, string> = {
-    "karantina otomatis": "SAP QM notification issued, lot quarantined",
-    "pending konfirmasi": "Human-in-the-Loop SLA 10 min",
-    "ditolak / afkir": "Scrap disposition & remelt furnace",
-    "ditolak": "Scrap disposition & remelt furnace",
+    "karantina terverifikasi": "Lot on hold; quality notification active",
+    "pending konfirmasi": "Awaiting supervisor authorization",
+    "ditolak / afkir": "Scrap disposition",
   };
 
-  const shiftDatasets: Record<string, { items: DefectDispositionItem[]; total: number; containmentRate: number }> = {
-    today: {
-      items: [
-        {
-          name: "Auto Quarantine",
-          desc: "SAP QM ticket issued, lot quarantined",
-          count: 36,
-          percent: 52.4,
-          color: "from-blue-600 to-blue-700",
-          dotColor: "bg-blue-600",
-          textColor: "text-blue-700",
-          stroke: "#3B82F6",
-          strokeDasharray: "230.47 439.82",
-          strokeDashoffset: "0",
-        },
-        {
-          name: "Pending Review",
-          desc: "Human-in-the-Loop SLA 10 min",
-          count: 8,
-          percent: 28.6,
-          color: "from-amber-500 to-amber-600",
-          dotColor: "bg-amber-500",
-          textColor: "text-amber-700",
-          stroke: "#F59E0B",
-          strokeDasharray: "125.79 439.82",
-          strokeDashoffset: "-230.47",
-        },
-        {
-          name: "Scrapped / Rejected",
-          desc: "Scrap disposition & remelt furnace",
-          count: 80,
-          percent: 19.0,
-          color: "from-purple-500 to-purple-600",
-          dotColor: "bg-purple-500",
-          textColor: "text-purple-700",
-          stroke: "#8B5CF6",
-          strokeDasharray: "83.56 439.82",
-          strokeDashoffset: "-356.26",
-        },
-      ],
-      total: 124,
-      containmentRate: 96.8,
-    },
-    "shift-2": {
-      items: [
-        {
-          name: "Auto Quarantine",
-          desc: "SAP QM ticket issued, lot quarantined",
-          count: 24,
-          percent: 48.0,
-          color: "from-blue-600 to-blue-700",
-          dotColor: "bg-blue-600",
-          textColor: "text-blue-700",
-          stroke: "#3B82F6",
-          strokeDasharray: "205.08 439.82",
-          strokeDashoffset: "0",
-        },
-        {
-          name: "Pending Review",
-          desc: "Human-in-the-Loop SLA 10 min",
-          count: 6,
-          percent: 22.0,
-          color: "from-amber-500 to-amber-600",
-          dotColor: "bg-amber-500",
-          textColor: "text-amber-700",
-          stroke: "#F59E0B",
-          strokeDasharray: "94.00 439.82",
-          strokeDashoffset: "-205.08",
-        },
-        {
-          name: "Scrapped / Rejected",
-          desc: "Scrap disposition & remelt furnace",
-          count: 50,
-          percent: 30.0,
-          color: "from-purple-500 to-purple-600",
-          dotColor: "bg-purple-500",
-          textColor: "text-purple-700",
-          stroke: "#8B5CF6",
-          strokeDasharray: "128.18 439.82",
-          strokeDashoffset: "-299.08",
-        },
-      ],
-      total: 80,
-      containmentRate: 97.4,
-    },
-    "all-shifts": {
-      items: [
-        {
-          name: "Auto Quarantine",
-          desc: "SAP QM ticket issued, lot quarantined",
-          count: 60,
-          percent: 51.2,
-          color: "from-blue-600 to-blue-700",
-          dotColor: "bg-blue-600",
-          textColor: "text-blue-700",
-          stroke: "#3B82F6",
-          strokeDasharray: "218.75 439.82",
-          strokeDashoffset: "0",
-        },
-        {
-          name: "Pending Review",
-          desc: "Human-in-the-Loop SLA 10 min",
-          count: 14,
-          percent: 25.6,
-          color: "from-amber-500 to-amber-600",
-          dotColor: "bg-amber-500",
-          textColor: "text-amber-700",
-          stroke: "#F59E0B",
-          strokeDasharray: "109.38 439.82",
-          strokeDashoffset: "-218.75",
-        },
-        {
-          name: "Scrapped / Rejected",
-          desc: "Scrap disposition & remelt furnace",
-          count: 130,
-          percent: 23.2,
-          color: "from-purple-500 to-purple-600",
-          dotColor: "bg-purple-500",
-          textColor: "text-purple-700",
-          stroke: "#8B5CF6",
-          strokeDasharray: "99.12 439.82",
-          strokeDashoffset: "-328.13",
-        },
-      ],
-      total: 204,
-      containmentRate: 97.1,
-    },
-    "7d": {
-      items: [
-        {
-          name: "Auto Quarantine",
-          desc: "SAP QM ticket issued, lot quarantined",
-          count: 280,
-          percent: 54.5,
-          color: "from-blue-600 to-blue-700",
-          dotColor: "bg-blue-600",
-          textColor: "text-blue-700",
-          stroke: "#3B82F6",
-          strokeDasharray: "232.85 439.82",
-          strokeDashoffset: "0",
-        },
-        {
-          name: "Pending Review",
-          desc: "Human-in-the-Loop SLA 10 min",
-          count: 45,
-          percent: 18.5,
-          color: "from-amber-500 to-amber-600",
-          dotColor: "bg-amber-500",
-          textColor: "text-amber-700",
-          stroke: "#F59E0B",
-          strokeDasharray: "79.04 439.82",
-          strokeDashoffset: "-232.85",
-        },
-        {
-          name: "Scrapped / Rejected",
-          desc: "Scrap disposition & remelt furnace",
-          count: 480,
-          percent: 27.0,
-          color: "from-purple-500 to-purple-600",
-          dotColor: "bg-purple-500",
-          textColor: "text-purple-700",
-          stroke: "#8B5CF6",
-          strokeDasharray: "115.36 439.82",
-          strokeDashoffset: "-311.89",
-        },
-      ],
-      total: 805,
-      containmentRate: 98.2,
-    },
-  };
-
-  const activeData = shiftDatasets[filter] || shiftDatasets.today;
-  const rawItems = disposition && filter === "today" ? disposition : activeData.items;
-  const items = rawItems.map((item) => {
+  const items = (disposition ?? []).map((item) => {
     const key = item.name.toLowerCase().trim();
     return {
       ...item,
@@ -271,8 +45,7 @@ export function DashboardDefectDistribution({
     };
   });
 
-  const total = propTotalDefects !== undefined && filter === "today" ? propTotalDefects : activeData.total;
-  const containmentRate = activeData.containmentRate;
+  const total = items.reduce((sum, item) => sum + item.count, 0);
 
   // Donut geometry for FlowDesk Pipeline Value style:
   // r = 68, C = 2 * pi * 68 = 427.256
@@ -280,9 +53,9 @@ export function DashboardDefectDistribution({
   const circumference = 2 * Math.PI * radius; // ~427.26
 
   // Calculate proportional stroke lengths based on item percentages
-  const seg1Length = (items[0]?.percent / 100) * circumference;
-  const seg2Length = (items[1]?.percent / 100) * circumference;
-  const seg3Length = (items[2]?.percent / 100) * circumference;
+  const seg1Length = ((items[0]?.percent ?? 0) / 100) * circumference;
+  const seg2Length = ((items[1]?.percent ?? 0) / 100) * circumference;
+  const seg3Length = ((items[2]?.percent ?? 0) / 100) * circumference;
 
   const seg1Offset = 0;
   const seg2Offset = -seg1Length;
@@ -303,17 +76,9 @@ export function DashboardDefectDistribution({
             Defect Disposition
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Resolution status of detected defect anomalies
+            Lots by disposition status (live from batch records)
           </p>
         </div>
-
-        <AnimatedSelect
-          value={filter}
-          onChange={setFilter}
-          options={filterOptions}
-          align="right"
-          ariaLabel="Filter defect disposition shift"
-        />
       </div>
 
       {/* FlowDesk 3-Tone Donut Chart */}
@@ -381,13 +146,10 @@ export function DashboardDefectDistribution({
         {/* Center Donut Metrics (FlowDesk Pipeline Value Style) */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            QC Containment
+            Lots in Disposition
           </span>
           <span className="text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight mt-0.5">
-            <AnimatedCounter value={containmentRate} decimals={1} suffix="%" duration={1.2} />
-          </span>
-          <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-            Total Defects: <AnimatedCounter value={total} duration={1.0} /> Pcs
+            <AnimatedCounter value={total} duration={1.0} />
           </span>
         </div>
       </div>
@@ -396,7 +158,7 @@ export function DashboardDefectDistribution({
       <div className="flex items-center justify-center gap-3 py-1 text-[11px] font-medium text-slate-600 border-b border-slate-100 pb-2">
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-blue-500" />
-          Auto Quarantine
+          Held
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -437,7 +199,7 @@ export function DashboardDefectDistribution({
 
               <div className="flex items-center gap-2 shrink-0 ml-3">
                 <span className="text-xs font-semibold text-slate-900 tabular-nums px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200/70">
-                  {item.count} pcs
+                  {item.count} lots
                 </span>
                 <span className="text-xs text-slate-500 w-12 text-right font-medium tabular-nums">
                   {item.percent}%

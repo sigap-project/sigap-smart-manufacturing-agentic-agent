@@ -16,11 +16,11 @@ interface TwinRadialGaugeProps {
 }
 
 export function TwinRadialGauge({
-  value = 89.4,
+  value = 0,
   size = 180,
   strokeWidth = 10,
-  label = "Efisiensi OEE",
-  sublabel = "Target: 85%",
+  label = "",
+  sublabel = "",
   accentColor = "#059669",
   trackColor = "#E2E8F0",
   showTicks = true,

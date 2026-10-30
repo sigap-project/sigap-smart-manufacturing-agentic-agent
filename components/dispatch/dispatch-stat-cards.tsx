@@ -5,7 +5,6 @@ import {
   Send,
   Clock,
   CheckCircle2,
-  TrendingUp,
   MoreHorizontal,
   Layers,
   ShieldCheck,
@@ -53,8 +52,7 @@ export function DispatchStatCards({ dispatches }: DispatchStatCardsProps) {
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 pt-2 border-t border-slate-100">
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>+18.2% vs last shift</span>
+          <span>All recorded ERP actions</span>
         </div>
       </motion.div>
 

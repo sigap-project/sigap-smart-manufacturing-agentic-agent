@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
   Check,
   Clock,
@@ -17,39 +16,6 @@ export function BatchApprovalPanel({
   pendingBatches,
   onInspectBatch,
 }: BatchApprovalPanelProps) {
-  // Live SLA timers simulation: track countdown seconds for each batch
-  const [timers, setTimers] = useState<{ [batchId: string]: number }>({});
-
-  useEffect(() => {
-    // Initialize timers from batch data
-    const initialTimers: { [batchId: string]: number } = {};
-    pendingBatches.forEach((b) => {
-      initialTimers[b.id] = b.slaSeconds || 600;
-    });
-    setTimers(initialTimers);
-
-    const interval = setInterval(() => {
-      setTimers((prev) => {
-        const next: { [batchId: string]: number } = {};
-        Object.entries(prev).forEach(([id, sec]) => {
-          next[id] = sec > 0 ? sec - 1 : 0;
-        });
-        return next;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [pendingBatches.length]);
-
-  const formatSla = (seconds: number | undefined) => {
-    if (seconds === undefined) return "10m 00s";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}m ${secs
-      .toString()
-      .padStart(2, "0")}s`;
-  };
-
   return (
     <div className="rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 sm:p-6 flex flex-col h-full">
       {/* Panel Header */}
@@ -88,9 +54,6 @@ export function BatchApprovalPanel({
           </div>
         ) : (
           pendingBatches.map((batch) => {
-            const currentSeconds = timers[batch.id] ?? (batch.slaSeconds || 600);
-            const isUrgent = currentSeconds < 300; // less than 5 minutes
-
             return (
               <div
                 key={batch.id}
@@ -109,56 +72,23 @@ export function BatchApprovalPanel({
                       </span>
                     </div>
 
-                    {/* Small Countdown SLA Timer */}
-                    <div
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
-                        isUrgent
-                          ? "bg-rose-50 text-rose-700 border-rose-200/80"
-                          : "bg-amber-50 text-amber-700 border-amber-200/80"
-                      }`}
-                      title="Remaining response time before automated escalation to Plant Manager"
-                    >
+                    {/* Time since the lot was created (real, from Batch.createdAt) */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border bg-amber-50 text-amber-700 border-amber-200/80">
                       <Clock className="w-3 h-3" />
-                      <span className="tabular-nums">SLA: {formatSla(currentSeconds)}</span>
+                      <span className="tabular-nums">{batch.timeAgo}</span>
                     </div>
                   </div>
 
                   {/* Defect Summary Line */}
                   <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-2.5">
-                    {(() => {
-                      const s = batch.defectSummary || "";
-                      if (s.includes("Anomali defect berulang")) {
-                        return "Recurring defect anomaly (94.2%) detected on 3 base mounting points.";
-                      }
-                      if (s.includes("Anomali defect permukaan")) {
-                        return "Surface defect anomaly exceeding 1.2mm tolerance on seal flange area.";
-                      }
-                      if (s.includes("Cacat thread sporadis") || s.includes("thread defect")) {
-                        return "Sporadic thread defect anomaly, awaiting operator visual confirmation.";
-                      }
-                      return s || `${batch.defectCount} anomalies detected on conveyor optical scan.`;
-                    })()}
+                    {batch.defectSummary || `${batch.defectCount} defect(s) recorded in this lot.`}
                   </p>
 
-                  {/* Escalation Score Badge */}
+                  {/* Defect count */}
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 font-medium">
-                        Formula Score:
-                      </span>
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full border tabular-nums ${
-                          (batch.escalationScore ?? 0) >= 0.7
-                            ? "bg-rose-50 text-rose-700 border-rose-200/80"
-                            : (batch.escalationScore ?? 0) >= 0.4
-                            ? "bg-amber-50 text-amber-700 border-amber-200/80"
-                            : "bg-emerald-50 text-emerald-700 border-emerald-200/80"
-                        }`}
-                      >
-                        {(batch.escalationScore ?? 0).toFixed(2)} •{" "}
-                        {(batch.escalationScore ?? 0) >= 0.7
-                          ? "Pattern Confirmed"
-                          : "Elevated"}
+                      <span className="text-xs text-slate-500 font-medium tabular-nums">
+                        {batch.defectCount} defect(s) / {batch.inspectionCount ?? batch.totalPcs} inspected
                       </span>
                     </div>
 

@@ -22,7 +22,8 @@ export function TwinOverlayBadges({
 }: TwinOverlayBadgesProps) {
   if (!showBadges) return null;
 
-  const totalInspectionsText = `${(stats?.totalInspections ?? 0).toLocaleString("en-US")} Pcs`;
+  const passedPcs = Math.max(0, (stats?.totalInspections ?? 0) - (stats?.heldDefectPcs ?? 0));
+  const totalInspectionsText = `${passedPcs.toLocaleString("en-US")} Pcs`;
   const heldLotsText = `${stats?.batchesHeldCount ?? 0} Lots`;
   const anomalyPcsText = `${stats?.heldDefectPcs ?? 0} pcs anomalies`;
 

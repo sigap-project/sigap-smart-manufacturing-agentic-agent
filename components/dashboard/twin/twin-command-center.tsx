@@ -147,8 +147,10 @@ export function TwinCommandCenter({ stats }: TwinCommandCenterProps) {
                 <span className="font-medium text-xs">Line: HPDC #02</span>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-md border border-slate-300/80 shadow-2xs">
-                <span className="text-slate-400 text-xs">Target OEE:</span>
-                <span className="text-slate-900 font-semibold text-xs">89.4%</span>
+                <span className="text-slate-400 text-xs">First-pass yield:</span>
+                <span className="text-slate-900 font-semibold text-xs">
+                  {typeof activeStats?.firstPassYieldPct === "number" ? `${activeStats.firstPassYieldPct}%` : "—"}
+                </span>
               </div>
             </div>
           </motion.div>
@@ -250,13 +252,10 @@ export function TwinCommandCenter({ stats }: TwinCommandCenterProps) {
           {/* Row 1: Hourly Trend Chart (8 cols) + Defect Distribution Radial Gauge (4 cols) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             <div className="lg:col-span-8">
-              <DashboardTrendChart />
+              <DashboardTrendChart trend={activeStats?.defectTrend} />
             </div>
             <div className="lg:col-span-4">
-              <DashboardDefectDistribution
-                disposition={stats?.defectDisposition}
-                totalDefects={stats?.totalDefects}
-              />
+              <DashboardDefectDistribution disposition={activeStats?.defectDisposition} />
             </div>
           </div>
 

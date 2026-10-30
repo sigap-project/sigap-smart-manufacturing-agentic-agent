@@ -44,7 +44,7 @@ export function DispatchCreateModal({
       status: "Dispatched",
       batchId,
       partName,
-      escalationScore: 0.76,
+      escalationScore: 0,
       approvedBy: "Budi Pratama (QC Lead)",
       sapTicketId: `${consumer.replace(" ", "-")}-${randomNum}`,
       defectCode: "DEF-MANUAL-01",

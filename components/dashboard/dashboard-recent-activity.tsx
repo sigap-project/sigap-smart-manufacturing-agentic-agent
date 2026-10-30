@@ -6,12 +6,12 @@ import {
   Send,
   Package,
   AlertTriangle,
-  CalendarClock,
   CheckCircle2,
   ArrowUpRight,
   Clock,
 } from "lucide-react";
 import { useSigapEvents } from "@/hooks/useSigapEvents";
+import { useSigapGlobal } from "@/context/sigap-global-context";
 
 interface ActivityItem {
   id?: string;
@@ -27,69 +27,6 @@ interface ActivityItem {
   isNew?: boolean;
 }
 
-const INITIAL_ACTIVITIES: ActivityItem[] = [
-  {
-    id: "act-init-1",
-    title: "SAP QM Quality Notification Issued",
-    description: "Ticket #QN-9042 autonomously dispatched for Lot #B-2026-0730 with S3 imagery",
-    source: "Station #01 • YOLOv8",
-    timestamp: "2m ago",
-    status: "Dispatched",
-    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
-    icon: Send,
-    iconColor: "text-emerald-600",
-    iconBg: "bg-emerald-50 border-emerald-200/70",
-  },
-  {
-    id: "act-init-2",
-    title: "Flag 'UnderReview' on Scrap Supplier",
-    description: "PATCH /SupplierRecord/{id} to SAP MM for supplier PT Krakatau Scrap",
-    source: "AWS Bedrock Agent",
-    timestamp: "8m ago",
-    status: "Held",
-    badgeColor: "bg-amber-50 text-amber-700 border-amber-200/80",
-    icon: Package,
-    iconColor: "text-amber-600",
-    iconBg: "bg-amber-50 border-amber-200/70",
-  },
-  {
-    id: "act-init-3",
-    title: "Pneumatic Diverter Reroutes Batch",
-    description: "45 pcs anomalous casting cubes diverted to Physical Quarantine Bin (score 0.74)",
-    source: "PLC S7-1200",
-    timestamp: "14m ago",
-    status: "Quarantined",
-    badgeColor: "bg-rose-50 text-rose-700 border-rose-200/80",
-    icon: AlertTriangle,
-    iconColor: "text-rose-600",
-    iconBg: "bg-rose-50 border-rose-200/70",
-  },
-  {
-    id: "act-init-4",
-    title: "SAP PP Casting Line Reschedule Proposed",
-    description: "POST /RescheduleRequest submitted for metal melting furnace optimization",
-    source: "SAP PP Connector",
-    timestamp: "25m ago",
-    status: "Pending Approval",
-    badgeColor: "bg-blue-50 text-blue-700 border-blue-200/80",
-    icon: CalendarClock,
-    iconColor: "text-blue-600",
-    iconBg: "bg-blue-50 border-blue-200/70",
-  },
-  {
-    id: "act-init-5",
-    title: "Vision Confidence Threshold Calibrated",
-    description: "YOLOv8-Nano auto-tuned threshold to 94.2% to reduce false positives",
-    source: "Agentic Vision Core",
-    timestamp: "40m ago",
-    status: "Completed",
-    badgeColor: "bg-slate-100 text-slate-700 border-slate-200/80",
-    icon: CheckCircle2,
-    iconColor: "text-slate-600",
-    iconBg: "bg-slate-100 border-slate-200/70",
-  },
-];
-
 // Collision-proof ID generator for real-time SSE activities
 let actCounter = 0;
 function generateUniqueActivityId(prefix: string, entityId?: string | number) {
@@ -100,7 +37,35 @@ function generateUniqueActivityId(prefix: string, entityId?: string | number) {
 }
 
 export function DashboardRecentActivity() {
-  const [activities, setActivities] = useState<ActivityItem[]>(INITIAL_ACTIVITIES);
+  const { dispatches } = useSigapGlobal();
+  // Live SSE items (same-process events only); persisted dispatch records fill the rest
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+
+  const dispatchItems: ActivityItem[] = dispatches.slice(0, 5).map((d) => {
+    const done = d.status === "Dispatched";
+    const rejected = d.status === "Rejected";
+    return {
+      id: `dsp-${d.id}`,
+      title: `${d.consumer}: ${d.actionSummary || d.defectCode || "ERP action"}`,
+      description: `${d.id} • ${d.batchId} • ${d.triggerReason}`,
+      source: d.approvedBy ? `Approved by ${d.approvedBy.split(":")[0]}` : "Governed agent proposal",
+      timestamp: d.timestamp,
+      status: d.status,
+      badgeColor: done
+        ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
+        : rejected
+        ? "bg-rose-50 text-rose-700 border-rose-200/80"
+        : "bg-amber-50 text-amber-700 border-amber-200/80",
+      icon: Send,
+      iconColor: done ? "text-emerald-600" : rejected ? "text-rose-600" : "text-amber-600",
+      iconBg: done
+        ? "bg-emerald-50 border-emerald-200/70"
+        : rejected
+        ? "bg-rose-50 border-rose-200/70"
+        : "bg-amber-50 border-amber-200/70",
+    };
+  });
+  const shown = [...activities, ...dispatchItems].slice(0, 5);
 
   // Dengarkan seluruh event operasional SIGAP melalui SSE
   const { isConnected } = useSigapEvents({
@@ -222,7 +187,7 @@ export function DashboardRecentActivity() {
                   isConnected ? "bg-emerald-500" : "bg-amber-500"
                 }`}
               />
-              <span>{isConnected ? "Live Stream" : "Connecting..."}</span>
+              <span>{isConnected ? "Live Stream" : "Polling"}</span>
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -241,7 +206,10 @@ export function DashboardRecentActivity() {
 
       {/* Activity List */}
       <div className="space-y-3">
-        {activities.map((item, idx) => {
+        {shown.length === 0 && (
+          <p className="p-6 text-center text-xs text-slate-400 font-mono">No agent actions recorded yet.</p>
+        )}
+        {shown.map((item, idx) => {
           const Icon = item.icon;
           return (
             <motion.div

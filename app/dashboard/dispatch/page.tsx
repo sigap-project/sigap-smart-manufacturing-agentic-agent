@@ -12,7 +12,6 @@ import {
   ConsumerType,
   DispatchItem,
   DispatchStatus,
-  INITIAL_DISPATCHES,
 } from "@/components/dispatch/types";
 import { DispatchSkeleton } from "@/components/dispatch/dispatch-skeleton";
 import { useSigapEvents } from "@/hooks/useSigapEvents";
@@ -63,14 +62,10 @@ export default function ExportDispatchPage() {
       try {
         const res = await fetch("/api/dispatch");
         const json = await res.json();
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-          setDispatches(json.data);
-        } else {
-          setDispatches(INITIAL_DISPATCHES);
-        }
+        setDispatches(Array.isArray(json.data) ? json.data : []);
       } catch (err) {
         console.warn("Failed fetching live dispatch data:", err);
-        setDispatches(INITIAL_DISPATCHES);
+        setDispatches([]);
       } finally {
         setIsLoading(false);
       }

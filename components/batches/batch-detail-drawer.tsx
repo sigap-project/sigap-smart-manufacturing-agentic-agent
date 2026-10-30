@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Layers,
-  AlertTriangle,
   ExternalLink,
   Scan,
   CheckCircle2,
@@ -204,35 +203,6 @@ export function BatchDetailDrawer({
               </div>
             </div>
 
-            {/* Escalation Score Breakdown */}
-            {batch.escalationScore !== undefined && (
-              <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-200/80">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                    Escalation Risk Score
-                  </span>
-                  <span className="text-xs font-semibold text-amber-700 tabular-nums">
-                    {batch.escalationScore.toFixed(2)}
-                  </span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mb-2">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      batch.escalationScore >= 0.7
-                        ? "bg-rose-500"
-                        : batch.escalationScore >= 0.4
-                        ? "bg-amber-400"
-                        : "bg-emerald-400"
-                    }`}
-                    style={{ width: `${Math.min(batch.escalationScore * 100, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-slate-400">
-                  Formula: (Frequency × 0.40) + (Severity × 0.35) + (Supplier × 0.25)
-                </p>
-              </div>
-            )}
 
             {/* Defect Summary Details */}
             {batch.defectSummary && (

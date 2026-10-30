@@ -3,13 +3,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { AlertTriangle, Zap } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { InlineLoginBanner } from "@/components/auth/inline-login-banner";
 import { useSigapSession } from "@/hooks/useSigapSession";
 import { InspectionCameraPanel } from "@/components/inspection/inspection-camera-panel";
 import { InspectionEventsList } from "@/components/inspection/inspection-events-list";
 import { InspectionAgentTrace } from "@/components/inspection/inspection-agent-trace";
-import { InspectionEscalationGauge } from "@/components/inspection/inspection-escalation-gauge";
 import { useSigapGlobal } from "@/context/sigap-global-context";
 import { BrowserInspectionResult } from "@/lib/contracts";
 import type { InspectionRecord } from "@/components/history/types";
@@ -25,7 +24,6 @@ export function InspectionViewClient({
   initialBatchId,
   activeLot,
   activePart,
-  escalationScore: initialScore,
 }: InspectionViewClientProps) {
   const { batches, inspections, applyInspectionSnapshot } = useSigapGlobal();
 
@@ -59,13 +57,6 @@ export function InspectionViewClient({
   const currentLotId = currentBatch?.lotId || activeLot || "#B-PENDING";
   const currentProductType =
     currentBatch?.productType || activePart || "Submersible Pump Impeller Casting";
-
-  const effectiveEscalationScore = useMemo(() => {
-    if (currentBatch && typeof currentBatch.escalationScore === "number") {
-      return currentBatch.escalationScore;
-    }
-    return initialScore;
-  }, [currentBatch, initialScore]);
 
   const canAnalyze = Boolean(
     sessionActor && (sessionActor.role === "operator" || sessionActor.role === "supervisor")
@@ -231,31 +222,6 @@ export function InspectionViewClient({
             <InspectionAgentTrace inspectionId={selectedInspectionId || undefined} />
           </motion.div>
 
-          {/* Escalation Score Gauge */}
-          <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.65, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            style={{ willChange: "transform, opacity" }}
-          >
-            {effectiveEscalationScore !== null && effectiveEscalationScore !== undefined ? (
-              <InspectionEscalationGauge
-                score={effectiveEscalationScore}
-                lotId={`Lot ${currentLotId}`}
-                partName={currentProductType}
-              />
-            ) : (
-              <div className="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center py-10">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <p className="text-xs font-semibold text-slate-700">Awaiting Escalation Metric</p>
-                <p className="text-[11px] text-slate-400 mt-0.5 max-w-xs">
-                  Escalation score will display once defect metrics or policy calculations are recorded for this batch.
-                </p>
-              </div>
-            )}
-          </motion.div>
         </div>
       </div>
     </div>
