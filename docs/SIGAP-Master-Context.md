@@ -3,7 +3,7 @@
 
 > **Konteks**: AI Agentic Hackathon SOKRATES × BINUS Alam Sutera 2026 | Track: Intelligence Manufacturing  
 > **Deadline proposal**: 10 September 2026 | **Demo Day**: 31 Oktober 2026 @ BINUS Alam Sutera  
-> **Git baseline**: commit `b0de4c6` — this document reflects the actual codebase at that point.
+> **Git baseline**: commit `6f37d85` (branch `aws-sap`, 30 Oct 2026) — this document reflects the actual codebase at that point.
 
 ---
 
@@ -76,7 +76,7 @@ Berbeda dari dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambil
 | Framework | **Next.js 15** (App Router) | Turbopack, React Server Components |
 | Language | **TypeScript 5** | Type-safety untuk model manufaktur kompleks |
 | Styling | **Tailwind CSS v4** + Framer Motion | Dark mode industrial aesthetic |
-| Real-time | **Server-Sent Events (SSE)** via `/api/events` | Native HTTP streaming, no WebSocket cluster |
+| Real-time | **REST polling** (global context 5 s, agent trace 3 s) + SSE `/api/events` for in-process events | The worker runs on BTP Cloud Foundry and the UI on Amplify, so cross-process updates arrive by polling |
 | Icons | **Lucide React** | Consistent iconography |
 
 ### 4.2 Backend & API
@@ -85,7 +85,7 @@ Berbeda dari dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambil
 | Runtime | **Node.js 20+** (Next.js Route Handlers) | In-process monolith, zero inter-service latency |
 | ORM | **Prisma 6** | Type-safe queries, migrations, seeding |
 | Security | **Bearer token barrier** (`lib/auth.ts`) | `Authorization: Bearer <EDGE_CAMERA_API_KEY>` on `/api/internal/*` |
-| Real-time Bus | **Node.js EventEmitter** (`lib/events.ts`) | SSE distribution |
+| Real-time Bus | **Node.js EventEmitter** (`lib/events.ts`) | SSE distribution, web process only (worker events do not reach it) |
 | Evidence | **Amazon S3** (`lib/evidence-store.ts`) | Frame JPEG storage with presigned URLs |
 
 ### 4.3 AI / Inference Layer (Two-Stage Edge Pipeline)
@@ -152,10 +152,11 @@ Berbeda dari dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambil
   Step 1 (DETECT):   Classify defect type from inspection evidence
   Step 2 (MEMORY):   Query: defect count in 8-minute capture-time window
   Step 3 (FORMULA):  Count distinct defective products in window
-  Step 4 (DECISION): Decision logic:
-     • 1 distinct defective product → CREATE_QUALITY_NOTIFICATION
-     • 3 distinct defective products → additionally eligible for
-       HOLD_MATERIAL_LOT and HOLD_WORK_ORDER
+  Step 4 (DECISION): Decision logic (trigger from the active customer profile):
+     • thresholdBreached = false → CREATE_QUALITY_NOTIFICATION only
+     • thresholdBreached = true (defects ≥ escalationDefectTrigger) →
+       additionally HOLD_MATERIAL_LOT and HOLD_WORK_ORDER
+     • disposition: below trigger / at trigger, per profile
   Step 5 (DISPATCH): Propose ERP actions
   │
   ▼ All ERP actions require supervisor approval
@@ -172,19 +173,34 @@ Berbeda dari dashboard QC biasa yang hanya *menampilkan* data, SIGAP **mengambil
   ▼
 [Feedback Loop]
   → AgentLog steps written per reasoning trace
-  → SSE events broadcast to UI (inspection:new, batch:updated, dispatch:pending, dispatch:executed)
+  → UI polls /api/agent/logs, /api/batches, /api/dispatch, /api/dashboard/stats
   → Audit trail in History tab
 ```
 
 ### Decision Window & Trigger Rules
 - **Window**: 8-minute sliding window based on `capturedAt` (capture timestamp, not receivedAt)
-- **Trigger 1** (1 distinct defective product): → `CREATE_QUALITY_NOTIFICATION`
-- **Trigger 2** (3 distinct defective products): → additionally eligible for `HOLD_MATERIAL_LOT` + `HOLD_WORK_ORDER`
+- **Trigger 1** (≥ 1 distinct defective product): → `CREATE_QUALITY_NOTIFICATION`
+- **Trigger 2** (≥ `escalationDefectTrigger` distinct defective products; **3** for Domestic, **1** for Export, see §5.1): → additionally eligible for `HOLD_MATERIAL_LOT` + `HOLD_WORK_ORDER`
+- The approve route re-checks eligibility against the run's `policySnapshot` (not a hard-coded 3)
 - **All actions require supervisor approval** (configurable; `autoDispatchMode: "autonomous" | "human_approval"` in Settings)
 - **No "Full Auto" autonomous dispatch** in the governance model — all ERP mutations require human confirmation
 
-> **Removed**: ~~Escalation Score formula (E≥0.70)~~ — replaced by defect count trigger logic above.  
+> **Removed**: ~~Escalation Score formula (E≥0.70)~~ — replaced by defect count trigger logic above. As of `6f37d85` the UI no longer displays an escalation score anywhere (gauge, drawer, dispatch modal, approval panel).  
 > **Removed**: ~~"Mode A: Full Auto"~~ — autonomous SAP dispatch without approval has been removed from the governance model.
+
+### 5.1 Customer Quality Profiles
+
+Added after the industry interview with Pak Soegiarto (CEO, Suma Plafon): QC standards depend on the customer. Export buyers demand zero defects; domestic buyers accept Grade A/B with rework.
+
+| Profile key | Label | `escalationDefectTrigger` | Disposition below trigger | Disposition at trigger |
+|---|---|---|---|---|
+| `domestic_grade_ab` (default) | Domestic (Grade A/B) | 3 | `GRADE_B_REWORK` | `REJECT_SCRAP` |
+| `export_zero_defect` | Export (Zero Defect) | 1 | `REJECT_SCRAP` | `REJECT_SCRAP` |
+
+- Source: `data/quality-policy.json` → `customerProfiles`.
+- Selected in **Settings → Agent Autonomy → Customer Quality Profile** (`Setting.customerProfile`).
+- At ingestion, `lib/inspection-service.ts` (`withActiveCustomerProfile`) merges the active profile into `WorkflowRun.policySnapshot` (`activeProfile`, overriding `escalationDefectTrigger`). The worker reasons with the profile in force at capture time.
+- `get_quality_policy` returns `customerProfile` and `disposition`; the FORMULA explanation reads e.g. *"Export (Zero Defect): 1 of 1 defects: threshold breached; lot/work-order holds allowed. Disposition: REJECT_SCRAP."*
 
 ---
 
@@ -334,11 +350,11 @@ Synced with `d-day/prisma/schema.prisma` as of commit `b0de4c6`.
 {
   id: string
   inspectionId: string
-  step: string          // "01" | "02" | "03" | "04" | "05"
+  step: string          // fixed per stage: DETECT "01", MEMORY "02", FORMULA "03", DECISION "04", DISPATCH "05"
   stepName: string      // "DETECT" | "MEMORY" | "FORMULA" | "DECISION" | "DISPATCH"
   input?: Json
-  output?: Json
-  decision?: string
+  output?: Json         // raw evidence, shown collapsed in the UI
+  decision?: string     // human-readable explanation (see below)
   latencyMs?: number
   runId?: string
   sequence: number
@@ -350,6 +366,13 @@ Synced with `d-day/prisma/schema.prisma` as of commit `b0de4c6`.
   completedAt?: DateTime
 }
 ```
+
+**Trace semantics** (`lib/quality-agent.ts`):
+- `sequence` orders rows within a run; `step` is the pipeline stage, so a stage can appear more than once (e.g. several DECISION turns).
+- `decision` on tool rows is **code-generated** from the tool result, e.g. *"2 of 3 defects: threshold not breached; only a quality notification is allowed, holds blocked."* Reused dispatches say *"already proposed … reused existing dispatch."*
+- `decision` on `kind: "model_usage"` rows is the Nova rationale for that turn (`<thinking>` tags stripped). `output` keeps `{provider, modelId, turn, usage}`.
+- Every run ends with a `kind: "decision"` row: *"Run outcome: awaiting_approval (1 of 1 defects, 3 action(s) proposed, disposition REJECT_SCRAP)."* The UI stops polling once it sees it.
+- Supervisor approve/reject rows (step "05") explain the decision and the defect count vs trigger.
 
 ### 6.7 `SimulatorRecord` — Persistent ERP Verification Storage
 ```typescript
@@ -374,6 +397,7 @@ Synced with `d-day/prisma/schema.prisma` as of commit `b0de4c6`.
   autoStoreEnabled: boolean             // default true
   autoDispatchMode: "autonomous" | "human_approval"  // default "autonomous"
   approvalSlaMinutes: number            // default 15
+  customerProfile: "domestic_grade_ab" | "export_zero_defect"  // default "domestic_grade_ab", see §5.1
   mockMode: boolean
   cameraSource: "mock" | "rtsp"
   rtspUrl?: string
@@ -426,10 +450,12 @@ See `lib/contracts.ts` for full `InspectionEvent` schema. Key fields:
 | GET | `/api/agent/logs?inspectionId=` | Reasoning trace audit |
 | GET | `/api/settings` | Get current settings |
 | PUT | `/api/settings` | Update settings |
-| GET | `/api/dashboard/stats` | Dashboard statistics |
+| GET | `/api/dashboard/stats` | Dashboard statistics: `totalInspections`, `defectRate`, `dpmo`, `firstPassYieldPct`, `defectTrend {hourly (12h), daily (7d), WIB}`, `defectDisposition` (lots by status) |
 | GET | `/api/events` | SSE stream (text/event-stream) |
 
 ### 7.3 SSE Events
+
+> Only events emitted inside the Next.js process reach `/api/events`. The worker (BTP CF) cannot publish to it, and `agent:step` is not emitted; the UI polls instead.
 
 | Event | Payload | Trigger |
 |---|---|---|
@@ -689,16 +715,18 @@ Gates 1–3 are driven by the classifier and MUST pass. Gate 4 is a localization
 - **Raspberry Pi 4**: running `edge_inference_worker.py` with USB webcam at `/dev/video0`
 - **Platform**: Next.js 15 (`npm run dev`) pointing to AWS RDS PostgreSQL
 - **SAP**: `SAP_MODE=mock` — simulator responds to QM/MM/PP actions
-- **Settings**: `autoDispatchMode: "human_approval"` for live human-in-the-loop demo
+- **Settings**: `autoDispatchMode: "human_approval"` for live human-in-the-loop demo; Customer Quality Profile = **Domestic (Grade A/B)** to start
 
 ### Urutan Demo (5 menit)
 
 1. **(0:00–0:30)** Settings page: tunjukkan `Require Human Approval` aktif. "Kami set ini supaya Anda bisa lihat human-in-the-loop bekerja secara langsung."
-2. **(0:30–2:00)** Inspection tab: arahkan webcam ke sampel impeller cacat → Red LED + Buzzer aktif → Bounding box merah muncul di UI → Agent Reasoning Trace panel menampilkan DETECT → MEMORY → FORMULA → DECISION step-by-step real-time.
-3. **(2:00–2:30)** Batch Quarantine Board: batch `HELD` muncul di panel Pending Approval. `pendingApproval: true`, SLA timer berjalan.
+2. **(0:30–2:00)** Inspection tab: arahkan webcam ke sampel impeller cacat → Red LED + Buzzer aktif → Bounding box merah muncul di UI → Agent Reasoning Trace panel menampilkan 01 DETECT → 02 MEMORY → 03 FORMULA → 04 DECISION, setiap langkah dengan kalimat penjelasan (mis. "2 of 3 defects: threshold not breached…") dan bukti JSON yang bisa dibuka.
+3. **(2:00–2:30)** Batch Quarantine Board: batch `HELD` muncul di panel Pending Approval (`pendingApproval: true`, umur lot ditampilkan).
+   - **Beat profil pelanggan (Soegiarto)**: Settings → Customer Quality Profile → **Export (Zero Defect)** → scan 1 cacat → agent langsung mengusulkan QM + MM + PP, FORMULA menampilkan "1 of 1 … Disposition: REJECT_SCRAP". Kembalikan ke Domestic setelahnya.
 4. **(2:30–3:30)** Supervisor klik Approve → WorkflowRun `awaiting_approval → completed` → Dispatch tab menampilkan 3 DispatchRecord baru: `CREATE_QUALITY_NOTIFICATION`, `HOLD_MATERIAL_LOT`, `HOLD_WORK_ORDER`, semua status `verified`.
 5. **(3:30–4:00)** History tab: audit trail lengkap — setiap AgentLog step, payloadHash, caseEpoch, sapTicketId tercatat.
 6. **(4:00–5:00)** Tunjukkan Settings → switch ke `autonomous` mode → scan ulang → loop terjadi tanpa intervensi manusia. Green LED menyala untuk produk OK.
+7. Dashboard: First-Pass Yield, DPMO (target Six Sigma 3.4), tren cacat per jam/hari dan disposisi lot — semua dihitung langsung dari database (sebut sebagai *measured on prototype data*; data demo sengaja banyak cacat).
 
 ### Fallback
 Rekam video skenario di atas H-3 sebelum Demo Day. Simpan di Laptop B. Jika koneksi AWS timeout di panggung, putar video sebagai pengganti.
@@ -708,6 +736,8 @@ Rekam video skenario di atas H-3 sebelum Demo Day. Simpan di Laptop B. Jika kone
 - ~~"99.72% accuracy"~~ jika menggunakan v2 model yang belum diverifikasi (gunakan v1 figure dengan label "v1 baseline")
 - ~~"Autonomous SAP dispatch"~~ kecuali mode `autonomous` aktif dan supervisor hadir untuk konfirmasi
 - ~~"mAP50 55.05%"~~ — angka stale, tidak ada di codebase
+- ~~"OEE 89.4%"~~ — angka hard-coded lama, sudah dihapus dari UI; gunakan First-Pass Yield / DPMO yang terukur
+- ~~"Mendeteksi porositas internal" / "presisi mikron"~~ — kamera hanya melihat cacat permukaan (lihat §16)
 
 ---
 
@@ -725,13 +755,13 @@ Key deliverables:
 - `ai_models/AI_IMPROVEMENT_ROADMAP.md` — Technical findings on Pi 4 CPU quantization & mAP/latency improvement roadmap
 
 ### Role 2 — Web Engineer
-**Tanggung jawab**: Dashboard visual, SSE real-time, approval flow, SAP mock integration.
+**Tanggung jawab**: Dashboard visual, polling real-time (SSE hanya in-process), approval flow, SAP mock integration.
 
 Key deliverables:
 - All Next.js route handlers functional (ingestion, batches, dispatch, events)
 - `workflow-worker.ts` running stably with leased claims
-- SSE broadcasting all 5 event types
-- Human approval flow (role check, optimistic locking, SLA timer)
+- Cross-process updates via REST polling (worker on BTP CF, UI on Amplify)
+- Human approval flow (role check, optimistic locking, policy-snapshot eligibility re-check)
 
 ### Role 3 — Speaker / Proposal Writer
 **Tanggung jawab**: Narasi, proposal 3 halaman, pitch deck, Q&A prep.
@@ -748,14 +778,14 @@ Key deliverables:
 
 ---
 
-## 15. Cloud Deployment & Credit Protection Status (Audited Oct 28, 2026)
+## 15. Cloud Deployment & Credit Protection Status (Audited Oct 28, 2026; redeployed Oct 30, 2026)
 
 ### 15.1 Live Deployed Environment Matrix
 
 | Component | Environment | Host & Identifier | Operational State |
 |---|---|---|---|
-| **Amplify Web Platform** | AWS Amplify (`ap-southeast-2`) | App `dsjuc7fhaopci`, Branch `aws-sap` | ✅ **Live**: [https://aws-sap.dsjuc7fhaopci.amplifyapp.com](https://aws-sap.dsjuc7fhaopci.amplifyapp.com) (Job 3 SUCCEED) |
-| **Background Worker** | SAP BTP Cloud Foundry (`ap10`) | App `sigap-workflow-remontada-rasa-mangga` in space `hackathon-remontada-rasa-mangga` | ✅ **Running**: `1/1` instance, 1024M quota (`npx prisma generate && npm run worker`) |
+| **Amplify Web Platform** | AWS Amplify (`ap-southeast-2`) | App `dsjuc7fhaopci`, Branch `aws-sap` | ✅ **Live**: [https://aws-sap.dsjuc7fhaopci.amplifyapp.com](https://aws-sap.dsjuc7fhaopci.amplifyapp.com) (Job 25, commit `6f37d85`) |
+| **Background Worker** | SAP BTP Cloud Foundry (`ap10`) | App `sigap-workflow-remontada-rasa-mangga` in space `hackathon-remontada-rasa-mangga` | ✅ **Running**: `1/1` instance, 1024M quota (`npx prisma generate && npm run worker`), redeployed 30 Oct with commit `e772b20` |
 | **Relational Database** | AWS RDS PostgreSQL (`ap-southeast-2`) | Instance `sigap-postgres` (`db.t4g.micro`, single-AZ, 20 GB) | ✅ **Active**: Verified connection (`batchCount: 8`, worker connection limit = 3) |
 | **Evidence Vault** | AWS S3 (`ap-southeast-2`) | Bucket `sigap-inspection-frames` | ✅ **Active**: SHA-256 byte integrity verified |
 | **Governed AI Reasoning** | AWS Bedrock (`us-east-1`) | `amazon.nova-lite-v1:0` | ✅ **Active**: Strict output token cap (600) & truncation handling |
@@ -771,6 +801,7 @@ Key deliverables:
    - Each successful turn writes a structured `AgentLog` entry:
      - `kind: "model_usage"`, `stage: "DECISION"`, `stepName: "DECISION"`, `step: "04"`.
      - `output: { provider, modelId, turn, usage: { inputTokens, outputTokens, totalTokens } }`.
+     - `decision`: the model's rationale text for that turn (prompt rule 5 asks Nova for one sentence of reasoning per tool call and a final conclusion).
 3. **Deterministic Fast Paths (Zero LLM Tokens)**:
    - Inspections with `outcome === "ok"` exit deterministically (`status: "completed"`, `actionsProposed: 0`, 0 model calls).
    - Inspections with `outcome === "unknown"` exit deterministically (`status: "needs_review"`, `actionsProposed: 0`, 0 model calls).
@@ -784,10 +815,51 @@ Key deliverables:
    - Any setting where `SAP_MODE !== "mock"` rejects execution with `SAP_LIVE_NOT_IMPLEMENTED` (`retryable: false`). No mock actions are silently executed under live flags.
 7. **Cross-Process State Synchronization**:
    - Since the worker runs on SAP BTP Cloud Foundry and the UI runs on AWS Amplify, process-local Server-Sent Events do not cross process boundaries.
-   - Synchronized via REST polling: Global Context polls `/api/batches` and `/api/dashboard/stats` every 5 seconds; Inspection Agent Trace polls `/api/agent/logs` every 2 seconds.
+   - Synchronized via REST polling: Global Context polls `/api/batches` and `/api/dashboard/stats` every 5 seconds; Inspection Agent Trace polls `/api/agent/logs` every 3 seconds until the run's final "Run outcome" row (or a failed row) appears, capped at 10 minutes.
 8. **Availability Target**:
    - Budgeted to keep all SIGAP services continuously available through **November 3, 2026** within the reported $100.87 AWS credit balance.
 
 ---
 
-*Last updated: commit `5dbef9f` + Cloud Deployment Audit (AWS Amplify branch `aws-sap` & SAP BTP Cloud Foundry worker verified).*
+## 16. Industry Validation & Roadmap (Oct 2026 interviews)
+
+### 16.1 What practitioners told us
+
+**Pak Edi — Manufacturing GM, Indospring**
+- Sand casting tolerance is about ±2 mm; the most critical defect, **porosity, is internal** and cannot be seen by a surface camera. Current digitalisation focuses on sand temperature to prevent it.
+- Final inspection is mostly visual + dimensional, recorded on **paper / Excel**.
+- SIGAP fits **final QC after machining** (e.g. brake drums): scratches, dents and holes on the finished surface. Roll out per product, not all variants at once.
+- Follow-up: request defect definitions, reject %, and reject photos via WhatsApp.
+
+**Pak Soegiarto — CEO, Suma Plafon**
+- Standards follow the customer: **export = zero defect**, domestic = Grade A/B with rework → implemented as §5.1 Customer Quality Profiles.
+- Use **several parameters** (weight, colour spectrum), not one; Six Sigma thinking (defects per million) → DPMO tile on the dashboard.
+- Static images are a start; industry needs **moving-line, real-time** inspection. Asked whether precision is mm or micron.
+
+### 16.2 Implemented in response
+| Feedback | Shipped |
+|---|---|
+| Customer-specific standards | Customer Quality Profiles (§5.1), switchable in Settings, explained in the trace |
+| Six Sigma / reject rate | DPMO + First-Pass Yield from inspection records |
+| Replace paper / Excel logs | History audit trail with AgentLog trace + CSV export |
+| Explainability | Per-step explanation sentences + model rationale (§6.6) |
+
+### 16.3 Roadmap (not built)
+| Feedback | Roadmap item | AWS/SAP fit |
+|---|---|---|
+| Multiple parameters | Extra edge sensors (HX711 load cell, TCS34725 colour / spectrometer) as new agent tools → multi-signal decision | AgentCore Gateway tools; Bedrock reasoning |
+| Defect taxonomy (scratch/dent/hole) | Multi-class detector trained on Indospring reject photos; operator tags defect type at review (active learning) | S3 dataset; SageMaker / AI Core training |
+| Moving line, real time | Conveyor trigger (IR sensor) + continuous capture on the Pi | — |
+| Internal porosity | Out of camera scope; ingest X-ray/CT results as upstream inspection events | Same ingestion contract |
+| Sand temperature → porosity | Ingest process telemetry; MEMORY step correlates defects with process drift | Bedrock KB / SAP RPT-1 tabular prediction |
+| Combined-parameter optimisation (GA) | Offline tuning of policy thresholds against `scripts/evaluate-agent.ts` scenarios | — |
+| Per-product rollout | `productFamily`-specific policies | — |
+
+### 16.4 Q&A honesty lines
+- SIGAP inspects **surface** defects at final QC. It does not detect internal porosity or do micron metrology (that needs CMM / laser / X-ray).
+- It assists the human inspector and replaces the paper log; supervisors still approve every ERP action.
+- Separate **measured** prototype numbers (latency, recall, DPMO on demo data) from **projected** production benefits.
+
+---
+
+*Last updated: commit `6f37d85` (30 Oct 2026) — explainable trace, customer quality profiles, live dashboard metrics; Amplify job 25 and BTP CF worker redeployed.*

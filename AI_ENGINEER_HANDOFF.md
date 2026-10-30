@@ -23,6 +23,12 @@ Dokumen ini adalah panduan integrasi tingkat produksi (*production-grade handoff
 
 ---
 
+> [!IMPORTANT]
+> **Status per 30 Okt 2026 (commit `6f37d85`)** — beberapa bagian dokumen ini bersifat historis:
+> - Jejak penalaran ditulis oleh worker (`scripts/workflow-worker.ts` → `lib/quality-agent.ts`) ke tabel `AgentLog`; baca lewat `GET /api/agent/logs?inspectionId=`. Skema langkah dan arti kolom `decision` ada di `docs/SIGAP-Master-Context.md` §6.6.
+> - Event SSE `agent:log` tidak pernah dipancarkan; worker berjalan di BTP Cloud Foundry sehingga UI melakukan polling.
+> - **Escalation Score** dan gauge **OEE** di bawah sudah tidak dipakai. Keputusan memakai jumlah cacat berbeda dalam jendela waktu vs trigger dari Customer Quality Profile (Master Context §5.1); dashboard menampilkan First-Pass Yield dan DPMO.
+
 ## 1. Ringkasan Eksekutif & Batasan Layanan
 
 Layanan AI Anda dirancang sebagai **proses independen (*decoupled microservices*)**, baik dijalankan di:
@@ -314,7 +320,7 @@ SIGAP mengusung arsitektur *Agentic Autonomous Manufacturing* yang meniru proses
 [05. DISPATCH] --> Instruksi aktuator mesin (Pneumatic Ejector) & Mutasi Tiket SAP QM
 ```
 
-### Formula Matematika Eskalasi Resiko (Fase 03):
+### Formula Matematika Eskalasi Resiko (Fase 03) — *historis, tidak dipakai lagi*:
 $$\text{Escalation Score } (E) = \min\left(1.0, \frac{N_{\text{defects, } 10\text{min}}}{K_{\text{tolerance}}} \times W_{\text{severity}}\right)$$
 
 *Di mana:*

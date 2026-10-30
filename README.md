@@ -83,12 +83,11 @@ flowchart LR
 ## 🚀 Fitur Utama Dashboard
 
 1. **Pusat Operasional Kualitas (`/dashboard`)**:
-   - Telemetri OEE (Overall Equipment Effectiveness) lini HPDC #02 secara real-time.
-   - Grafik tren laju cacat harian, distribusi Pareto cacat, antrian lot berisiko, dan umpan aktivitas agen AI.
+   - First-Pass Yield dan DPMO (target Six Sigma 3.4) dihitung langsung dari catatan inspeksi.
+   - Tren cacat per jam (12 jam) dan per hari (7 hari, WIB), disposisi lot per status, lot terbuka yang perlu tindakan, dan aktivitas dispatch agen — semua dari database, tanpa angka hard-coded.
 2. **Stasiun Inspeksi & Penalaran AI (`/dashboard/inspection`)**:
    - Pemutar feed video optik konveyor dengan visualisasi bounding box YOLOv8.
-   - Jejak langkah penalaran deduktif agen (*Agent Reasoning Trace*) tahap demi tahap (Deteksi &rarr; Memori &rarr; Formula &rarr; Keputusan).
-   - Pengukur eskalasi resiko (*Escalation Gauge*) otomatis.
+   - Jejak langkah penalaran deduktif agen (*Agent Reasoning Trace*) 01 Deteksi &rarr; 02 Memori &rarr; 03 Formula &rarr; 04 Keputusan &rarr; 05 Dispatch; setiap langkah punya kalimat penjelasan, alasan model (Nova), dan bukti JSON yang bisa dibuka. Panel terus diperbarui sampai baris "Run outcome" muncul.
 3. **Batch Board & Kontrol Pelepasan (`/dashboard/batches`)**:
    - Manajemen siklus lot manufaktur (*Pending Review, Held/Karantina, Released, Rejected*).
    - Panel persetujuan *Human-in-the-Loop* dengan integrasi mutasi database (`PATCH /api/batches/[id]/approve` & `reject`).
@@ -98,6 +97,9 @@ flowchart LR
 5. **Audit Riwayat Lot & Ekspor CSV (`/dashboard/history`)**:
    - Riwayat inspeksi lengkap dengan filter tanggal, status, dan kelas cacat.
    - Fitur ekspor langsung ke format CSV berstandar laporan QC manufaktur.
+   - Detail inspeksi menampilkan jejak penalaran asli dari `AgentLog`.
+6. **Pengaturan (`/dashboard/settings`)**:
+   - **Customer Quality Profile**: *Domestic (Grade A/B)* — eskalasi pada 3 cacat, di bawahnya Grade B rework; *Export (Zero Defect)* — eskalasi dan scrap pada cacat pertama. Lihat `docs/SIGAP-Master-Context.md` §5.1.
    - Modal audit inspeksi mendalam beserta visual gambar dan riwayat penalaran agen.
 6. **Pengaturan Sistem & Kalibrasi AI (`/dashboard/settings`)**:
    - Konfigurasi hardware optik (kamera RTSP, mock mode).
