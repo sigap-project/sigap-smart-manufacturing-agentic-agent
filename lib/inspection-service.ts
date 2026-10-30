@@ -55,20 +55,22 @@ export function getManifestCanonicalHash(): string {
  * Snapshot the operator-selected customer quality profile into the run's policy,
  * so the worker (separate process) reasons with the trigger/disposition in force at capture time.
  */
-async function withActiveCustomerProfile(policy: unknown): Promise<unknown> {
-  const base = policy as { customerProfiles?: Record<string, { escalationDefectTrigger?: number }> };
-  const setting = await prisma.setting.findUnique({
-    where: { id: "default" },
-    select: { customerProfile: true },
-  });
+async function withActiveCustomerProfile(policy: unknown, preloadedSetting?: { customerProfile?: string | null; escalationWindowMinutes?: number | null; escalationCountTrigger?: number | null; autoDispatchMode?: string | null; approvalSlaMinutes?: number | null } | null): Promise<unknown> {
+  const base = policy as { slidingWindowMinutes?: number; escalationDefectTrigger?: number; defaultAutoDispatchMode?: string; customerProfiles?: Record<string, { label?: string; belowTrigger?: string; atTrigger?: string; escalationDefectTrigger?: number }> };
+  const setting = preloadedSetting !== undefined ? preloadedSetting : await prisma.setting.findUnique({ where: { id: "default" }, select: { customerProfile: true, escalationWindowMinutes: true, escalationCountTrigger: true, autoDispatchMode: true, approvalSlaMinutes: true } });
   const key = setting?.customerProfile ?? "domestic_grade_ab";
   const profile = base.customerProfiles?.[key];
-  if (!profile) return policy;
+  const windowMinutes = typeof setting?.escalationWindowMinutes === "number" && setting.escalationWindowMinutes > 0 ? setting.escalationWindowMinutes : (base.slidingWindowMinutes ?? 8);
+  const customTrigger = typeof setting?.escalationCountTrigger === "number" && setting.escalationCountTrigger > 0 ? setting.escalationCountTrigger : undefined;
+  const triggerCount = key === "domestic_grade_ab" ? (customTrigger ?? profile?.escalationDefectTrigger ?? base.escalationDefectTrigger ?? 3) : (profile?.escalationDefectTrigger ?? customTrigger ?? base.escalationDefectTrigger ?? 3);
+  const autoDispatchMode = setting?.autoDispatchMode === "autonomous" ? "autonomous" : "human_approval";
   return {
     ...base,
-    activeProfile: { key, ...profile },
-    escalationDefectTrigger:
-      profile.escalationDefectTrigger ?? (base as { escalationDefectTrigger?: number }).escalationDefectTrigger,
+    slidingWindowMinutes: windowMinutes,
+    escalationDefectTrigger: triggerCount,
+    defaultAutoDispatchMode: autoDispatchMode,
+    approvalSlaMinutes: setting?.approvalSlaMinutes ?? 15,
+    ...(profile ? { activeProfile: { key, ...profile, escalationDefectTrigger: triggerCount } } : {}),
   };
 }
 
@@ -717,10 +719,22 @@ export function validateInspectionEvent(event: unknown): InspectionEvent {
   return event as InspectionEvent;
 }
 
+export interface IngestInspectionOptions {
+  skipPreChecks?: boolean;
+  preloadedSetting?: {
+    customerProfile?: string | null;
+    escalationWindowMinutes?: number | null;
+    escalationCountTrigger?: number | null;
+    autoDispatchMode?: string | null;
+    approvalSlaMinutes?: number | null;
+  } | null;
+}
+
 export async function ingestInspection(
   event: InspectionEvent,
-  actor: Actor
-): Promise<IngestResult> {
+  actor: Actor,
+  options?: IngestInspectionOptions
+): Promise<IngestResult & { rawRecord?: unknown }> {
   // 1. Authorize Actor
   const isBrowserEvent =
     event.captureSource === "browser-upload" || event.captureSource === "browser-webcam";
@@ -764,56 +778,63 @@ export async function ingestInspection(
 
   const payloadHash = computePayloadHash(event);
 
-  // 2. Initial idempotency check against existing event ID
-  const existingEvent = await prisma.inspection.findUnique({
-    where: { eventId: event.eventId },
-    include: { workflowRun: true, batch: true },
-  });
+  if (!options?.skipPreChecks) {
+    // 2 & 3. Run initial idempotency check and duplicate item check in parallel
+    const [existingEvent, existingItem] = await Promise.all([
+      prisma.inspection.findUnique({
+        where: { eventId: event.eventId },
+        include: { workflowRun: true, batch: true },
+      }),
+      prisma.inspection.findFirst({
+        where: {
+          batchId: event.batchId,
+          itemId: event.itemId,
+        },
+      }),
+    ]);
 
-  if (existingEvent) {
-    const isIdentical = isDuplicateInspection(existingEvent, event, payloadHash);
-    if (isIdentical) {
-      return {
-        eventId: event.eventId,
-        inspectionId: existingEvent.id,
-        runId: existingEvent.workflowRun?.id || `run-${existingEvent.id}`,
-        duplicate: true,
-        batchVersion: existingEvent.batch.version,
-        caseEpoch: existingEvent.caseEpoch,
-        imageSha256: existingEvent.imageSha256 || event.frame.sha256,
-        payloadHash: existingEvent.payloadHash || payloadHash,
-      };
-    } else {
+    if (existingEvent) {
+      const isIdentical = isDuplicateInspection(existingEvent, event, payloadHash);
+      if (isIdentical) {
+        return {
+          eventId: event.eventId,
+          inspectionId: existingEvent.id,
+          runId: existingEvent.workflowRun?.id || `run-${existingEvent.id}`,
+          duplicate: true,
+          batchVersion: existingEvent.batch.version,
+          caseEpoch: existingEvent.caseEpoch,
+          imageSha256: existingEvent.imageSha256 || event.frame.sha256,
+          payloadHash: existingEvent.payloadHash || payloadHash,
+          rawRecord: { ...existingEvent, agentLogs: [] },
+        };
+      } else {
+        throw new IngestError(
+          409,
+          "EVENT_CONFLICT",
+          `Event ID '${event.eventId}' already used with different payload or batch/item`
+        );
+      }
+    }
+
+    if (existingItem) {
       throw new IngestError(
         409,
-        "EVENT_CONFLICT",
-        `Event ID '${event.eventId}' already used with different payload or batch/item`
+        "ITEM_ALREADY_INSPECTED",
+        `Item '${event.itemId}' has already been inspected in batch '${event.batchId}' (inspection ${existingItem.id})`,
+        { existingInspectionId: existingItem.id }
       );
     }
   }
 
-  // 3. Initial check if item has already been inspected in this batch
-  const existingItem = await prisma.inspection.findFirst({
-    where: {
-      batchId: event.batchId,
-      itemId: event.itemId,
-    },
-  });
-
-  if (existingItem) {
-    throw new IngestError(
-      409,
-      "ITEM_ALREADY_INSPECTED",
-      `Item '${event.itemId}' has already been inspected in batch '${event.batchId}' (inspection ${existingItem.id})`,
-      { existingInspectionId: existingItem.id }
-    );
-  }
-
-  // 4. Store evidence in configured evidence store (S3 or local durable)
+  // 4. Store evidence and resolve runtime policy in parallel
   const frameBuffer = Buffer.from(event.frame.jpegBase64, "base64");
   let storeRes: { storageKey: string; store: "s3" | "local" };
+  let policy: unknown;
   try {
-    storeRes = await storeEvidence(frameBuffer, event.eventId, event.frame.sha256);
+    [storeRes, policy] = await Promise.all([
+      storeEvidence(frameBuffer, event.eventId, event.frame.sha256),
+      withActiveCustomerProfile(getQualityPolicySync(), options?.preloadedSetting),
+    ]);
   } catch (err) {
     throw new IngestError(
       503,
@@ -825,7 +846,6 @@ export async function ingestInspection(
   // 5. Transactionally insert Inspection, WorkflowRun, update Batch, insert DETECT AgentLog
   const inspectionId = `INS-${Date.now().toString().slice(-6)}-${crypto.randomBytes(2).toString("hex")}`;
   const runId = `RUN-${Date.now().toString().slice(-6)}-${crypto.randomBytes(2).toString("hex")}`;
-  const policy = await withActiveCustomerProfile(getQualityPolicySync());
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -865,43 +885,42 @@ export async function ingestInspection(
         }
       }
 
-      // Recheck duplicate event under lock
-      const raceEvent = await tx.inspection.findUnique({
-        where: { eventId: event.eventId },
+      // Recheck duplicate event or item under lock in a single query
+      const raceMatch = await tx.inspection.findFirst({
+        where: {
+          OR: [
+            { eventId: event.eventId },
+            { batchId: event.batchId, itemId: event.itemId },
+          ],
+        },
         include: { workflowRun: true },
       });
-      if (raceEvent) {
-        const isIdentical = isDuplicateInspection(raceEvent, event, payloadHash);
-        if (isIdentical) {
-          return {
-            inspection: raceEvent,
-            updatedBatch: batch,
-            workflowRun: raceEvent.workflowRun || { id: `run-${raceEvent.id}` },
-            isDuplicate: true,
-          };
+      if (raceMatch) {
+        if (raceMatch.eventId === event.eventId) {
+          const isIdentical = isDuplicateInspection(raceMatch, event, payloadHash);
+          if (isIdentical) {
+            return {
+              inspection: raceMatch,
+              updatedBatch: batch,
+              workflowRun: raceMatch.workflowRun || { id: `run-${raceMatch.id}` },
+              detectLog: null,
+              isDuplicate: true,
+            };
+          } else {
+            throw new IngestError(
+              409,
+              "EVENT_CONFLICT",
+              `Event ID '${event.eventId}' already used with different payload or batch/item`
+            );
+          }
         } else {
           throw new IngestError(
             409,
-            "EVENT_CONFLICT",
-            `Event ID '${event.eventId}' already used with different payload or batch/item`
+            "ITEM_ALREADY_INSPECTED",
+            `Item '${event.itemId}' has already been inspected in batch '${event.batchId}' (inspection ${raceMatch.id})`,
+            { existingInspectionId: raceMatch.id }
           );
         }
-      }
-
-      // Recheck duplicate item under lock
-      const raceItem = await tx.inspection.findFirst({
-        where: {
-          batchId: event.batchId,
-          itemId: event.itemId,
-        },
-      });
-      if (raceItem && raceItem.eventId !== event.eventId) {
-        throw new IngestError(
-          409,
-          "ITEM_ALREADY_INSPECTED",
-          `Item '${event.itemId}' has already been inspected in batch '${event.batchId}' (inspection ${raceItem.id})`,
-          { existingInspectionId: raceItem.id }
-        );
       }
 
       // Create Inspection
@@ -999,7 +1018,7 @@ export async function ingestInspection(
       });
 
       // Record DETECT Stage in AgentLog
-      await tx.agentLog.create({
+      const detectLog = await tx.agentLog.create({
         data: {
           inspectionId: inspection.id,
           runId: workflowRun.id,
@@ -1028,6 +1047,7 @@ export async function ingestInspection(
         inspection,
         updatedBatch,
         workflowRun,
+        detectLog,
         isDuplicate: false,
       };
     }, { maxWait: 60000, timeout: 60000 });
@@ -1042,6 +1062,7 @@ export async function ingestInspection(
         caseEpoch: result.inspection.caseEpoch || result.updatedBatch.caseEpoch,
         imageSha256: result.inspection.imageSha256 || event.frame.sha256,
         payloadHash: result.inspection.payloadHash || payloadHash,
+        rawRecord: { ...result.inspection, batch: result.updatedBatch, agentLogs: [] },
       };
     }
 
@@ -1058,6 +1079,13 @@ export async function ingestInspection(
       imageSha256: event.frame.sha256,
     });
 
+    // Fast-path non-blocking trigger so workflow run starts with 0ms queue delay
+    if (process.env.SIGAP_TEST_MODE !== "1") {
+      void import("../scripts/workflow-worker")
+        .then((w) => w.processNextWorkflowRun())
+        .catch(() => {});
+    }
+
     return {
       eventId: event.eventId,
       inspectionId: result.inspection.id,
@@ -1067,6 +1095,11 @@ export async function ingestInspection(
       caseEpoch: result.updatedBatch.caseEpoch,
       imageSha256: event.frame.sha256,
       payloadHash: payloadHash,
+      rawRecord: {
+        ...result.inspection,
+        batch: result.updatedBatch,
+        agentLogs: result.detectLog ? [result.detectLog] : [],
+      },
     };
   } catch (err: unknown) {
     if (err instanceof IngestError) {

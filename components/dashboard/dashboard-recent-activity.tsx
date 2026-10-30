@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Send,
@@ -78,7 +79,7 @@ export function DashboardRecentActivity() {
           ? `Anomaly Detected: ${newIns.defectClass}`
           : `Unit Passed Inspection: ${newIns.partName || "Motor Bracket"}`,
         description: `Frame #${String(newIns.id).slice(-4)} (${newIns.confidence}% confidence) inspected on ${newIns.batchId || "Active Lot"}`,
-        source: "Station #01 • YOLOv8-Nano",
+        source: "Station #01 • YOLOv8s-cls + YOLOv8m",
         timestamp: "Just now",
         status: isDefect ? "Held" : "Passed",
         badgeColor: isDefect
@@ -195,13 +196,14 @@ export function DashboardRecentActivity() {
           </p>
         </div>
 
-        <button
+        <Link
+          href="/dashboard/history"
           aria-label="View All Logs"
           className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200/70 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
           title="Open Complete Logs"
         >
           <ArrowUpRight className="w-4 h-4" />
-        </button>
+        </Link>
       </div>
 
       {/* Activity List */}

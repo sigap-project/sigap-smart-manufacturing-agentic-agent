@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Search, Filter } from "lucide-react";
 import { AnimatedSelect } from "@/components/ui/animated-select";
@@ -99,48 +100,53 @@ export function DashboardPriorityItems() {
           <p className="p-6 text-center text-xs text-slate-400 font-mono">No open lots.</p>
         )}
         {filteredItems.map((item, idx) => (
-          <motion.div
+          <Link
             key={item.lotId}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.45,
-              delay: 0.68 + idx * 0.05,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-            style={{ willChange: "transform, opacity" }}
-            className="p-3 rounded-xl bg-white hover:bg-slate-50/80 border border-slate-200/60 transition-colors flex items-center justify-between gap-3 group"
+            href="/dashboard/batches"
+            className="block"
           >
-            {/* Left: Avatar Thumbnail & Part Information */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center font-sans text-xs font-bold text-slate-700 shrink-0">
-                {item.code}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.45,
+                delay: 0.68 + idx * 0.05,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              style={{ willChange: "transform, opacity" }}
+              className="p-3 rounded-xl bg-white hover:bg-slate-50/80 border border-slate-200/60 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
+            >
+              {/* Left: Avatar Thumbnail & Part Information */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center font-sans text-xs font-bold text-slate-700 shrink-0">
+                  {item.code}
+                </div>
+
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                    {item.partName}
+                  </span>
+                  <span className="text-[11px] text-slate-400 truncate">
+                    {item.lotId} • {item.defectType}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                  {item.partName}
-                </span>
-                <span className="text-[11px] text-slate-400 truncate">
-                  {item.lotId} • {item.defectType}
+              {/* Right: Supplier & Status Badge */}
+              <div className="flex flex-col items-end shrink-0 gap-1">
+                {item.supplier && (
+                  <span className="text-[11px] font-medium text-slate-400 truncate max-w-[140px]">
+                    {item.supplier}
+                  </span>
+                )}
+                <span
+                  className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${item.badgeColor}`}
+                >
+                  {item.badge}
                 </span>
               </div>
-            </div>
-
-            {/* Right: Supplier & Status Badge */}
-            <div className="flex flex-col items-end shrink-0 gap-1">
-              {item.supplier && (
-                <span className="text-[11px] font-medium text-slate-400 truncate max-w-[140px]">
-                  {item.supplier}
-                </span>
-              )}
-              <span
-                className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${item.badgeColor}`}
-              >
-                {item.badge}
-              </span>
-            </div>
-          </motion.div>
+            </motion.div>
+          </Link>
         ))}
       </div>
     </motion.div>

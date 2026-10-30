@@ -185,10 +185,29 @@ export function formatDispatchRecord(item: any): DispatchItem {
       ? "Rejected"
       : "Dispatched";
 
+  // Normalize consumer string ("SAP_QM" -> "SAP QM") so UI badges and filters match 100%
+  const rawConsumer = String(item.consumer || "SAP QM").replace("_", " ").trim();
+  const normalizedConsumer: DispatchItem["consumer"] =
+    rawConsumer === "SAP QM" ||
+    rawConsumer === "SAP MM" ||
+    rawConsumer === "SAP PP" ||
+    rawConsumer === "Human Notification"
+      ? rawConsumer
+      : "SAP QM";
+
   return {
     id: item.id,
-    consumer: item.consumer || "SAP QM",
+    consumer: normalizedConsumer,
     batchId: item.batch?.lotId || item.batchId || item.lotId || "—",
+    batchRecordId: item.batch?.id || item.batchId || "",
+    revision: typeof item.revision === "number" ? item.revision : 1,
+    batchVersion:
+      typeof item.batch?.version === "number"
+        ? item.batch.version
+        : typeof item.expectedBatchVersion === "number"
+        ? item.expectedBatchVersion
+        : 1,
+    rawStatus: raw || "pending_approval",
 
     partName: item.partName || item.batch?.productType || item.productName || "—",
     triggerReason: item.triggerReason || "—",
@@ -230,7 +249,7 @@ export function formatSettings(setting: any): SettingsState & { id: string; upda
 
     autoSaveBatchBoard: setting.autoStoreEnabled ?? true,
     autoDispatchMode:
-      (setting.autoDispatchMode as "autonomous" | "human_approval") || "autonomous",
+      (setting.autoDispatchMode as "autonomous" | "human_approval") || "human_approval",
     approvalTimeout: setting.approvalSlaMinutes ?? 15,
     customerProfile:
       setting.customerProfile === "export_zero_defect" ? "export_zero_defect" : "domestic_grade_ab",

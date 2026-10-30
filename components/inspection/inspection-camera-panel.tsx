@@ -60,8 +60,8 @@ interface RequestIdentity {
 }
 
 /**
- * Aspect-preserving resize into 1920x1080 without upscaling,
- * white background for alpha, JPEG quality 0.9.
+ * Aspect-preserving resize into 800x800 without upscaling,
+ * white background for alpha, JPEG quality 0.85 (optimal for 640x640 ONNX center-square crop).
  */
 function normalizeCanvasToJpeg(
   sourceCanvas: HTMLCanvasElement,
@@ -71,8 +71,8 @@ function normalizeCanvasToJpeg(
   let targetW = srcW;
   let targetH = srcH;
 
-  if (targetW > 1920 || targetH > 1080) {
-    const scale = Math.min(1920 / targetW, 1080 / targetH);
+  if (targetW > 800 || targetH > 800) {
+    const scale = Math.min(800 / targetW, 800 / targetH);
     targetW = Math.round(targetW * scale);
     targetH = Math.round(targetH * scale);
   }
@@ -90,7 +90,7 @@ function normalizeCanvasToJpeg(
   ctx.fillRect(0, 0, targetW, targetH);
   ctx.drawImage(sourceCanvas, 0, 0, targetW, targetH);
 
-  const dataUrl = outCanvas.toDataURL("image/jpeg", 0.9);
+  const dataUrl = outCanvas.toDataURL("image/jpeg", 0.85);
   const commaIdx = dataUrl.indexOf(",");
   const jpegBase64 = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl;
 

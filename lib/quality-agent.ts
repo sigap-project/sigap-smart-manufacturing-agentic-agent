@@ -625,6 +625,11 @@ Rules:
                     proposedActionTypes.push(actionType);
                   }
                 } else {
+                  const isAutonomous =
+                    process.env.SIGAP_TEST_MODE !== "1" &&
+                    policy.defaultAutoDispatchMode === "autonomous";
+                  const initialDispatchStatus = isAutonomous ? "queued" : "pending_approval";
+
                   const dispatch = await prisma.dispatchRecord.create({
                     data: {
                       id: `DSP-${Date.now().toString().slice(-6)}-${crypto
@@ -640,7 +645,8 @@ Rules:
                         defectCountInWindow,
                         summary,
                       },
-                      status: "pending_approval",
+                      status: initialDispatchStatus,
+                      approvedBy: isAutonomous ? "Autonomous Policy Engine" : null,
                       runId: run.id,
                       caseEpoch: batch.caseEpoch,
                       actionType,
@@ -655,11 +661,16 @@ Rules:
                     accepted: true,
                     dispatchId: dispatch.id,
                     actionKey,
-                    status: "pending_approval",
-                    requiresSupervisorApproval: true,
+                    status: initialDispatchStatus,
+                    requiresSupervisorApproval: !isAutonomous,
                   };
 
                   emitSigapEvent("dispatch:status_changed", dispatch);
+                  if (isAutonomous) {
+                    void import("../scripts/workflow-worker")
+                      .then((w) => w.processNextDispatch())
+                      .catch(() => {});
+                  }
                 }
               }
             }

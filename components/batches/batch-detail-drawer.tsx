@@ -285,8 +285,17 @@ export function BatchDetailDrawer({
               </div>
             </div>
 
-            {/* Action Link to Inspection Station */}
-            <div className="pt-1">
+            {/* Action Links to Inspection Station & SAP Dispatch */}
+            <div className="pt-1 space-y-2">
+              {current.pendingApproval && (
+                <Link
+                  href="/dashboard/dispatch"
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80 text-xs font-semibold text-amber-800 transition-all cursor-pointer group shadow-xs"
+                >
+                  <span>Review Pending SAP ERP Dispatches</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-amber-600 group-hover:text-amber-800 transition-colors" />
+                </Link>
+              )}
               <Link
                 href="/dashboard/inspection"
                 className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-700 transition-all cursor-pointer group shadow-xs"

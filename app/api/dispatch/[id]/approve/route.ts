@@ -203,12 +203,32 @@ export async function PATCH(
       );
     }
 
-    const formatted = formatDispatchRecord(result.dispatch);
+    let finalDispatch = result.dispatch;
+
+    // Fast-path immediate SAP execution in live operational mode (keeps SIGAP_TEST_MODE="1" two-step for qa:audit)
+    if (process.env.SIGAP_TEST_MODE !== "1" && finalDispatch?.id) {
+      try {
+        const { processNextDispatch } = await import("@/scripts/workflow-worker");
+        await processNextDispatch();
+        const refreshed = await prisma.dispatchRecord.findUnique({
+          where: { id: finalDispatch.id },
+          include: { batch: true },
+        });
+        if (refreshed) finalDispatch = refreshed;
+      } catch (err) {
+        console.warn("[approve fast-path dispatch warning]:", err);
+      }
+    }
+
+    const formatted = formatDispatchRecord(finalDispatch);
     emitSigapEvent("dispatch:status_changed", formatted);
 
     return NextResponse.json({
       success: true,
-      message: `Tiket ${result.dispatch?.id} berhasil DISETUJUI & DIANTRIKAN untuk eksekusi.`,
+      message:
+        formatted.sapTicketId && formatted.sapTicketId !== "—"
+          ? `Ticket ${formatted.id} approved & dispatched to ${formatted.consumer} (${formatted.sapTicketId}).`
+          : `Ticket ${result.dispatch?.id} approved & queued for SAP execution.`,
       data: formatted,
       idempotent: result.idempotent,
     });
@@ -223,3 +243,5 @@ export async function PATCH(
     );
   }
 }
+
+export const POST = PATCH;

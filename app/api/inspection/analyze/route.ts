@@ -256,10 +256,32 @@ export async function POST(request: NextRequest) {
   const computedImageSha256 = crypto.createHash("sha256").update(jpegBytes).digest("hex");
 
   try {
-    // 7. Verify Batch exists before inference
-    const batch = await prisma.batch.findUnique({
-      where: { id: req.batchId },
-    });
+    // 7 & 8 & 9. Fetch Batch, Idempotency check, Active Settings, and Batch Item IDs in a single parallel round-trip
+    const [batch, existingEvent, activeSetting, batchItems] = await Promise.all([
+      prisma.batch.findUnique({
+        where: { id: req.batchId },
+      }),
+      prisma.inspection.findUnique({
+        where: { eventId: req.eventId },
+        include: { workflowRun: true, batch: true },
+      }),
+      prisma.setting.findUnique({
+        where: { id: "default" },
+        select: {
+          customerProfile: true,
+          escalationWindowMinutes: true,
+          escalationCountTrigger: true,
+          autoDispatchMode: true,
+          approvalSlaMinutes: true,
+          detectionConfidenceThreshold: true,
+        },
+      }),
+      prisma.inspection.findMany({
+        where: { batchId: req.batchId },
+        select: { id: true, itemId: true },
+      }),
+    ]);
+
     if (!batch) {
       return NextResponse.json(
         {
@@ -270,12 +292,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    // 8. Pre-inference Idempotency Check on eventId
-    const existingEvent = await prisma.inspection.findUnique({
-      where: { eventId: req.eventId },
-      include: { workflowRun: true, batch: true },
-    });
 
     if (existingEvent) {
       const matchingHash =
@@ -329,41 +345,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 9. Auto-assign "<lotId>-NNN" when no itemId was given, then check (batchId, itemId) is unused
-    let itemId = requestedItemId;
-    if (!itemId) {
-      let seq = (await prisma.inspection.count({ where: { batchId: req.batchId } })) + 1;
-      do {
-        itemId = `${batch.lotId}-${String(seq++).padStart(3, "0")}`;
-      } while (
-        await prisma.inspection.findFirst({
-          where: { batchId: req.batchId, itemId },
-          select: { id: true },
-        })
-      );
+    // 9. Auto-assign "<lotId>-NNN" in memory when no itemId was given, then verify (batchId, itemId) is unused
+    const usedItemMap = new Map<string, string>();
+    for (const row of batchItems) {
+      if (row.itemId) usedItemMap.set(row.itemId, row.id);
     }
 
-    const existingItem = await prisma.inspection.findFirst({
-      where: {
-        batchId: req.batchId,
-        itemId,
-      },
-    });
-
-    if (existingItem) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "ITEM_ALREADY_INSPECTED",
-          error: `Item '${itemId}' has already been inspected in batch '${req.batchId}' (inspection ${existingItem.id})`,
-          details: { existingInspectionId: existingItem.id },
-        },
-        { status: 409 }
-      );
+    let itemId = requestedItemId;
+    if (!itemId) {
+      let seq = batchItems.length + 1;
+      do {
+        itemId = `${batch.lotId}-${String(seq++).padStart(3, "0")}`;
+      } while (usedItemMap.has(itemId));
+    } else {
+      const existingInspectionId = usedItemMap.get(itemId);
+      if (existingInspectionId) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: "ITEM_ALREADY_INSPECTED",
+            error: `Item '${itemId}' has already been inspected in batch '${req.batchId}' (inspection ${existingInspectionId})`,
+            details: { existingInspectionId },
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // 10. Run Server Vision Inference
-    const vision = await analyzeJpeg(jpegBytes);
+    const vision = await analyzeJpeg(jpegBytes, {
+      confidenceThresholdPct: activeSetting?.detectionConfidenceThreshold,
+      precomputedSha256: computedImageSha256,
+    });
 
     // 11. Construct Full Server-Owned InspectionEvent
     const fullEvent: InspectionEvent = {
@@ -406,10 +419,16 @@ export async function POST(request: NextRequest) {
       role: session.role,
     };
 
-    const ingestResult = await ingestInspection(validatedEvent, actor);
+    const ingestResult = await ingestInspection(validatedEvent, actor, {
+      skipPreChecks: true,
+      preloadedSetting: activeSetting,
+    });
 
-    // 14. Fetch Persisted Formatted Record
-    const inspectionRecord = await sigapStore.getInspectionById(ingestResult.inspectionId);
+    // 14. Format Persisted Record Directly (Zero Extra DB Round-Trip)
+    const inspectionRecord = ingestResult.rawRecord
+      ? formatInspectionRecord(ingestResult.rawRecord)
+      : await sigapStore.getInspectionById(ingestResult.inspectionId);
+
     if (!inspectionRecord) {
       throw new IngestError(
         500,

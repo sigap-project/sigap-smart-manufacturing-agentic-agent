@@ -423,9 +423,26 @@ export const sigapStore = {
   },
 
   async updateSettings(partial: Partial<SettingsState>): Promise<SettingsState> {
+    const parsedRetention =
+      typeof partial.logRetention === "string"
+        ? parseInt(partial.logRetention, 10)
+        : typeof (partial as any).logRetentionDays === "number"
+        ? (partial as any).logRetentionDays
+        : undefined;
+
     const updated = await prisma.setting.upsert({
       where: { id: "default" },
       update: {
+        ...(typeof partial.simulationMode === "boolean"
+          ? { mockMode: partial.simulationMode }
+          : {}),
+        ...(partial.cameraSource === "mock" || partial.cameraSource === "rtsp"
+          ? { cameraSource: partial.cameraSource }
+          : {}),
+        ...(typeof partial.rtspUrl === "string" ? { rtspUrl: partial.rtspUrl.trim() } : {}),
+        ...(Array.isArray(partial.monitoredProducts)
+          ? { monitoredProducts: partial.monitoredProducts }
+          : {}),
         ...(typeof partial.confidenceThreshold === "number"
           ? { detectionConfidenceThreshold: partial.confidenceThreshold }
           : {}),
@@ -434,6 +451,9 @@ export const sigapStore = {
           : {}),
         ...(typeof partial.triggerCount === "number"
           ? { escalationCountTrigger: partial.triggerCount }
+          : {}),
+        ...(typeof partial.autoSaveBatchBoard === "boolean"
+          ? { autoStoreEnabled: partial.autoSaveBatchBoard }
           : {}),
         ...(typeof partial.autoDispatchMode === "string"
           ? { autoDispatchMode: partial.autoDispatchMode }
@@ -445,15 +465,28 @@ export const sigapStore = {
         partial.customerProfile === "export_zero_defect"
           ? { customerProfile: partial.customerProfile }
           : {}),
+        ...(typeof partial.autoExportCsv === "boolean"
+          ? { autoExportCsv: partial.autoExportCsv }
+          : {}),
+        ...(typeof parsedRetention === "number" && Number.isFinite(parsedRetention)
+          ? { logRetentionDays: parsedRetention }
+          : {}),
       },
       create: {
         id: "default",
+        mockMode: partial.simulationMode ?? true,
+        cameraSource: partial.cameraSource ?? "mock",
+        rtspUrl: partial.rtspUrl ?? "rtsp://192.168.1.120:8554/live/station-01",
+        monitoredProducts: partial.monitoredProducts ?? [],
         detectionConfidenceThreshold: partial.confidenceThreshold ?? 85.0,
         escalationWindowMinutes: partial.escalationWindow ?? 8,
         escalationCountTrigger: partial.triggerCount ?? 3,
+        autoStoreEnabled: partial.autoSaveBatchBoard ?? true,
         autoDispatchMode: partial.autoDispatchMode ?? "human_approval",
         approvalSlaMinutes: partial.approvalTimeout ?? 15,
         customerProfile: partial.customerProfile ?? "domestic_grade_ab",
+        autoExportCsv: partial.autoExportCsv ?? true,
+        logRetentionDays: parsedRetention ?? 30,
       },
     });
 

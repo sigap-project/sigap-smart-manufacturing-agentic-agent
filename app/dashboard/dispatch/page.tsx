@@ -2,12 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { DispatchStatCards } from "@/components/dispatch/dispatch-stat-cards";
 import { DispatchToolbar } from "@/components/dispatch/dispatch-toolbar";
 import { DispatchTable } from "@/components/dispatch/dispatch-table";
 import { DispatchDetailModal } from "@/components/dispatch/dispatch-detail-modal";
 import { DispatchCreateModal } from "@/components/dispatch/dispatch-create-modal";
+import { InlineLoginBanner } from "@/components/auth/inline-login-banner";
 import {
   ConsumerType,
   DispatchItem,
@@ -15,18 +16,27 @@ import {
 } from "@/components/dispatch/types";
 import { DispatchSkeleton } from "@/components/dispatch/dispatch-skeleton";
 import { useSigapEvents } from "@/hooks/useSigapEvents";
+import { useSigapSession } from "@/hooks/useSigapSession";
 import { useSigapGlobal } from "@/context/sigap-global-context";
 
 export default function ExportDispatchPage() {
-  const { dispatches: globalDispatches, createDispatch: globalCreateDispatch } = useSigapGlobal();
+  const {
+    dispatches: globalDispatches,
+    batches: globalBatches,
+    createDispatch: globalCreateDispatch,
+    refreshServerState,
+  } = useSigapGlobal();
+  const session = useSigapSession();
+  const canDecide = session.actor?.role === "supervisor";
   const [dispatches, setDispatches] = useState<DispatchItem[]>(globalDispatches);
   const [isLoading, setIsLoading] = useState(false);
+  const [busyDispatchId, setBusyDispatchId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<DispatchStatus | "all">("all");
   const [consumerFilter, setConsumerFilter] = useState<ConsumerType | "all">("all");
   const [selectedDispatch, setSelectedDispatch] = useState<DispatchItem | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (globalDispatches && globalDispatches.length > 0) {
@@ -34,9 +44,9 @@ export default function ExportDispatchPage() {
     }
   }, [globalDispatches]);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+  const showToast = (text: string, ok = true) => {
+    setToast({ ok, text });
+    setTimeout(() => setToast(null), 4500);
   };
 
   // Dengarkan event broadcast SSE secara real-time
@@ -94,6 +104,116 @@ export default function ExportDispatchPage() {
     showToast(`Ticket ${newItem.id} (${newItem.consumer}) created successfully.`);
   };
 
+  // Handler persetujuan supervisor (Approve & Dispatch ke SAP OData)
+  const handleApproveDispatch = async (
+    item: DispatchItem,
+    customReason = "Verified defect evidence & sliding-window threshold; approved for SAP execution."
+  ) => {
+    if (!canDecide) {
+      showToast("Sign in as a supervisor to approve SAP ERP dispatches.", false);
+      return;
+    }
+    setBusyDispatchId(item.id);
+    try {
+      const matchedBatch = globalBatches.find(
+        (b) => b.id === item.batchRecordId || b.lotId === item.batchId || b.id === item.batchId
+      );
+      const expectedBatchVersion = matchedBatch?.version ?? item.batchVersion ?? 1;
+      const expectedRevision = item.revision ?? 1;
+
+      const res = await fetch(`/api/dispatch/${encodeURIComponent(item.id)}/approve`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session.csrfToken ? { "x-csrf-token": session.csrfToken } : {}),
+        },
+        body: JSON.stringify({
+          expectedRevision,
+          expectedBatchVersion,
+          reason: customReason,
+        }),
+      });
+      const json = await res.json();
+      if (res.status === 401) {
+        session.expire();
+        showToast("Session expired. Please sign in again.", false);
+        return;
+      }
+      if (!res.ok || !json.success) {
+        await refreshServerState();
+        showToast(json.error || "Failed to approve dispatch.", false);
+        return;
+      }
+      if (json.data) {
+        setDispatches((prev) => prev.map((d) => (d.id === item.id ? json.data : d)));
+        if (selectedDispatch?.id === item.id) {
+          setSelectedDispatch(json.data);
+        }
+      }
+      await refreshServerState();
+      showToast(json.message || `Ticket ${item.id} approved & dispatched to ${item.consumer}.`, true);
+    } catch {
+      showToast("Network error while approving dispatch.", false);
+    } finally {
+      setBusyDispatchId(null);
+    }
+  };
+
+  // Handler penolakan supervisor (Reject Proposal)
+  const handleRejectDispatch = async (
+    item: DispatchItem,
+    customReason = "Rejected by supervisor after visual inspection review."
+  ) => {
+    if (!canDecide) {
+      showToast("Sign in as a supervisor to reject SAP ERP proposals.", false);
+      return;
+    }
+    setBusyDispatchId(item.id);
+    try {
+      const matchedBatch = globalBatches.find(
+        (b) => b.id === item.batchRecordId || b.lotId === item.batchId || b.id === item.batchId
+      );
+      const expectedBatchVersion = matchedBatch?.version ?? item.batchVersion ?? 1;
+      const expectedRevision = item.revision ?? 1;
+
+      const res = await fetch(`/api/dispatch/${encodeURIComponent(item.id)}/reject`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session.csrfToken ? { "x-csrf-token": session.csrfToken } : {}),
+        },
+        body: JSON.stringify({
+          expectedRevision,
+          expectedBatchVersion,
+          reason: customReason,
+        }),
+      });
+      const json = await res.json();
+      if (res.status === 401) {
+        session.expire();
+        showToast("Session expired. Please sign in again.", false);
+        return;
+      }
+      if (!res.ok || !json.success) {
+        await refreshServerState();
+        showToast(json.error || "Failed to reject dispatch.", false);
+        return;
+      }
+      if (json.data) {
+        setDispatches((prev) => prev.map((d) => (d.id === item.id ? json.data : d)));
+        if (selectedDispatch?.id === item.id) {
+          setSelectedDispatch(json.data);
+        }
+      }
+      await refreshServerState();
+      showToast(json.message || `Ticket ${item.id} rejected.`, true);
+    } catch {
+      showToast("Network error while rejecting dispatch.", false);
+    } finally {
+      setBusyDispatchId(null);
+    }
+  };
+
   // Filtered dispatches based on search, status, and consumer
   const filteredDispatches = useMemo(() => {
     return dispatches.filter((d) => {
@@ -134,10 +254,18 @@ export default function ExportDispatchPage() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12 animate-in fade-in duration-200">
       {/* Toast Notification Banner */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-medium shadow-xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          className={`fixed top-20 right-6 z-50 px-4 py-3 rounded-2xl bg-white border text-xs font-medium shadow-xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200 ${
+            toast.ok ? "border-slate-200 text-slate-800" : "border-rose-200 text-rose-800"
+          }`}
+        >
+          {toast.ok ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          )}
+          <span>{toast.text}</span>
         </div>
       )}
 
@@ -186,6 +314,12 @@ export default function ExportDispatchPage() {
         </div>
       </motion.div>
 
+      <InlineLoginBanner
+        session={session}
+        description="Sign in as a supervisor to approve or reject governed SAP QM, MM, and PP proposals."
+        roleNotice={canDecide ? null : "Only supervisors can authorize or reject SAP ERP dispatches."}
+      />
+
       {/* Tahap 2: TOP: Stat Row (4 compact white cards, 150ms - 350ms) */}
       <DispatchStatCards dispatches={dispatches} />
 
@@ -220,6 +354,10 @@ export default function ExportDispatchPage() {
         <DispatchTable
           dispatches={filteredDispatches}
           onViewDetails={(dispatch) => setSelectedDispatch(dispatch)}
+          canDecide={canDecide}
+          busyDispatchId={busyDispatchId}
+          onApprove={(item) => handleApproveDispatch(item)}
+          onReject={(item) => handleRejectDispatch(item)}
         />
       </motion.div>
 
@@ -227,6 +365,10 @@ export default function ExportDispatchPage() {
       <DispatchDetailModal
         dispatch={selectedDispatch}
         onClose={() => setSelectedDispatch(null)}
+        canDecide={canDecide}
+        busyDispatchId={busyDispatchId}
+        onApprove={(item, reason) => handleApproveDispatch(item, reason)}
+        onReject={(item, reason) => handleRejectDispatch(item, reason)}
       />
 
       {/* MODAL 2: Create New Manual Dispatch */}

@@ -23,6 +23,7 @@ export interface SettingsState {
 }
 
 export const ALL_PRODUCTS = [
+  "Submersible Pump Impeller Casting",
   "Bracket Motor A7",
   "Gearbox Housing C2",
   "Flange Pinion X1",
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   escalationWindow: 8,
   triggerCount: 3,
   monitoredProducts: [
+    "Submersible Pump Impeller Casting",
     "Bracket Motor A7",
     "Gearbox Housing C2",
     "Flange Pinion X1",
@@ -47,7 +49,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   ],
 
   autoSaveBatchBoard: true,
-  autoDispatchMode: "autonomous",
+  autoDispatchMode: "human_approval",
   approvalTimeout: 15,
   customerProfile: "domestic_grade_ab",
 

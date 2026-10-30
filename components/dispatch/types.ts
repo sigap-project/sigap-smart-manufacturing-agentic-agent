@@ -8,6 +8,10 @@ export interface DispatchItem {
   timestamp: string;
   rawDate: string; // ISO date for sorting
   status: DispatchStatus;
+  rawStatus?: string;
+  revision?: number;
+  batchVersion?: number;
+  batchRecordId?: string;
   batchId: string;
   partName: string;
   escalationScore: number;

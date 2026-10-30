@@ -83,7 +83,8 @@ interface RuntimeSessions {
   detSession: OrtInferenceSession;
 }
 
-let sessionInitPromise: Promise<RuntimeSessions> | null = null;
+const globalForVision = globalThis as unknown as { sigapVisionSessionPromise?: Promise<RuntimeSessions> | null };
+let sessionInitPromise: Promise<RuntimeSessions> | null = globalForVision.sigapVisionSessionPromise ?? null;
 
 async function initSessions(): Promise<RuntimeSessions> {
   const baseDir = path.join(process.cwd(), "ai_models");
@@ -228,7 +229,7 @@ function getRuntimeSessions(): Promise<RuntimeSessions> {
       throw err;
     });
   }
-  return sessionInitPromise;
+  return globalForVision.sigapVisionSessionPromise = sessionInitPromise;
 }
 
 /**
@@ -356,7 +357,7 @@ function nmsBoxes(
   return keep;
 }
 
-export async function analyzeJpeg(jpegBytes: Buffer): Promise<VisionAnalysis> {
+export async function analyzeJpeg(jpegBytes: Buffer, options?: { confidenceThresholdPct?: number; precomputedSha256?: string }): Promise<VisionAnalysis> {
   // 1. Validate byte size before inference/decode
   if (jpegBytes.length > 1048576) {
     throw new IngestError(
@@ -403,7 +404,7 @@ export async function analyzeJpeg(jpegBytes: Buffer): Promise<VisionAnalysis> {
     );
   }
 
-  const imageSha256 = crypto.createHash("sha256").update(jpegBytes).digest("hex");
+  const imageSha256 = options?.precomputedSha256 || crypto.createHash("sha256").update(jpegBytes).digest("hex");
   const srcW = decoded.width;
   const srcH = decoded.height;
 
@@ -455,7 +456,8 @@ export async function analyzeJpeg(jpegBytes: Buffer): Promise<VisionAnalysis> {
         pDefect = pDefect / probSum;
         pOk = pOk / probSum;
 
-        const th = manifest.classifier.thresholds;
+        const customRatio = typeof options?.confidenceThresholdPct === "number" && Math.abs(options.confidenceThresholdPct - 85) > 0.5 ? Math.max(0.5, Math.min(0.99, options.confidenceThresholdPct / 100)) : null;
+        const th = customRatio ? { defect: customRatio, ok: customRatio } : manifest.classifier.thresholds;
         if (pDefect >= th.defect && pDefect >= pOk) {
           outcome = "defect";
           confidence = Number((pDefect * 100).toFixed(2));

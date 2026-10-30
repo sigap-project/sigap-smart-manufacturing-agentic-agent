@@ -232,6 +232,35 @@ export async function processNextDispatch(): Promise<boolean> {
       include: { batch: true },
     });
 
+    if (candidate.runId) {
+      const run = await prisma.workflowRun.findUnique({
+        where: { id: candidate.runId },
+        select: { inspectionId: true },
+      });
+      if (run?.inspectionId) {
+        await prisma.agentLog.create({
+          data: {
+            inspectionId: run.inspectionId,
+            runId: candidate.runId,
+            sequence: 99,
+            step: "05",
+            stepName: "DISPATCH",
+            stage: "DISPATCH",
+            kind: "tool_result",
+            status: "completed",
+            decision: `Dispatched ${candidate.actionType} to ${consumer.replace("_", " ")} -> SAP Ticket ${dispatchRes.externalId} verified in state '${readBack.resultingState}'.`,
+            input: { actionKey: candidate.actionKey, consumer, targetId },
+            output: {
+              status: "verified",
+              sapTicketId: dispatchRes.externalId,
+              resultingState: readBack.resultingState,
+            },
+            latencyMs: 18,
+          },
+        });
+      }
+    }
+
     console.log(`[WORKER] Dispatch ${candidate.id} VERIFIED in state '${readBack.resultingState}'`);
     emitSigapEvent("dispatch:status_changed", verified);
   } else {

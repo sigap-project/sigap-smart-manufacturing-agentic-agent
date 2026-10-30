@@ -37,7 +37,7 @@ export function ModelAiConfigCard({
               AI Detection &amp; Escalation Thresholds
             </h3>
             <p className="text-xs text-slate-500">
-              Parameters for YOLOv8-Nano inference, AWS Bedrock temporal memory, and monitored product SKUs.
+              Parameters for Two-Stage ONNX (YOLOv8s-cls + YOLOv8m) inference, Amazon Nova Lite (Bedrock) temporal memory, and monitored product SKUs.
             </p>
           </div>
         </div>

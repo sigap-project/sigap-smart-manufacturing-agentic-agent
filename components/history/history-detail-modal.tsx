@@ -122,36 +122,62 @@ export function HistoryDetailModal({
           {/* Scrollable Body */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
             {/* 1. Camera Snapshot Viewport Frame */}
-            <div className="relative w-full h-52 sm:h-60 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner flex items-center justify-center">
-              {/* Corner Reticle Brackets */}
-              <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-slate-600" />
-              <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-slate-600" />
-              <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-slate-600" />
-              <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-slate-600" />
-
-              {/* Center Target Indicator */}
-              {isOk ? (
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-20 h-20 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/10 flex items-center justify-center mb-2">
-                    <CheckCircle2 className="w-9 h-9 text-emerald-400" />
-                  </div>
-                  <span className="font-mono text-xs font-semibold text-emerald-300 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30">
-                    PASSED OK [{record.confidence !== null ? record.confidence.toFixed(1) : "N/A"}%]
-                  </span>
+            <div className="relative w-full h-52 sm:h-64 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner flex items-center justify-center">
+              {record.imageUrl && !record.imageUrl.startsWith("/mock-") ? (
+                <div className="relative w-full h-full flex items-center justify-center bg-slate-950">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={record.imageUrl}
+                    alt={`Inspection ${record.id}`}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                  {Array.isArray((record as any).boundingBoxes) &&
+                    (record as any).boundingBoxes.map((b: any, i: number) => (
+                      <div
+                        key={b.id || i}
+                        style={{
+                          left: `${b.x}%`,
+                          top: `${b.y}%`,
+                          width: `${b.width}%`,
+                          height: `${b.height}%`,
+                        }}
+                        className="absolute border-2 border-rose-500 bg-rose-500/15 rounded-xs pointer-events-none"
+                      />
+                    ))}
                 </div>
               ) : (
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-20 h-20 rounded-2xl border-2 border-amber-400 bg-amber-500/15 flex items-center justify-center mb-2">
-                    <AlertTriangle className="w-9 h-9 text-amber-400" />
-                  </div>
-                  <span className="font-mono text-xs font-semibold text-amber-300 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
-                    {record.defectClass.toUpperCase()} [{record.confidence !== null ? record.confidence.toFixed(1) : "N/A"}%]
-                  </span>
-                </div>
+                <>
+                  {/* Corner Reticle Brackets */}
+                  <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-slate-600" />
+                  <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-slate-600" />
+                  <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-slate-600" />
+                  <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-slate-600" />
+
+                  {/* Center Target Indicator */}
+                  {isOk ? (
+                    <div className="relative z-10 flex flex-col items-center">
+                      <div className="w-20 h-20 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/10 flex items-center justify-center mb-2">
+                        <CheckCircle2 className="w-9 h-9 text-emerald-400" />
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-emerald-300 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30">
+                        PASSED OK [{record.confidence !== null ? record.confidence.toFixed(1) : "N/A"}%]
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="relative z-10 flex flex-col items-center">
+                      <div className="w-20 h-20 rounded-2xl border-2 border-amber-400 bg-amber-500/15 flex items-center justify-center mb-2">
+                        <AlertTriangle className="w-9 h-9 text-amber-400" />
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-amber-300 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
+                        {record.defectClass.toUpperCase()} [{record.confidence !== null ? record.confidence.toFixed(1) : "N/A"}%]
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Telemetry Footer */}
-              <div className="absolute bottom-3 left-4 text-[10px] font-mono text-slate-400">
+              <div className="absolute bottom-3 left-4 text-[10px] font-mono text-slate-300 bg-slate-950/75 px-2 py-0.5 rounded">
                 {record.line} • OPTICAL SENSOR 01 • {record.timestamp}
               </div>
             </div>
@@ -166,7 +192,7 @@ export function HistoryDetailModal({
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400">
-                  Model: YOLOv8-Nano + AWS Bedrock
+                  Model: YOLOv8s-cls + YOLOv8m + Amazon Nova Lite
                 </span>
               </div>
 

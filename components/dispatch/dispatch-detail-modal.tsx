@@ -8,22 +8,46 @@ import {
   UserCheck,
   Copy,
   Check,
+  Loader2,
+  ShieldCheck,
+  XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DispatchItem } from "./types";
 
 interface DispatchDetailModalProps {
   dispatch: DispatchItem | null;
   onClose: () => void;
+  canDecide?: boolean;
+  busyDispatchId?: string | null;
+  onApprove?: (dispatch: DispatchItem, reason: string) => void;
+  onReject?: (dispatch: DispatchItem, reason: string) => void;
 }
 
 export function DispatchDetailModal({
   dispatch,
   onClose,
+  canDecide = false,
+  busyDispatchId = null,
+  onApprove,
+  onReject,
 }: DispatchDetailModalProps) {
   const [copied, setCopied] = useState(false);
+  const [reason, setReason] = useState(
+    "Verified optical defect evidence & sliding-window threshold; approved for SAP execution."
+  );
+
+  useEffect(() => {
+    if (dispatch) {
+      setReason(
+        "Verified optical defect evidence & sliding-window threshold; approved for SAP execution."
+      );
+    }
+  }, [dispatch?.id]);
 
   if (!dispatch) return null;
+
+  const isBusy = busyDispatchId === dispatch.id;
 
   const handleCopyTicket = () => {
     navigator.clipboard.writeText(dispatch.sapTicketId);
@@ -207,6 +231,71 @@ export function DispatchDetailModal({
                 </span>
               </div>
             </div>
+
+            {/* 5. Supervisor Governance Action Box (when Pending Approval) */}
+            {dispatch.status === "Pending Approval" && onApprove && onReject && (
+              <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200/80 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-blue-800 font-bold flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    Supervisor Governance Authorization
+                  </span>
+                  {!canDecide && (
+                    <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      Sign in as Supervisor required
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-medium text-slate-600 block mb-1">
+                    Audit Sign-off Reason / Note:
+                  </label>
+                  <input
+                    type="text"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    disabled={!canDecide || isBusy}
+                    placeholder="Enter authorization or rejection note..."
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    disabled={!canDecide || isBusy || !reason.trim()}
+                    onClick={() => onApprove(dispatch, reason.trim())}
+                    className={`flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      canDecide && !isBusy && reason.trim()
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer"
+                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    }`}
+                  >
+                    {isBusy ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
+                    <span>Approve &amp; Dispatch to {dispatch.consumer}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!canDecide || isBusy || !reason.trim()}
+                    onClick={() => onReject(dispatch, reason.trim())}
+                    className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+                      canDecide && !isBusy && reason.trim()
+                        ? "bg-white hover:bg-rose-50 text-rose-600 border-rose-200 cursor-pointer"
+                        : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                    }`}
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Reject Proposal</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer Actions */}

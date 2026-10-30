@@ -11,12 +11,19 @@ import {
   ChevronRight,
   Layers,
   Send,
+  Check,
+  X,
+  Loader2,
 } from "lucide-react";
 import { ConsumerType, DispatchItem, DispatchStatus } from "./types";
 
 interface DispatchTableProps {
   dispatches: DispatchItem[];
   onViewDetails: (dispatch: DispatchItem) => void;
+  canDecide?: boolean;
+  busyDispatchId?: string | null;
+  onApprove?: (dispatch: DispatchItem) => void;
+  onReject?: (dispatch: DispatchItem) => void;
 }
 
 type SortField = "id" | "consumer" | "rawDate" | "status";
@@ -25,6 +32,10 @@ type SortDirection = "asc" | "desc";
 export function DispatchTable({
   dispatches,
   onViewDetails,
+  canDecide = false,
+  busyDispatchId = null,
+  onApprove,
+  onReject,
 }: DispatchTableProps) {
   const [sortField, setSortField] = useState<SortField>("rawDate");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -231,13 +242,60 @@ export function DispatchTable({
 
                 {/* Action Button */}
                 <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-                  <button
-                    onClick={() => onViewDetails(item)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-slate-400" />
-                    <span>View</span>
-                  </button>
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    {item.status === "Pending Approval" && onApprove && onReject && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={!canDecide || busyDispatchId === item.id}
+                          onClick={() => onApprove(item)}
+                          title={
+                            canDecide
+                              ? "Approve & execute SAP mutation"
+                              : "Sign in as supervisor to approve"
+                          }
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                            canDecide && busyDispatchId !== item.id
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 cursor-pointer shadow-2xs"
+                              : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                          }`}
+                        >
+                          {busyDispatchId === item.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Check className="w-3 h-3" />
+                          )}
+                          <span>Approve</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canDecide || busyDispatchId === item.id}
+                          onClick={() => onReject(item)}
+                          title={
+                            canDecide
+                              ? "Reject proposed SAP action"
+                              : "Sign in as supervisor to reject"
+                          }
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all ${
+                            canDecide && busyDispatchId !== item.id
+                              ? "bg-white hover:bg-rose-50 text-rose-600 border-rose-200/80 cursor-pointer"
+                              : "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed"
+                          }`}
+                        >
+                          <X className="w-3 h-3" />
+                          <span>Reject</span>
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onViewDetails(item)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-400" />
+                      <span>View</span>
+                    </button>
+                  </div>
                 </td>
               </motion.tr>
             ))}

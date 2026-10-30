@@ -148,7 +148,7 @@ export function InspectionAgentTrace({
         return;
       }
       if (document.visibilityState === "visible") fetchLogs();
-    }, 3000);
+    }, 1200);
     return () => {
       active = false;
       clearInterval(interval);
